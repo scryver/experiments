@@ -246,10 +246,52 @@ outline_triangle(Image *image, v2u a, v2u b, v2u c, u32 colour)
 //
 
 internal inline void
-fill_rectangle(Image *image, u32 xStart, u32 yStart, u32 width, u32 height, v4 colour)
+fill_rectangle(Image *image, s32 xStart, s32 yStart, u32 width, u32 height, v4 colour)
 {
-    i_expect(xStart + width <= image->width);
-    i_expect(yStart + height <= image->height);
+    if (xStart < 0)
+    {
+        s32 diff = -xStart;
+        u32 newWidth = width - diff;
+        if (newWidth > width)
+        {
+            newWidth = 0;
+        }
+        width = newWidth;
+        xStart = 0;
+    }
+    else if ((xStart + width) > image->width)
+    {
+        s32 diff = (xStart + width) - image->width;
+        u32 newWidth = width - diff;
+        if (newWidth > width)
+        {
+            newWidth = 0;
+        }
+        width = newWidth;
+    }
+    
+    if (yStart < 0)
+    {
+        s32 diff = -yStart;
+        u32 newHeight = height - diff;
+        if (newHeight > height)
+        {
+            newHeight = 0;
+        }
+        height = newHeight;
+        yStart = 0;
+    }
+    else if ((yStart + height) > image->height)
+    {
+        s32 diff = (yStart + height) - image->height;
+        u32 newHeight = height - diff;
+        if (newHeight > height)
+        {
+            newHeight = 0;
+        }
+        height = newHeight;
+    }
+    
     for (u32 y = yStart; y < (yStart + height); ++y)
     {
         for (u32 x = xStart; x < (xStart + width); ++x)
@@ -302,7 +344,16 @@ fill_triangle(Image *image, v2u a, v2u b, v2u c, v4 colour)
     }
 }
 
-internal void
+internal inline void
+fill_triangle(Image *image, v2 a, v2 b, v2 c, v4 colour)
+{
+    v2u au = V2U(round(a.x), round(a.y));
+    v2u bu = V2U(round(b.x), round(b.y));
+    v2u cu = V2U(round(c.x), round(c.y));
+    fill_triangle(image, au, bu, cu, colour);
+}
+
+internal inline void
 fill_triangle(Image *image, v2u a, v2u b, v2u c, u32 colour)
 {
     fill_triangle(image, a, b, c, unpack_colour(colour));

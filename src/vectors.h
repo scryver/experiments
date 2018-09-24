@@ -147,6 +147,14 @@ normalize(v2 a)
 }
 
 internal inline v2
+set_length(v2 a, f32 length)
+{
+    v2 result = normalize(a);
+    result *= length;
+    return result;
+}
+
+internal inline v2
 direction(v2 from, v2 to)
 {
     v2 result = to - from;
@@ -157,6 +165,17 @@ internal inline v2
 direction_unit(v2 from, v2 to)
 {
     v2 result = normalize(to - from);
+    return result;
+}
+
+internal inline v2
+rotate(v2 a, v2 rotation)
+{
+    v2 result = {};
+    
+    result.x = a.x * rotation.x - a.y * rotation.y;
+    result.y = a.x * rotation.y + a.y * rotation.x;
+    
     return result;
 }
 

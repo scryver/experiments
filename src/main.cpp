@@ -2,6 +2,7 @@
 #include <sys/mman.h>     // PROT_*, MAP_*, munmap
 #include <dlfcn.h>        // dlopen, dlsym, dlclose
 #include <unistd.h>       // usleep
+#include <time.h>
 
 #include <stdio.h>        // fprintf
 #include <stdlib.h>
@@ -142,6 +143,21 @@ struct Vertex
     v2 pos;
     v2 uv;
 };
+
+internal inline struct timespec
+get_wall_clock(void)
+{
+    struct timespec clock;
+    clock_gettime(CLOCK_MONOTONIC, &clock);
+    return clock;
+}
+
+internal inline f32
+get_seconds_elapsed(struct timespec start, struct timespec end)
+{
+    return ((f32)(end.tv_sec - start.tv_sec)
+            + ((f32)(end.tv_nsec - start.tv_nsec) * 1e-9f));
+}
 
 int main(int argc, char **argv)
 {
@@ -408,6 +424,8 @@ int main(int argc, char **argv)
     
     glUseProgram(programID);
     
+    struct timespec lastTime = get_wall_clock();
+    
     bool isRunning = true;
     while (isRunning)
     {
@@ -465,7 +483,11 @@ int main(int argc, char **argv)
             }
         }
         
-        draw_image(state, image, mouse);
+        struct timespec now = get_wall_clock();
+        f32 secondsElapsed = get_seconds_elapsed(lastTime, now);
+        lastTime = now;
+        
+        draw_image(state, image, mouse, secondsElapsed);
         
         glViewport(0, 0, windowWidth, windowHeight);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);

@@ -88,9 +88,12 @@ init_particle_system(ParticleSystem *system, u32 particleCount, v2 origin,
 internal inline Particle *
 add_particle(ParticleSystem *system)
 {
-    i_expect(system->particleCount < system->maxParticles);
-    Particle *particle = system->particles + system->particleCount++;
+    Particle *particle = 0;
+    if (system->particleCount < system->maxParticles)
+    {
+    particle = system->particles + system->particleCount++;
     init_particle(particle, system->origin, system->randomizer);
+    }
     return particle;
 }
 
@@ -100,6 +103,34 @@ remove_particle(ParticleSystem *system, u32 index)
     i_expect(index < system->maxParticles);
     i_expect(system->particleCount > 0);
     system->particles[index] = system->particles[--system->particleCount];
+}
+
+internal inline void
+sort_particles(ParticleSystem *system, s32 startIndex, s32 endIndex)
+{
+    // NOTE(michiel): Oldest particles get moved to end of array
+    if (startIndex < endIndex)
+    {
+         Particle *pivot = system->particles + endIndex;
+        u32 index = startIndex;
+        for (u32 j = startIndex; j < endIndex - 1; ++j)
+        {
+            Particle *test = system->particles + j;
+            if (test->lifeSpan > pivot->lifeSpan)
+            {
+                Particle temp = system->particles[index];
+                system->particles[index] = *test;
+                *test = temp;
+                ++index;
+            }
+        }
+        Particle temp = *pivot;
+        *pivot = system->particles[index];
+        system->particles[index] = temp;
+        
+        sort_particles(system, startIndex, index - 1);
+        sort_particles(system, index + 1, endIndex);
+    }
 }
 
 internal inline void
@@ -115,25 +146,6 @@ apply_force(ParticleSystem *system, v2 force)
 internal void
 update_particles(ParticleSystem *system)
 {
-    if (system->particleCount >= system->maxParticles)
-    {
-        s32 shortestLife = 10000;
-        u32 shortestIndex = 0xFFFFFFFF;
-        for (u32 particleIndex = 0; particleIndex < system->particleCount; ++particleIndex)
-        {
-            Particle *particle = system->particles + particleIndex;
-            if (shortestLife > particle->lifeSpan)
-            {
-                shortestLife = particle->lifeSpan;
-                shortestIndex = particleIndex;
-            }
-        }
-        if (shortestIndex != 0xFFFFFFFF)
-        {
-            remove_particle(system, shortestIndex);
-        }
-    }
-    
     for (u32 particleIndex = 0; particleIndex < system->particleCount;)
     {
         Particle *particle = system->particles + particleIndex;
@@ -163,6 +175,7 @@ struct ParticleState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
+    f32 secondsCount;
     
     ParticleSystem system;
 };
@@ -179,14 +192,23 @@ DRAW_IMAGE(draw_image)
     {
         particleState->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         
-        init_particle_system(system, 1024, V2(center.x, 200), &particleState->randomizer);
+        init_particle_system(system, 8192, V2(center.x, 200), &particleState->randomizer);
         
         state->initialized = true;
     }
     
-    add_particle(system);
-    add_particle(system);
-    add_particle(system);
+    particleState->secondsCount += dt;
+    
+    sort_particles(system, 0, system->particleCount - 1);
+    
+    s32 removeCount = system->maxParticles - system->particleCount;
+    removeCount = maximum(0, 60 - removeCount);
+        system->particleCount -= removeCount;
+    
+    for (u32 i = 0; i < 60; ++i)
+    {
+        add_particle(system);
+    }
     
     v2 gravity = V2(0, 0.07f);
     apply_force(system, gravity);
@@ -195,6 +217,14 @@ DRAW_IMAGE(draw_image)
     
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     render_particles(image, system);
+    
+    if (particleState->secondsCount >= 1.0f)
+    {
+        fprintf(stdout, "Frames: %d (%5.2fms)\n", particleState->ticks,
+                (f32)particleState->ticks / 1000.0f);
+        particleState->ticks = 0;
+                particleState->secondsCount -= 1.0f;
+    }
     
     ++particleState->ticks;
 }

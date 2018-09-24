@@ -23,6 +23,7 @@ pushd "$buildDir" > /dev/null
 #    clang++ $flags $exceptions "$codeDir/oscillation.cpp" -o oscillation -lX11 -lGL
 #    clang++ $flags $exceptions "$codeDir/pendulum.cpp" -o pendulum -lX11 -lGL
 #    clang++ $flags $exceptions "$codeDir/springs.cpp" -o springs -lX11 -lGL
-    clang++ $flags $exceptions "$codeDir/particles.cpp" -o particles -lX11 -lGL
+#    clang++ $flags $exceptions "$codeDir/particles.cpp" -o particles -lX11 -lGL
+    clang++ $flags $exceptions "$codeDir/simple_vehicle.cpp" -o simple_vehicle -lX11 -lGL
 popd > /dev/null
 

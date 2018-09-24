@@ -56,7 +56,7 @@ struct Image
     u32 *pixels;
 };
 
-#define DRAW_IMAGE(name) void name(State *state, Image *image, v2u mouse)
+#define DRAW_IMAGE(name) void name(State *state, Image *image, v2u mouse, f32 dt)
 typedef DRAW_IMAGE(DrawImage);
 
 internal v2
