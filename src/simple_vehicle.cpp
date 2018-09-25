@@ -5,50 +5,17 @@ DRAW_IMAGE(draw_image);
 
 #include "random.h"
 #include "forces.h"
+#include "vehicle.h"
 #include "drawing.cpp"
-
-struct Vehicle
-{
-    Mover mover;
-    
-    f32 maxForce;
-    f32 maxSpeed;
-    u32 radius;
-};
 
 struct VehicleState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
     
-    Vehicle vehicle;
+    u32 vehicleCount;
+    Vehicle *vehicles;
 };
-
-internal void
-init_vehicle(Vehicle *vehicle, v2 pos)
-{
-    vehicle->mover = create_mover(pos);
-    vehicle->mover.velocity = V2(0, -2);
-    
-    vehicle->maxForce = 0.1f;
-    vehicle->maxSpeed = 4.0f;
-    vehicle->radius = 6;
-}
-
-internal void
-seek(Vehicle *vehicle, v2 target)
-{
-    v2 desired = target - vehicle->mover.position;
-    desired = set_length(desired, vehicle->maxSpeed);
-    
-    v2 steer = desired - vehicle->mover.velocity;
-    if (length_squared(steer) > (vehicle->maxForce * vehicle->maxForce))
-    {
-        steer = set_length(steer, vehicle->maxForce);
-    }
-    
-    apply_force(&vehicle->mover, steer);
-}
 
 DRAW_IMAGE(draw_image)
 {
@@ -58,20 +25,35 @@ DRAW_IMAGE(draw_image)
     {
         vehicleState->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         
-        init_vehicle(&vehicleState->vehicle, V2(100, 50));
+        vehicleState->vehicleCount = 64;
+        vehicleState->vehicles = allocate_array(Vehicle, vehicleState->vehicleCount);
+        
+        for (u32 vehicleIndex = 0; vehicleIndex < vehicleState->vehicleCount; ++vehicleIndex)
+        {
+            Vehicle *vehicle = vehicleState->vehicles + vehicleIndex;
+            init_vehicle(vehicle, V2(random_choice(&vehicleState->randomizer, image->width), 
+                                     random_choice(&vehicleState->randomizer, image->height)));
+        }
         
         state->initialized = true;
     }
     
     //v2 center = V2((f32)image->width * 0.5f, (f32)image->height * 0.5f);
     
-    Vehicle *vehicle = &vehicleState->vehicle;
-    
+    for (u32 vehicleIndex = 0; vehicleIndex < vehicleState->vehicleCount; ++vehicleIndex)
+    {
+        Vehicle *vehicle = vehicleState->vehicles + vehicleIndex;
     seek(vehicle, V2(mouse.x, mouse.y));
+        //arrive(vehicle, V2(mouse.x, mouse.y));
     update(&vehicle->mover);
+    }
     
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
+    for (u32 vehicleIndex = 0; vehicleIndex < vehicleState->vehicleCount; ++vehicleIndex)
+    {
+        Vehicle *vehicle = vehicleState->vehicles + vehicleIndex;
+        
     v2 dir = vehicle->mover.velocity;
     dir = normalize(dir);
     
@@ -79,13 +61,17 @@ DRAW_IMAGE(draw_image)
     v2 backUp = V2(-8, 5);
     v2 backDo = V2(-8, -5);
     
+    if (length_squared(dir))
+    {
     front = rotate(front, dir);
      backUp = rotate(backUp, dir);
      backDo = rotate(backDo, dir);
+    }
     
     fill_triangle(image, front + vehicle->mover.position, backUp + vehicle->mover.position,
                   backDo + vehicle->mover.position, V4(1, 1, 0, 1));
-    fill_circle(image, mouse.x, mouse.y, 20, V4(1, 1, 1, 1));
+    }
+    fill_circle(image, mouse.x, mouse.y, 20, V4(1, 1, 1, 0.7f));
     
     ++vehicleState->ticks;
 }

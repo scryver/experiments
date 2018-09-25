@@ -29,13 +29,16 @@ struct Rectangle2u
     v2u max;
 };
 
-#define sin sinf
-#define cos cosf
+#define sin  sinf
+#define cos  cosf
+#define sqrt sqrtf
 
 #define minimum(a, b)  ((a) < (b) ? (a) : (b))
 #define maximum(a, b)  ((a) > (b) ? (a) : (b))
 #define absolute(a)    (((a) < 0) ? -(a) : (a))
-#define round(f)       ((s32)(f + 0.5f))
+#define round(f)       ((s32)((f) + 0.5f))
+#define trunc(f)       ((s32)(f))
+#define lerp(t, a, b)  ((a) + (t) * ((b) - (a)))
 
 #define array_count(a) (sizeof(a) / sizeof(a[0]))
 

@@ -32,8 +32,7 @@ init_particle(Particle *particle, v2 position, RandomSeriesPCG *random = 0)
     particle->pos = position;
     if (random)
     {
-    particle->vel = V2(random01(random) * 2.0f - 1.0f,
-                       random01(random) * 2.0f - 1.0f);
+    particle->vel = V2(random_bilateral(random), random_bilateral(random));
         particle->vel *= 5.0f;
     }
     else

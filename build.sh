@@ -6,9 +6,9 @@ curDir="$(pwd)"
 codeDir="$curDir/src"
 buildDir="$curDir/gebouw"
 
-flags="-O0 -g -ggdb -Wall -Werror -pedantic -std=c++11"
+flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11"
 
-exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct"
+exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types"
 
 mkdir -p "$buildDir"
 
@@ -24,6 +24,8 @@ pushd "$buildDir" > /dev/null
 #    clang++ $flags $exceptions "$codeDir/pendulum.cpp" -o pendulum -lX11 -lGL
 #    clang++ $flags $exceptions "$codeDir/springs.cpp" -o springs -lX11 -lGL
 #    clang++ $flags $exceptions "$codeDir/particles.cpp" -o particles -lX11 -lGL
-    clang++ $flags $exceptions "$codeDir/simple_vehicle.cpp" -o simple_vehicle -lX11 -lGL
+#    clang++ $flags $exceptions "$codeDir/simple_vehicle.cpp" -o simple_vehicle -lX11 -lGL
+    clang++ $flags $exceptions "$codeDir/flowfield.cpp" -o flowfield -lX11 -lGL
+    clang++ $flags $exceptions "$codeDir/perlin.cpp" -o perlin -lX11 -lGL
 popd > /dev/null
 

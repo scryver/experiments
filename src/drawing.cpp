@@ -5,7 +5,7 @@
 internal inline f32 
 clamp01(f32 value)
 {
-    if (value < 0.0f)
+    if (value < 0.0f) 
     {
         value = 0.0f;
     }
@@ -308,14 +308,14 @@ fill_rectangle(Image *image, u32 xStart, u32 yStart, u32 width, u32 height, u32 
 }
 
 internal inline s32
-orient2d(v2u a, v2u b, v2u c)
+orient2d(v2s a, v2s b, v2s c)
 {
      s32 result = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
     return result;
 }
 
 internal void
-fill_triangle(Image *image, v2u a, v2u b, v2u c, v4 colour)
+fill_triangle(Image *image, v2s a, v2s b, v2s c, v4 colour)
 {
     s32 minX = minimum(a.x, minimum(b.x, c.x));
     s32 minY = minimum(a.y, minimum(b.y, c.y));
@@ -325,36 +325,65 @@ fill_triangle(Image *image, v2u a, v2u b, v2u c, v4 colour)
     minX = maximum(minX, 0);
     minY = maximum(minY, 0);
     maxX = minimum(maxX, image->width - 1);
-    maxY = maximum(maxY, image->height - 1);
+    maxY = minimum(maxY, image->height - 1);
     
-    v2u p;
+    s32 A01 = a.y - b.y;
+    s32 A12 = b.y - c.y;
+    s32 A20 = c.y - a.y;
+    
+    s32 B01 = b.x - a.x;
+    s32 B12 = c.x - b.x;
+    s32 B20 = a.x - c.x;
+    
+    v2s p = V2S(minX, minY);
+    
+    s32 w0_row = orient2d(b, c, p);
+    s32 w1_row = orient2d(c, a, p);
+    s32 w2_row = orient2d(a, b, p);
+    
     for (p.y = minY; p.y <= maxY; ++p.y)
     {
+        s32 w0 = w0_row;
+        s32 w1 = w1_row;
+        s32 w2 = w2_row;
+        
         for (p.x = minX; p.x <= maxX; ++p.x)
         {
-            s32 w0 = orient2d(b, c, p);
-            s32 w1 = orient2d(c, a, p);
-            s32 w2 = orient2d(a, b, p);
-            
             if ((w0 | w1 | w2) >= 0)
             {
                 draw_pixel(image, p.x, p.y, colour);
             }
+            
+            w0 += A12;
+            w1 += A20;
+            w2 += A01;
         }
+        
+        w0_row += B12;
+        w1_row += B20;
+        w2_row += B01;
     }
 }
+
+#if 0
+internal inline void
+fill_triangle(Image *image, v2u a, v2u b, v2u c, v4 colour)
+{
+    fill_triangle(image, V2S(a), V2S(b), V2S(c), colour);
+}
+#endif
 
 internal inline void
 fill_triangle(Image *image, v2 a, v2 b, v2 c, v4 colour)
 {
-    v2u au = V2U(round(a.x), round(a.y));
-    v2u bu = V2U(round(b.x), round(b.y));
-    v2u cu = V2U(round(c.x), round(c.y));
+    v2s au = V2S(round(a.x), round(a.y));
+    v2s bu = V2S(round(b.x), round(b.y));
+    v2s cu = V2S(round(c.x), round(c.y));
     fill_triangle(image, au, bu, cu, colour);
 }
 
 internal inline void
-fill_triangle(Image *image, v2u a, v2u b, v2u c, u32 colour)
+fill_triangle(Image *image, v2s a, v2s b, v2s c, u32 colour)
 {
     fill_triangle(image, a, b, c, unpack_colour(colour));
 }

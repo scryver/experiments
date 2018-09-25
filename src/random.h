@@ -44,9 +44,16 @@ random_choice(RandomSeriesPCG *series, u32 choiceCount)
 }
 
 inline f32
-random01(RandomSeriesPCG *series)
+random_unilateral(RandomSeriesPCG *series)
 {
     f32 result = (f32)random_next_u32(series) / (f32)U32_MAX;
+    return result;
+}
+
+inline f32
+random_bilateral(RandomSeriesPCG *series)
+{
+    f32 result = random_unilateral(series) * 2.0f - 1.0f;
     return result;
 }
 
