@@ -88,7 +88,7 @@ DRAW_IMAGE(draw_image)
         state->initialized = true;
     }
     
-    v2 mouseP = V2(mouse.x, mouse.y);
+    v2 mouseP = mouse.pixelPosition;
     
     update_flow_field(&flow->field, &flow->perlin, flow->zMod);
         

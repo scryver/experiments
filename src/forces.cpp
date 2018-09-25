@@ -54,12 +54,12 @@ DRAW_IMAGE(draw_image)
         for (u32 moverIndex = 0; moverIndex < physics->moverCount; ++moverIndex)
         {
             Mover *mover = physics->movers + moverIndex;
-            mover->position.x = random01(&physics->randomizer) * (f32)image->width;
-            mover->position.y = random01(&physics->randomizer) * (f32)image->height;
-            mover->velocity.x = 1.0f - 2.0f * random01(&physics->randomizer);
-            mover->velocity.y = 1.0f - 2.0f * random01(&physics->randomizer);
+            mover->position.x = random_unilateral(&physics->randomizer) * (f32)image->width;
+            mover->position.y = random_unilateral(&physics->randomizer) * (f32)image->height;
+            mover->velocity.x = random_bilateral(&physics->randomizer);
+            mover->velocity.y = random_bilateral(&physics->randomizer);
             //mover->position.y = (f32)image->height / 2.0f;
-            mover->mass = random01(&physics->randomizer) + 1.0f;
+            mover->mass = random_unilateral(&physics->randomizer) + 1.0f;
             mover->oneOverMass = 1.0f / mover->mass;
         }
         

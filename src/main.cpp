@@ -306,7 +306,7 @@ int main(int argc, char **argv)
     state->memory = (u8 *)mmap(0, state->memorySize, PROT_READ|PROT_WRITE,
                                MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
     
-    v2u mouse = {};
+    Mouse mouse = {};
     {
     Window retRoot;
     Window retChild;
@@ -317,8 +317,8 @@ int main(int argc, char **argv)
     {
         winX = maximum(0, winX);
         winY = maximum(0, winY);
-        mouse.x = winX;
-        mouse.y = winY;
+            mouse.pixelPosition.x = (f32)winX;
+            mouse.pixelPosition.y = (f32)winY;
     }
     }
     
@@ -458,13 +458,59 @@ int main(int argc, char **argv)
                 case MotionNotify:
                 {
                     // NOTE(michiel): Mouse update event.xmotion.x/y
-                    mouse.x = event.xmotion.x;
-                    mouse.y = event.xmotion.y;
+                    mouse.pixelPosition.x = (f32)event.xmotion.x;
+                    mouse.pixelPosition.y = (f32)event.xmotion.y;
                 } break;
                 
                 case ButtonPress:
                 case ButtonRelease:
                 {
+                    if (event.type == ButtonPress)
+                    {
+                        if (event.xbutton.button == 1)
+                        {
+                            mouse.mouseDowns |= Mouse_Left;
+                        }
+                        else if (event.xbutton.button == 2) // TODO(michiel): Fix mouse: 2)
+                        {
+                            mouse.mouseDowns |= Mouse_Middle;
+                        }
+                        else if (event.xbutton.button == 3)
+                        {
+                            mouse.mouseDowns |= Mouse_Right;
+                        }
+                        else if (event.xbutton.button == 8)
+                        {
+                            mouse.mouseDowns |= Mouse_Extended1;
+                        }
+                        else if (event.xbutton.button == 9)
+                        {
+                            mouse.mouseDowns |= Mouse_Extended2;
+                        }
+                    }
+                    else
+                    {
+                        if (event.xbutton.button == 1)
+                        {
+                            mouse.mouseDowns &= ~Mouse_Left;
+                        }
+                        else if (event.xbutton.button == 2)
+                        {
+                            mouse.mouseDowns &= ~Mouse_Middle;
+                        }
+                        else if (event.xbutton.button == 3)
+                        {
+                            mouse.mouseDowns &= ~Mouse_Right;
+                        }
+                        else if (event.xbutton.button == 8)
+                        {
+                            mouse.mouseDowns &= ~Mouse_Extended1;
+                        }
+                        else if (event.xbutton.button == 9)
+                        {
+                            mouse.mouseDowns &= ~Mouse_Extended2;
+                        }
+                    }
                     // NOTE(michiel): Mouse press/release event.xbutton.button
                 } break;
                 

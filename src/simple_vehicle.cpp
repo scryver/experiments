@@ -43,8 +43,8 @@ DRAW_IMAGE(draw_image)
     for (u32 vehicleIndex = 0; vehicleIndex < vehicleState->vehicleCount; ++vehicleIndex)
     {
         Vehicle *vehicle = vehicleState->vehicles + vehicleIndex;
-    seek(vehicle, V2(mouse.x, mouse.y));
-        //arrive(vehicle, V2(mouse.x, mouse.y));
+    seek(vehicle, mouse.pixelPosition);
+        //arrive(vehicle, mouse.pixelPosition);
     update(&vehicle->mover);
     }
     
@@ -71,7 +71,7 @@ DRAW_IMAGE(draw_image)
     fill_triangle(image, front + vehicle->mover.position, backUp + vehicle->mover.position,
                   backDo + vehicle->mover.position, V4(1, 1, 0, 1));
     }
-    fill_circle(image, mouse.x, mouse.y, 20, V4(1, 1, 1, 0.7f));
+    fill_circle(image, mouse.pixelPosition.x, mouse.pixelPosition.y, 20, V4(1, 1, 1, 0.7f));
     
     ++vehicleState->ticks;
 }

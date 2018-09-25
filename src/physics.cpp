@@ -92,8 +92,7 @@ DRAW_IMAGE(draw_image)
     }
     Mover *mover = physics->movers + physics->currentMover;
     
-    v2 diff = V2((f32)mouse.x, (f32)mouse.y);
-    diff -= mover->position;
+    v2 diff = mouse.pixelPosition - mover->position;
     f32 lengthDiff = 1.0f / length(diff);
     diff *= 0.1f * lengthDiff;
     

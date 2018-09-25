@@ -59,7 +59,21 @@ struct Image
     u32 *pixels;
 };
 
-#define DRAW_IMAGE(name) void name(State *state, Image *image, v2u mouse, f32 dt)
+enum MouseButtons
+{
+    Mouse_Left      = 0x01,
+    Mouse_Middle    = 0x02,
+    Mouse_Right     = 0x04,
+    Mouse_Extended1 = 0x08,
+    Mouse_Extended2 = 0x10,
+};
+struct Mouse
+{
+    v2 pixelPosition;
+    u32 mouseDowns;
+};
+
+#define DRAW_IMAGE(name) void name(State *state, Image *image, Mouse mouse, f32 dt)
 typedef DRAW_IMAGE(DrawImage);
 
 internal v2
