@@ -2,6 +2,15 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#ifndef __has_builtin                   // Optional of course.
+#define __has_builtin(x)                0  // Compatibility with non-clang compilers.
+#endif
+
+#if (!__has_builtin(__builtin_sinf) || !__has_builtin(__builtin_cosf) || !__has_builtin(__builtin_sqrtf))
+#error No maths!
+#include <math.h>
+#endif
+
 #define global   static
 #define internal static
 
@@ -14,28 +23,22 @@ typedef int32_t  s32;
 typedef s32      b32;
 
 typedef float    f32;
+typedef double   f64;
 
 typedef size_t   umm;
 
 #define U32_MAX 0xFFFFFFFF
 
 #define TAU32   6.28318530717958647692528676655900576838f
-#include <math.h>
-#include "vectors.h"
 
-struct Rectangle2u
-{
-    v2u min;
-    v2u max;
-};
-
-#define sin  sinf
-#define cos  cosf
-#define sqrt sqrtf
+#define sin  __builtin_sinf
+#define cos  __builtin_cosf
+#define sqrt __builtin_sqrtf
 
 #define minimum(a, b)  ((a) < (b) ? (a) : (b))
 #define maximum(a, b)  ((a) > (b) ? (a) : (b))
 #define absolute(a)    (((a) < 0) ? -(a) : (a))
+#define square(a)      ((a) * (a))
 #define round(f)       ((s32)((f) + 0.5f))
 #define trunc(f)       ((s32)(f))
 #define lerp(t, a, b)  ((a) + (t) * ((b) - (a)))
@@ -45,11 +48,23 @@ struct Rectangle2u
 #define i_expect(a)    do { \
     if (!(a)) { fprintf(stderr, "Expectance not met: " #a "\n"); __builtin_trap(); } } while (0)
 
+#include "vectors.h"
+#include "complex.h"
+#include "multithread.h"
+
+struct Rectangle2u
+{
+    v2u min;
+    v2u max;
+};
+
 struct State
 {
     b32 initialized;
     u32 memorySize;
     u8 *memory;
+    
+    PlatformWorkQueue *workQueue;
 };
 
 struct Image
@@ -76,20 +91,38 @@ struct Mouse
 #define DRAW_IMAGE(name) void name(State *state, Image *image, Mouse mouse, f32 dt)
 typedef DRAW_IMAGE(DrawImage);
 
-internal v2
+internal inline f32
+map(f32 value, f32 fromMin, f32 fromMax, f32 toMin, f32 toMax)
+{
+    f32 result;
+    result = (value - fromMin) / (fromMax - fromMin);
+    result = result * (toMax - toMin) + toMin;
+    return result;
+}
+
+internal inline f64
+map(f64 value, f64 fromMin, f64 fromMax, f64 toMin, f64 toMax)
+{
+    f64 result;
+    result = (value - fromMin) / (fromMax - fromMin);
+    result = result * (toMax - toMin) + toMin;
+    return result;
+}
+
+internal inline v2
+map(v2 value, v2 fromMin, v2 fromMax, v2 toMin, v2 toMax)
+{
+    v2 result;
+    result.x = map(value.x, fromMin.x, fromMax.x, toMin.x, toMax.x);
+    result.y = map(value.y, fromMin.y, fromMax.y, toMin.y, toMax.y);
+    return result;
+}
+
+internal inline v2
 polar_to_cartesian(f32 r, f32 theta)
 {
     v2 result;
     result.x = r * cos(theta);
     result.y = r * sin(theta);
-    return result;
-}
-
-internal v2
-cartesian_to_polar(f32 x, f32 y)
-{
-    v2 result;
-    result.x = length(V2(x, y)); // r
-    result.y = 0; // theta
     return result;
 }

@@ -3,6 +3,8 @@
 #include <dlfcn.h>        // dlopen, dlsym, dlclose
 #include <unistd.h>       // usleep
 #include <time.h>
+#include <semaphore.h>
+#include <pthread.h>
 
 #include <stdio.h>        // fprintf
 #include <stdlib.h>
@@ -23,6 +25,15 @@ internal u8 *
 allocate_size(umm size)
 {
     return (u8 *)calloc(size, 1);
+}
+
+internal void
+deallocate(void *data)
+{
+    if (data)
+    {
+        free(data);
+    }
 }
 
 internal void
@@ -157,6 +168,117 @@ get_seconds_elapsed(struct timespec start, struct timespec end)
 {
     return ((f32)(end.tv_sec - start.tv_sec)
             + ((f32)(end.tv_nsec - start.tv_nsec) * 1e-9f));
+}
+
+//
+// NOTE(michiel): Multi threading
+//
+
+struct PlatformWorkQueue
+{
+    u32 volatile        completionGoal;
+    u32 volatile        completionCount;
+    
+    u32 volatile        nextEntryToWrite;
+    u32 volatile        nextEntryToRead;
+    sem_t               semaphoreHandle;
+    
+    PlatformWorkQueueEntry entries[MAX_WORK_QUEUE_ENTRIES];
+};
+
+internal void
+platform_add_entry(PlatformWorkQueue *queue, PlatformWorkQueueCallback *callback,
+                   void *data)
+{
+    u32 newNextEntryToWrite = (queue->nextEntryToWrite + 1) % MAX_WORK_QUEUE_ENTRIES;
+    i_expect(newNextEntryToWrite != queue->nextEntryToRead);
+    PlatformWorkQueueEntry *entry = queue->entries + queue->nextEntryToWrite;
+    entry->callback = callback;
+    entry->data = data;
+    ++queue->completionGoal;
+    
+    asm volatile("" ::: "memory");
+    
+    queue->nextEntryToWrite = newNextEntryToWrite;
+    sem_post(&queue->semaphoreHandle);
+}
+
+internal b32
+do_next_work_queue_entry(PlatformWorkQueue *queue)
+{
+    b32 weShouldSleep = false;
+    
+    u32 origNextEntryToRead = queue->nextEntryToRead;
+    u32 newNextEntryToRead = (queue->nextEntryToRead + 1) % MAX_WORK_QUEUE_ENTRIES;
+    if (origNextEntryToRead != queue->nextEntryToWrite)
+    {
+        u32 index = __sync_val_compare_and_swap(&queue->nextEntryToRead,
+                                                origNextEntryToRead,
+                                                newNextEntryToRead);
+        if (index == origNextEntryToRead)
+        {
+            PlatformWorkQueueEntry entry = queue->entries[index];
+            entry.callback(queue, entry.data);
+            __sync_fetch_and_add(&queue->completionCount, 1);
+        }
+    }
+    else
+    {
+        weShouldSleep = true;
+    }
+    
+    return weShouldSleep;
+}
+
+internal void
+platform_complete_all_work(PlatformWorkQueue *queue)
+{
+    while (queue->completionGoal != queue->completionCount)
+    {
+        do_next_work_queue_entry(queue);
+    }
+    
+    queue->completionGoal = 0;
+    queue->completionCount = 0;
+}
+
+void *
+thread_process(void *parameter)
+{
+    PlatformWorkQueue *queue = (PlatformWorkQueue *)parameter;
+    
+    for (;;)
+    {
+        if (do_next_work_queue_entry(queue))
+        {
+            sem_wait(&queue->semaphoreHandle);
+        }
+    }
+}
+
+internal void
+init_work_queue(PlatformWorkQueue *queue, u32 threadCount)
+{
+    queue->completionGoal = 0;
+    queue->completionCount = 0;
+    
+    queue->nextEntryToWrite = 0;
+    queue->nextEntryToRead = 0;
+    
+    u32 initialCount = 0;
+    sem_init(&queue->semaphoreHandle, 0, initialCount);
+    
+    for (u32 threadIndex = 0; threadIndex < threadCount; ++threadIndex)
+    {
+        pthread_attr_t attr;
+        pthread_t tid;
+        
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        
+        /* int result =*/ pthread_create(&tid, &attr, thread_process, queue);
+        pthread_attr_destroy(&attr);
+    }
 }
 
 int main(int argc, char **argv)
@@ -305,6 +427,9 @@ int main(int argc, char **argv)
     state->memorySize = 64 * 1024 * 1024;
     state->memory = (u8 *)mmap(0, state->memorySize, PROT_READ|PROT_WRITE,
                                MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+    
+    state->workQueue = allocate_struct(PlatformWorkQueue);
+    init_work_queue(state->workQueue, 8);
     
     Mouse mouse = {};
     {
