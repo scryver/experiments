@@ -179,7 +179,6 @@ DRAW_IMAGE(draw_image)
     
     gameState->prevMouseDown = mouse.mouseDowns;
     
-    
     if (gameState->running) //  && ((gameState->ticks % 30) == 0))
     {
         u32 nextActive = (grid->currentActive + 1) & 1;

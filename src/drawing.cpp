@@ -241,6 +241,45 @@ outline_triangle(Image *image, v2u a, v2u b, v2u c, u32 colour)
     outline_triangle(image, a, b, c, unpack_colour(colour));
 }
 
+internal void
+outline_circle(Image *image, s32 xStart, s32 yStart, u32 radius, f32 thickness = 1.0f,
+               v4 colour = V4(1, 1, 1, 1))
+{
+    s32 size = 2 * radius;
+    
+    f32 r = (s32)radius;
+    f32 maxDistSqr = r * r;
+    f32 minDistSqr = (r - thickness) * (r - thickness);
+    
+    xStart = xStart - (s32)radius + 1;
+    yStart = yStart - (s32)radius + 1;
+    
+    for (s32 y = yStart; y < yStart + size; ++y)
+    {
+        f32 fY = (f32)(y - yStart) - r + 0.5f;
+        f32 fYSqr = fY * fY;
+        for (s32 x = xStart; x < xStart + size; ++x)
+        {
+            f32 fX = (f32)(x - xStart) - r + 0.5f;
+            f32 distSqr = fX * fX + fYSqr;
+            if ((distSqr < maxDistSqr) &&
+                (distSqr > minDistSqr) &&
+                (0 <= x) && (x < image->width) &&
+                (0 <= y) && (y < image->height))
+            {
+                draw_pixel(image, x, y, colour);
+            }
+        }
+    }
+}
+
+internal void
+outline_circle(Image *image, s32 xStart, s32 yStart, u32 radius, f32 thickness = 1.0f,
+               u32 colour = 0xFFFFFFFF)
+{
+    outline_circle(image, xStart, yStart, radius, thickness, unpack_colour(colour));
+}
+
 //
 // NOTE(michiel): Filled shapes, (rect, circle)
 //
@@ -417,7 +456,6 @@ fill_circle(Image *image, s32 xStart, s32 yStart, u32 radius, v4 colour)
             }
         }
     
-
 internal void
 fill_circle(Image *image, s32 xStart, s32 yStart, u32 radius, u32 colour)
 {

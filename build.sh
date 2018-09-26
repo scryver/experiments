@@ -27,6 +27,8 @@ pushd "$buildDir" > /dev/null
 #    clang++ $flags $exceptions "$codeDir/simple_vehicle.cpp" -o simple_vehicle -lX11 -lGL
 #    clang++ $flags $exceptions "$codeDir/flowfield.cpp" -o flowfield -lX11 -lGL
 #    clang++ $flags $exceptions "$codeDir/perlin.cpp" -o perlin -lX11 -lGL
-    clang++ $flags $exceptions "$codeDir/gameoflife.cpp" -o game-of-life -lX11 -lGL
+#    clang++ $flags $exceptions "$codeDir/gameoflife.cpp" -o game-of-life -lX11 -lGL
+#    clang++ $flags $exceptions "$codeDir/fractal01.cpp" -o fractal01 -lX11 -lGL
+    clang++ $flags $exceptions "$codeDir/lsystem.cpp" -o lsystem -lX11 -lGL
 popd > /dev/null
 
