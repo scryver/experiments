@@ -268,6 +268,7 @@ init_work_queue(PlatformWorkQueue *queue, u32 threadCount)
     u32 initialCount = 0;
     sem_init(&queue->semaphoreHandle, 0, initialCount);
     
+    char name[16] = "Thread nr ";
     for (u32 threadIndex = 0; threadIndex < threadCount; ++threadIndex)
     {
         pthread_attr_t attr;
@@ -277,6 +278,10 @@ init_work_queue(PlatformWorkQueue *queue, u32 threadCount)
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
         
         /* int result =*/ pthread_create(&tid, &attr, thread_process, queue);
+        name[10] = '0' + threadIndex;
+        name[11] = '\0';
+        pthread_setname_np(tid, name);
+        
         pthread_attr_destroy(&attr);
     }
 }

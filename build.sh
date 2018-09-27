@@ -30,6 +30,7 @@ pushd "$buildDir" > /dev/null
 #    clang++ $flags $exceptions "$codeDir/gameoflife.cpp" -o game-of-life -lX11 -lGL
 #    clang++ $flags $exceptions "$codeDir/fractal01.cpp" -o fractal01 -lX11 -lGL
 #    clang++ $flags $exceptions "$codeDir/lsystem.cpp" -o lsystem -lX11 -lGL
-    clang++ $flags $exceptions "$codeDir/mandelbrot.cpp" -o mandelbrot -lX11 -lGL
+#    clang++ $flags $exceptions "$codeDir/mandelbrot.cpp" -o mandelbrot -lX11 -lGL
+    clang++ $flags $exceptions "$codeDir/mousemove.cpp" -o mousemove -lX11 -lGL
 popd > /dev/null
 
