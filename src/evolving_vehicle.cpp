@@ -29,6 +29,7 @@ struct EvolveState
     Vehicle *vehicles;
     
     WorldFood noms;
+    WorldFood poison;
 };
 
 internal inline void
@@ -96,6 +97,16 @@ DRAW_IMAGE(draw_image)
                                      random_choice(&evolveState->randomizer, image->height)));
         }
         
+        evolveState->poison.maxFoodCount = evolveState->poison.foodCount = 10;
+        evolveState->poison.foodies = allocate_array(Food, evolveState->poison.maxFoodCount);
+        
+        for (u32 foodIndex = 0; foodIndex < evolveState->poison.foodCount; ++foodIndex)
+        {
+            Food *food = evolveState->poison.foodies + foodIndex;
+            init_food(food, V2(random_choice(&evolveState->randomizer, image->width), 
+                               random_choice(&evolveState->randomizer, image->height)));
+        }
+        
         state->initialized = true;
     }
     
@@ -105,6 +116,7 @@ DRAW_IMAGE(draw_image)
     {
         Vehicle *vehicle = evolveState->vehicles + vehicleIndex;
         eat(vehicle, &evolveState->noms);
+        eat(vehicle, &evolveState->poison);
         update(&vehicle->mover, dt * 100.0f);
     }
     
@@ -135,6 +147,13 @@ DRAW_IMAGE(draw_image)
     for (u32 foodIndex = 0; foodIndex < evolveState->noms.foodCount; ++foodIndex)
     {
         Food *food = evolveState->noms.foodies + foodIndex;
+        fill_rectangle(image, food->position.x - 5, food->position.y - 5, 10, 10,
+                       V4(0, 1, 0, 1));
+    }
+    
+    for (u32 foodIndex = 0; foodIndex < evolveState->poison.foodCount; ++foodIndex)
+    {
+        Food *food = evolveState->poison.foodies + foodIndex;
         fill_rectangle(image, food->position.x - 5, food->position.y - 5, 10, 10,
                        V4(0, 1, 0, 1));
     }
