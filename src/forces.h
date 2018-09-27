@@ -66,7 +66,7 @@ apply_spring(Mover *mover, v2 anchor, f32 restLength, f32 k = 0.01f)
 }
 
 internal inline v2
-attraction(Mover *mover, Mover *attractor, f32 G = 1.0f)
+attraction_force(Mover *mover, Mover *attractor, f32 G = 1.0f)
 {
     v2 result = direction(mover->position, attractor->position);
     f32 d2 = length_squared(result);
@@ -76,11 +76,50 @@ attraction(Mover *mover, Mover *attractor, f32 G = 1.0f)
     return result;
 }
 
-internal inline void
-update(Mover *mover, f32 maxVelocity = 0.0f)
+internal inline v2
+steering_force(Mover *mover, v2 targetVelocity, f32 maxForce = 0.1f)
 {
-    mover->velocity += mover->acceleration;
-    mover->position += mover->velocity;
+    v2 result = targetVelocity - mover->velocity;
+    if (length_squared(result) > (maxForce * maxForce))
+    {
+        result = set_length(result, maxForce);
+    }
+    return result;
+}
+
+internal inline v2
+seeking_force(Mover *mover, v2 targetPosition, f32 maxSpeed = 4.0f, f32 maxForce = 0.1f)
+{
+    v2 desired = targetPosition - mover->position;
+    desired = set_length(desired, maxSpeed);
+    return steering_force(mover, desired, maxForce);
+}
+
+internal inline v2
+arriving_force(Mover *mover, v2 targetPosition, f32 catchDistance = 100.0f, 
+               f32 maxSpeed = 4.0f, f32 maxForce = 0.1f)
+{
+    v2 desired = targetPosition - mover->position;
+    f32 d2 = length_squared(desired);
+    
+    if (d2 < (catchDistance * catchDistance))
+    {
+        float t = sqrt(d2) / catchDistance; // TODO(michiel): Optimize
+        desired = set_length(desired, maxSpeed * t);
+    }
+    else
+    {
+        desired = set_length(desired, maxSpeed);
+    }
+    
+    return steering_force(mover, desired, maxForce);
+}
+
+internal inline void
+update(Mover *mover, f32 dt = 1.0f, f32 maxVelocity = 0.0f)
+{
+    mover->velocity += mover->acceleration * dt;
+    mover->position += mover->velocity * dt;
     if (maxVelocity != 0.0f)
     { 
         f32 maxVelSqr = maxVelocity * maxVelocity;

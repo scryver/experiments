@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <float.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -28,6 +29,15 @@ typedef double   f64;
 typedef size_t   umm;
 
 #define U32_MAX 0xFFFFFFFF
+
+#define F32_SIGN_MASK                   0x80000000
+#define F32_EXP_MASK                    0x7F800000
+#define F32_FRAC_MASK                   0x007FFFFF
+
+#define F32_MAX   FLT_MAX  // NOTE(michiel): Sign bit 0, Exponent (8bit) 254,     Mantissa all 1's
+#define F32_MIN  -FLT_MAX  // NOTE(michiel): Sign bit 0, Exponent (8bit) 254,     Mantissa all 1's
+#define F32_INF   3.403e38 // NOTE(michiel): Sign bit 0, Exponent (8bit) all 1's, Mantissa all 0's
+#define F32_MINF -3.403e38 // NOTE(michiel): Sign bit 0, Exponent (8bit) all 1's, Mantissa all 0's
 
 #define TAU32   6.28318530717958647692528676655900576838f
 

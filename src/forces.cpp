@@ -81,7 +81,7 @@ DRAW_IMAGE(draw_image)
         //apply_friction(mover);
         //apply_drag(mover);
         //apply_gravity(mover, &ground);
-        v2 attract = attraction(mover, &ground);
+        v2 attract = attraction_force(mover, &ground);
         apply_force(mover, attract);
         
         for (u32 nextMover = moverIndex + 1; nextMover < physics->moverCount; ++nextMover)

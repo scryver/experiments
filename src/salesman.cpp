@@ -1,9 +1,6 @@
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
-#include <time.h>
-#include <math.h>
-
 #include "main.cpp"
 #include "drawing.cpp"
 
@@ -195,7 +192,7 @@ DRAW_IMAGE(draw_image)
             salesmanState->bestEver[cityIndex] = salesmanState->currentPath[cityIndex];
         }
         
-        fprintf(stdout, "Best: %f\n", sqrtf((f32)salesmanState->bestDistanceSqr));
+        fprintf(stdout, "Best: %f\n", sqrt((f32)salesmanState->bestDistanceSqr));
     }
     }
     
