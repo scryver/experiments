@@ -189,7 +189,7 @@ draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
     
     platform_complete_all_work(queue);
     
-    deallocate(workers);
+    deallocate_array(workerEntries, workers);
     #endif
 }
 

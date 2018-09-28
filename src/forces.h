@@ -119,7 +119,7 @@ internal inline void
 update(Mover *mover, f32 dt = 1.0f, f32 maxVelocity = 0.0f)
 {
     mover->velocity += mover->acceleration * dt;
-    mover->position += mover->velocity * dt;
+    mover->position += mover->velocity;
     if (maxVelocity != 0.0f)
     { 
         f32 maxVelSqr = maxVelocity * maxVelocity;

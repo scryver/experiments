@@ -1,10 +1,13 @@
+#include <errno.h>
 #include <sys/stat.h>     // stat
 #include <sys/mman.h>     // PROT_*, MAP_*, munmap
 #include <dlfcn.h>        // dlopen, dlsym, dlclose
 #include <unistd.h>       // usleep
 #include <time.h>
+//#include <linux/futex.h> // TODO(michiel): futex
 #include <semaphore.h>
-#include <pthread.h>
+//#include <pthread.h>
+#include <sched.h>
 
 #include <stdio.h>        // fprintf
 #include <stdlib.h>
@@ -24,15 +27,17 @@
 internal u8 *
 allocate_size(umm size)
 {
-    return (u8 *)calloc(size, 1);
+    return (u8 *)mmap(0, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
 }
 
+#define deallocate_struct(addr) deallocate(sizeof(*addr), addr)
+#define deallocate_array(count, addr) deallocate(sizeof(*addr) * count, addr)
 internal void
-deallocate(void *data)
+deallocate(umm size, void *data)
 {
     if (data)
     {
-        free(data);
+        munmap(data, size);
     }
 }
 
@@ -48,6 +53,8 @@ print_error(char *message)
 
 #define OPENGL_GLOBAL_FUNCTION(name) global type_##name *name;
 #define GET_GL_FUNCTION(name) name = (type_##name *)glXGetProcAddress((GLubyte *) #name)
+
+typedef void   type_glXSwapIntervalEXT(Display *display, GLXDrawable drawable, int interval);
 
 typedef GLXContext type_glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
                                                    GLXContext shareContext,
@@ -85,6 +92,7 @@ typedef GLint  type_glGetUniformLocation(GLuint program, const GLchar *name);
 typedef void   type_glUniform1i(GLint location, GLint v0);
 
 OPENGL_GLOBAL_FUNCTION(glXCreateContextAttribsARB);
+OPENGL_GLOBAL_FUNCTION(glXSwapIntervalEXT);
 
 OPENGL_GLOBAL_FUNCTION(glGenBuffers);
 OPENGL_GLOBAL_FUNCTION(glBindBuffer);
@@ -181,6 +189,7 @@ struct PlatformWorkQueue
     
     u32 volatile        nextEntryToWrite;
     u32 volatile        nextEntryToRead;
+    //s32 volatile        semaphore;
     sem_t               semaphoreHandle;
     
     PlatformWorkQueueEntry entries[MAX_WORK_QUEUE_ENTRIES];
@@ -201,7 +210,11 @@ platform_add_entry(PlatformWorkQueue *queue, PlatformWorkQueueCallback *callback
     
     queue->nextEntryToWrite = newNextEntryToWrite;
     sem_post(&queue->semaphoreHandle);
-}
+//__sync_fetch_and_add(&queue->semaphore, 1);
+    // TODO(michiel): Complete random max processes!
+       //futex(&queue->semaphore, FUTEX_WAKE, 8, 0, 0, 0);
+    //i_expect(result == 1);
+    }
 
 internal b32
 do_next_work_queue_entry(PlatformWorkQueue *queue)
@@ -242,7 +255,7 @@ platform_complete_all_work(PlatformWorkQueue *queue)
     queue->completionCount = 0;
 }
 
-void *
+int
 thread_process(void *parameter)
 {
     PlatformWorkQueue *queue = (PlatformWorkQueue *)parameter;
@@ -251,7 +264,15 @@ thread_process(void *parameter)
     {
         if (do_next_work_queue_entry(queue))
         {
-            sem_wait(&queue->semaphoreHandle);
+            //s32 origSamValue = queue->semaphore;
+            //while (futex(&queue->semaphore, FUTEX_WAIT, origSamValue, NULL, 0, 0))
+            //{
+                //
+            //}
+            while (sem_wait(&queue->semaphoreHandle) == EINTR)
+            {
+                
+            }
         }
     }
 }
@@ -265,24 +286,20 @@ init_work_queue(PlatformWorkQueue *queue, u32 threadCount)
     queue->nextEntryToWrite = 0;
     queue->nextEntryToRead = 0;
     
-    u32 initialCount = 0;
+    s32 initialCount = -1;
     sem_init(&queue->semaphoreHandle, 0, initialCount);
     
     char name[16] = "Thread nr ";
     for (u32 threadIndex = 0; threadIndex < threadCount; ++threadIndex)
     {
-        pthread_attr_t attr;
-        pthread_t tid;
-        
-        pthread_attr_init(&attr);
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-        
-        /* int result =*/ pthread_create(&tid, &attr, thread_process, queue);
         name[10] = '0' + threadIndex;
         name[11] = '\0';
-        pthread_setname_np(tid, name);
         
-        pthread_attr_destroy(&attr);
+         u8 *threadStack = allocate_size(THREAD_STACK_SIZE);
+        int threadId = clone(thread_process, threadStack + THREAD_STACK_SIZE,
+                             CLONE_THREAD|CLONE_SIGHAND|CLONE_FS|CLONE_VM|CLONE_FILES|CLONE_PTRACE,
+                             queue);
+        fprintf(stdout, "Thread: %d\n", threadId);
     }
 }
 
@@ -306,6 +323,7 @@ int main(int argc, char **argv)
     XSetErrorHandler(xlib_error_callback);
     
     GET_GL_FUNCTION(glXCreateContextAttribsARB);
+    GET_GL_FUNCTION(glXSwapIntervalEXT);
     
     GET_GL_FUNCTION(glGenBuffers);
     GET_GL_FUNCTION(glBindBuffer);
@@ -434,7 +452,7 @@ int main(int argc, char **argv)
                                MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
     
     state->workQueue = allocate_struct(PlatformWorkQueue);
-    init_work_queue(state->workQueue, 8);
+    init_work_queue(state->workQueue, 1);
     
     Mouse mouse = {};
     {
@@ -555,6 +573,8 @@ int main(int argc, char **argv)
     glUseProgram(programID);
     
     struct timespec lastTime = get_wall_clock();
+    
+    glXSwapIntervalEXT(display, window, 1);
     
     bool isRunning = true;
     while (isRunning)

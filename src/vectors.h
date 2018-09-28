@@ -824,3 +824,166 @@ V4(f32 x, f32 y, f32 z, f32 w)
     
     return result;
 }
+
+internal inline v4
+operator -(v4 a)
+{
+    v4 result;
+    result.x = -a.x;
+    result.y = -a.y;
+    result.z = -a.z;
+    result.w = -a.w;
+    return result;
+}
+
+internal inline v4 &
+operator +=(v4 &a, v4 b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    a.z += b.z;
+    a.w += b.w;
+    return a;
+}
+
+internal inline v4
+operator +(v4 a, v4 b)
+{
+    v4 result = a;
+    result += b;
+    return result;
+}
+
+internal inline v4 &
+operator -=(v4 &a, v4 b)
+{
+    a.x -= b.x;
+    a.y -= b.y;
+    a.z -= b.z;
+    a.w -= b.w;
+    return a;
+}
+
+internal inline v4
+operator -(v4 a, v4 b)
+{
+    v4 result = a;
+    result -= b;
+    return result;
+}
+
+internal inline v4 &
+operator +=(v4 &a, f32 b)
+{
+    a.x += b;
+    a.y += b;
+    a.z += b;
+    a.w += b;
+    return a;
+}
+
+internal inline v4
+operator +(v4 a, f32 b)
+{
+    v4 result = a;
+    result += b;
+    return result;
+}
+
+internal inline v4 &
+operator -=(v4 &a, f32 b)
+{
+    a.x -= b;
+    a.y -= b;
+    a.z -= b;
+    a.w -= b;
+    return a;
+}
+
+internal inline v4
+operator -(v4 a, f32 b)
+{
+    v4 result = a;
+    result -= b;
+    return result;
+}
+
+internal inline v4 &
+operator *=(v4 &a, f32 b)
+{
+    a.x *= b;
+    a.y *= b;
+    a.z *= b;
+    a.w *= b;
+    return a;
+}
+
+internal inline v4
+operator *(v4 a, f32 b)
+{
+    v4 result = a;
+    result *= b;
+    return result;
+}
+
+internal inline v4
+operator *(f32 a, v4 b)
+{
+    return b * a;
+}
+
+internal inline v4 &
+operator /=(v4 &a, f32 b)
+{
+    a *= 1.0f / b;
+    return a;
+}
+
+internal inline v4
+operator /(v4 a, f32 b)
+{
+    v4 result = a;
+    result /= b;
+    return result;
+}
+
+internal inline f32
+dot(v4 a, v4 b)
+{
+    f32 result;
+    result = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+    return result;
+}
+
+internal inline f32
+length_squared(v4 a)
+{
+    f32 result = dot(a, a);
+    return result;
+}
+
+internal inline f32
+length(v4 a)
+{
+    f32 result = length_squared(a);
+    result = sqrt(result);
+    return result;
+}
+
+internal inline v4
+normalize(v4 a, f32 len)
+{
+    v4 result = {};
+    if (len != 0.0f)
+    {
+        result = a / len;
+    }
+    return result;
+}
+
+internal inline v4
+normalize(v4 a)
+{
+    v4 result = normalize(a, length(a));
+    return result;
+}

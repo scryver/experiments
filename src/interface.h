@@ -45,6 +45,10 @@ typedef size_t   umm;
 #define cos  __builtin_cosf
 #define sqrt __builtin_sqrtf
 
+#define kilobytes(a)   (1024ULL * a)
+#define megabytes(a)   (1024ULL * kilobytes(a))
+#define gigabytes(a)   (1024ULL * megabytes(a))
+
 #define minimum(a, b)  ((a) < (b) ? (a) : (b))
 #define maximum(a, b)  ((a) > (b) ? (a) : (b))
 #define absolute(a)    (((a) < 0) ? -(a) : (a))
