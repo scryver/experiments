@@ -27,7 +27,8 @@
 internal u8 *
 allocate_size(umm size)
 {
-    return (u8 *)mmap(0, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+    //return (u8 *)mmap(0, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+    return (u8 *)calloc(size, 1);
 }
 
 #define deallocate_struct(addr) deallocate(sizeof(*addr), addr)
@@ -37,7 +38,8 @@ deallocate(umm size, void *data)
 {
     if (data)
     {
-        munmap(data, size);
+        //munmap(data, size);
+        free(data);
     }
 }
 

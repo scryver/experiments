@@ -115,11 +115,24 @@ arriving_force(Mover *mover, v2 targetPosition, f32 catchDistance = 100.0f,
     return steering_force(mover, desired, maxForce);
 }
 
+internal inline v2
+separation_force(Mover *mover, Mover *repeller, f32 radius = 20.0f)
+{
+    v2 desired = mover->position - repeller->position;
+    
+    v2 result = {};
+    if (length_squared(desired) < square(radius))
+    {
+        result = normalize(desired);
+    }
+    return result;
+}
+
 internal inline void
 update(Mover *mover, f32 dt = 1.0f, f32 maxVelocity = 0.0f)
 {
     mover->velocity += mover->acceleration * dt;
-    mover->position += mover->velocity;
+    mover->position += mover->velocity * dt;
     if (maxVelocity != 0.0f)
     { 
         f32 maxVelSqr = maxVelocity * maxVelocity;

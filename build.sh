@@ -6,9 +6,9 @@ curDir="$(pwd)"
 codeDir="$curDir/src"
 buildDir="$curDir/gebouw"
 
-flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
+flags="-O0 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
 
-exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types"
+exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces"
 
 mkdir -p "$buildDir"
 
@@ -24,7 +24,7 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/pendulum.cpp" -o pendulum -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/springs.cpp" -o springs -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/particles.cpp" -o particles -lX11 -lGL &
-    clang++ $flags $exceptions "$codeDir/simple_vehicle.cpp" -o simple_vehicle -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/simple_vehicle.cpp" -o simple-vehicle -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/flowfield.cpp" -o flowfield -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/perlin.cpp" -o perlin -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/gameoflife.cpp" -o game-of-life -lX11 -lGL &
@@ -32,6 +32,8 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/lsystem.cpp" -o lsystem -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/mandelbrot.cpp" -o mandelbrot -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/mousemove.cpp" -o mousemove -lX11 -lGL &
-    clang++ $flags $exceptions "$codeDir/evolving_vehicle.cpp" -o evolving_vehicle -lX11 -lGL
+    clang++ $flags $exceptions "$codeDir/evolving_vehicle.cpp" -o evolving-vehicle -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/evolving_salesman.cpp" -o evolving-salesman -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/neural_network.cpp" -o neural-network -lX11 -lGL
 popd > /dev/null
 

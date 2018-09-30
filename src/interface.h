@@ -44,6 +44,7 @@ typedef size_t   umm;
 #define sin  __builtin_sinf
 #define cos  __builtin_cosf
 #define sqrt __builtin_sqrtf
+#define exp  __builtin_expf
 
 #define kilobytes(a)   (1024ULL * a)
 #define megabytes(a)   (1024ULL * kilobytes(a))
