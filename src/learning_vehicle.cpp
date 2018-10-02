@@ -6,6 +6,7 @@ DRAW_IMAGE(draw_image);
 #include "random.h"
 #include "forces.h"
 #include "vehicle.h"
+#include "neurons.h"
 #include "drawing.cpp"
 
 struct Food
@@ -20,7 +21,7 @@ struct WorldFood
     Food *foodies;
 };
 
-struct EvolveVehicle
+struct LearningVehicle
 {
     Mover mover;
     
@@ -29,13 +30,27 @@ struct EvolveVehicle
     
     f32 health;
     
-    u32 dnaCount;
-    f32 dna[4];
+    Neural brain;
+    // NOTE(michiel): Inputs:
+    // 0  : velocity x / maxSpeed
+    // 1  : velocity y / maxSpeed
+    // 2  : closest food direction x
+    // 3  : closest food direction y
+     // 4  : closest poison direction x
+     // 5  : closest poison direction y
+    // 6  : food / poison distance ratio
+    // 
+    // NOTE(michiel): Outputs:
+    // 0  : force x
+    // 1  : force y
+    
 };
 
 struct EvolveSettings
 {
     f32 border;
+    b32 debug;
+    b32 training;
     
     f32 mutationRate;     //   0.01f  percentage
     f32 mutationFactor;   //   0.10f  +/- dna chance
@@ -46,15 +61,15 @@ struct EvolveSettings
     
     f32 poisonWeight;     //   5.00f
     f32 poisonHealth;     //  -0.50f  per eating
-f32 poisonPerception; // 100.00f  pixels
+    f32 poisonPerception; // 100.00f  pixels
     
     f32 healthDrop;       //   0.1f   per second
     f32 cloneRate;        //   0.005f percentage
     f32 foodSpawnRate;    //   0.05f  percentage
     f32 poisonSpawnRate;  //   0.01f  percentage
-    };
+};
 
-struct EvolveState
+struct LearningState
 {
     RandomSeriesPCG randomizer;
     f32 seconds;
@@ -64,13 +79,11 @@ struct EvolveState
     
     u32 maxVehicleCount;
     u32 vehicleCount;
-    EvolveVehicle *currentVehicles;
-    EvolveVehicle *nextGeneration;
+    LearningVehicle *currentVehicles;
     
     WorldFood noms;
     WorldFood poison;
     
-    b32 debug;
     u32 prevMouseDown;
 };
 
@@ -89,58 +102,49 @@ init_vehicle(RandomSeriesPCG *random, EvolveVehicle *vehicle,
     vehicle->maxForce = maxForce;
     vehicle->maxSpeed = maxSpeed;
     vehicle->mover.velocity = V2(random_bilateral(random) * maxSpeed * 0.5f,
-                                   random_bilateral(random) * maxSpeed * 0.5f);
+                                 random_bilateral(random) * maxSpeed * 0.5f);
     
     vehicle->health = 1.0f;
     
-    vehicle->dnaCount = 4;
-    vehicle->dna[0] = random_unilateral(random); // NOTE(michiel): Food weight
-    vehicle->dna[1] = random_unilateral(random); // NOTE(michiel): Poison weight
-    vehicle->dna[2] = random_unilateral(random); // NOTE(michiel): Food perception
-    vehicle->dna[3] = random_unilateral(random); // NOTE(michiel): Poison perception
+    u32 hiddenLayers[2] = {10, 10};
+    init_neural_network(&vehicle->brain, 7, 2, hiddenLayers, 2);
+    randomize_weights(random, &vehicle->brain);
 }
 
 internal inline f32
-food_weight(EvolveSettings *settings, EvolveVehicle *vehicle)
+food_weight(EvolveSettings *settings)
 {
-    return vehicle->dna[0] * 2.0f * settings->foodWeight - settings->foodWeight;
+    return settings->foodWeight;
 }
 
 internal inline f32
-poison_weight(EvolveSettings *settings, EvolveVehicle *vehicle)
+poison_weight(EvolveSettings *settings)
 {
-    return vehicle->dna[1] * 2.0f * settings->poisonWeight - settings->poisonWeight;
+    return settings->poisonWeight;
 }
 
 internal inline f32
-food_perception(EvolveSettings *settings, EvolveVehicle *vehicle)
+food_perception(EvolveSettings *settings)
 {
-    return vehicle->dna[2] * settings->foodPerception;
+    return settings->foodPerception;
 }
 
 internal inline f32
-poison_perception(EvolveSettings *settings, EvolveVehicle *vehicle)
+poison_perception(EvolveSettings *settings)
 {
-    return vehicle->dna[3] * settings->poisonPerception;
+    return settings->poisonPerception;
 }
 
 internal void 
 clone_vehicle(RandomSeriesPCG *random, EvolveSettings *settings,
-              EvolveVehicle *source, EvolveVehicle *dest)
+              LearningVehicle *source, LearningVehicle *dest)
 {
     dest->mover = source->mover;
     dest->maxForce = source->maxForce;
     dest->maxSpeed = source->maxSpeed;
     dest->health = 1.0f;
-    dest->dnaCount = source->dnaCount;
-    for (u32 dnaIndex = 0; dnaIndex < source->dnaCount; ++dnaIndex)
-    {
-        dest->dna[dnaIndex] = source->dna[dnaIndex];
-        if (random_unilateral(random) < settings->mutationRate)
-        {
-            dest->dna[dnaIndex] += random_bilateral(random) * settings->mutationFactor;
-        }
-    }
+    
+    neural_copy(&source->brain, &dest->brain);
 }
 
 internal v2
@@ -154,7 +158,7 @@ seperate(u32 vehicleIndex, EvolveVehicle *vehicle,
     {
         if (neighbourIndex != vehicleIndex)
         {
-    EvolveVehicle *neighbour = neighbours + neighbourIndex;
+            EvolveVehicle *neighbour = neighbours + neighbourIndex;
             v2 diff = vehicle->mover.position - neighbour->mover.position;
             if (length_squared(diff) < square(40.0f))
             {
@@ -163,7 +167,7 @@ seperate(u32 vehicleIndex, EvolveVehicle *vehicle,
                 seperationForce += force;
             }
         }
-        }
+    }
     
     return seperationForce;
 }
@@ -180,11 +184,11 @@ eat(EvolveVehicle *vehicle, WorldFood *food, f32 healthMod = 0.0f, f32 perceptio
     {
         Food *current = food->foodies + foodIndex;
         
-    v2 direction = current->position - vehicle->mover.position;
+        v2 direction = current->position - vehicle->mover.position;
         f32 dirDistSqr = length_squared(direction);
         if (dirDistSqr < square(4.0f))
         {
-             *current = food->foodies[--food->foodCount];
+            *current = food->foodies[--food->foodCount];
             vehicle->health += healthMod;
             if (vehicle->health > 1.0f)
             {
@@ -205,9 +209,9 @@ eat(EvolveVehicle *vehicle, WorldFood *food, f32 healthMod = 0.0f, f32 perceptio
     
     if (recordSqr < F32_INF)
     {
-            result = seeking_force(&vehicle->mover, closest.position, vehicle->maxSpeed,
+        result = seeking_force(&vehicle->mover, closest.position, vehicle->maxSpeed,
                                vehicle->maxForce);
-        }
+    }
     
     return result;
 }
@@ -238,11 +242,11 @@ within_boundary_force(Mover *mover, v2 minBound, v2 maxBound, f32 maxSpeed, f32 
     if ((desired.x != 0.0f) ||
         (desired.y != 0.0f))
     {
-    desired = set_length(desired, maxSpeed);
+        desired = set_length(desired, maxSpeed);
         desired = desired - mover->velocity;
         if (length_squared(desired) > maxForce)
         {
-             desired = set_length(desired, maxForce);
+            desired = set_length(desired, maxForce);
         }
     }
     return desired;
@@ -278,8 +282,8 @@ random_in_bounds(RandomSeriesPCG *random, v2 minBound, v2 maxBound)
 
 DRAW_IMAGE(draw_image)
 {
-    i_expect(sizeof(EvolveState) <= state->memorySize);
-    EvolveState *evolveState = (EvolveState *)state->memory;
+    i_expect(sizeof(LearningState) <= state->memorySize);
+    LearningState *learnState = (LearningState *)state->memory;
     
     f32 border = 25.0f;
     v2 minBound = V2(border, border);
@@ -287,110 +291,110 @@ DRAW_IMAGE(draw_image)
     
     if (!state->initialized)
     {
-        //evolveState->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
-        evolveState->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
+        //learnState->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
+        learnState->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         
-        evolveState->settings.border = border;
-        evolveState->settings.mutationRate = 0.01f;
-        evolveState->settings.mutationFactor = 0.1f;
-        evolveState->settings.foodWeight = 5.0f;
-        evolveState->settings.foodHealth = 0.1f;
-        evolveState->settings.foodPerception = 100.0f;
-        evolveState->settings.poisonWeight = 5.0f;
-        evolveState->settings.poisonHealth = -0.75f;
-        evolveState->settings.poisonPerception = 100.0f;
-        evolveState->settings.healthDrop = 0.1f;
-        evolveState->settings.cloneRate = 0.005f;
-        evolveState->settings.foodSpawnRate = 0.05f;
-        evolveState->settings.poisonSpawnRate = 0.01f;
+        learnState->settings.border = border;
+        learnState->settings.mutationRate = 0.01f;
+        learnState->settings.mutationFactor = 0.1f;
+        learnState->settings.foodWeight = 5.0f;
+        learnState->settings.foodHealth = 0.1f;
+        learnState->settings.foodPerception = 100.0f;
+        learnState->settings.poisonWeight = 5.0f;
+        learnState->settings.poisonHealth = -0.75f;
+        learnState->settings.poisonPerception = 100.0f;
+        learnState->settings.healthDrop = 0.1f;
+        learnState->settings.cloneRate = 0.005f;
+        learnState->settings.foodSpawnRate = 0.05f;
+        learnState->settings.poisonSpawnRate = 0.01f;
         
-        evolveState->vehicleCount = evolveState->maxVehicleCount = 50;
-        evolveState->currentVehicles = allocate_array(EvolveVehicle, evolveState->vehicleCount);
-        //evolveState->nextGeneration = allocate_array(EvolveVehicle, evolveState->vehicleCount);
+        learnState->vehicleCount = learnState->maxVehicleCount = 50;
+        learnState->currentVehicles = allocate_array(LearningVehicle, learnState->vehicleCount);
         
-        for (u32 vehicleIndex = 0; vehicleIndex < evolveState->vehicleCount; ++vehicleIndex)
+        for (u32 vehicleIndex = 0; vehicleIndex < learnState->vehicleCount; ++vehicleIndex)
         {
-            EvolveVehicle *vehicle = evolveState->currentVehicles + vehicleIndex;
-            init_vehicle(&evolveState->randomizer, vehicle,
-                         random_in_bounds(&evolveState->randomizer, minBound + 2, maxBound - 2),
+            LearningVehicle *vehicle = learnState->currentVehicles + vehicleIndex;
+            init_vehicle(&learnState->randomizer, vehicle,
+                         random_in_bounds(&learnState->randomizer, minBound + 2, maxBound - 2),
                          200.0f, 100.0f);
         }
         
-        evolveState->noms.maxFoodCount = evolveState->noms.foodCount = 200;
-        evolveState->noms.foodies = allocate_array(Food, evolveState->noms.maxFoodCount);
-        evolveState->noms.foodCount = 40;
+        learnState->noms.maxFoodCount = learnState->noms.foodCount = 200;
+        learnState->noms.foodies = allocate_array(Food, learnState->noms.maxFoodCount);
+        learnState->noms.foodCount = 40;
         
-        for (u32 foodIndex = 0; foodIndex < evolveState->noms.foodCount; ++foodIndex)
+        for (u32 foodIndex = 0; foodIndex < learnState->noms.foodCount; ++foodIndex)
         {
-            Food *food = evolveState->noms.foodies + foodIndex;
-            init_food(food, random_in_bounds(&evolveState->randomizer, minBound, maxBound));
+            Food *food = learnState->noms.foodies + foodIndex;
+            init_food(food, random_in_bounds(&learnState->randomizer, minBound, maxBound));
         }
         
-        evolveState->poison.maxFoodCount = 200;
-        evolveState->poison.foodies = allocate_array(Food, evolveState->poison.maxFoodCount);
-          evolveState->poison.foodCount = 10;
+        learnState->poison.maxFoodCount = 200;
+        learnState->poison.foodies = allocate_array(Food, learnState->poison.maxFoodCount);
+        learnState->poison.foodCount = 10;
         
-        for (u32 foodIndex = 0; foodIndex < evolveState->poison.foodCount; ++foodIndex)
+        for (u32 foodIndex = 0; foodIndex < learnState->poison.foodCount; ++foodIndex)
         {
-            Food *food = evolveState->poison.foodies + foodIndex;
-            init_food(food, random_in_bounds(&evolveState->randomizer, minBound, maxBound));
+            Food *food = learnState->poison.foodies + foodIndex;
+            init_food(food, random_in_bounds(&learnState->randomizer, minBound, maxBound));
         }
         
         state->initialized = true;
     }
     
-    EvolveSettings *settings = &evolveState->settings;
+    EvolveSettings *settings = &learnState->settings;
     
     //v2 center = V2((f32)image->width * 0.5f, (f32)image->height * 0.5f);
     
-    for (s32 vehicleIndex = evolveState->vehicleCount - 1;
+    for (s32 vehicleIndex = learnState->vehicleCount - 1;
          vehicleIndex >= 0;
          --vehicleIndex)
     {
-        EvolveVehicle *vehicle = evolveState->currentVehicles + vehicleIndex;
+        EvolveVehicle *vehicle = learnState->currentVehicles + vehicleIndex;
         v2 boundaryForce = within_boundary_force(&vehicle->mover, minBound, maxBound,
                                                  vehicle->maxSpeed, vehicle->maxForce);
         apply_force(&vehicle->mover, 20.0f * boundaryForce);
-        seperate(vehicleIndex, vehicle, evolveState->vehicleCount,
-                 evolveState->currentVehicles);
-        behaviour(settings, vehicle, &evolveState->noms, &evolveState->poison, dt);
+        seperate(vehicleIndex, vehicle, learnState->vehicleCount,
+                 learnState->currentVehicles);
+        behaviour(settings, vehicle, &learnState->noms, &learnState->poison, dt);
         update(&vehicle->mover, dt, vehicle->maxSpeed);
         
         // NOTE(michiel): Random clone
-        if ((evolveState->vehicleCount < evolveState->maxVehicleCount) && 
-            (random_unilateral(&evolveState->randomizer) < settings->cloneRate))
+        if ((learnState->vehicleCount < learnState->maxVehicleCount) && 
+            (random_unilateral(&learnState->randomizer) < settings->cloneRate))
         {
-            EvolveVehicle *cloneVehicle = evolveState->currentVehicles + evolveState->vehicleCount++;
-            clone_vehicle(&evolveState->randomizer, settings, vehicle, cloneVehicle);
+            EvolveVehicle *cloneVehicle = learnState->currentVehicles + learnState->vehicleCount++;
+            clone_vehicle(&learnState->randomizer, settings, vehicle, cloneVehicle);
         }
         
         vehicle->health -= settings->healthDrop * dt;
         if (vehicle->health <= 0.0f)
         {
-            if (evolveState->noms.foodCount < evolveState->noms.maxFoodCount)
+            if (learnState->noms.foodCount < learnState->noms.maxFoodCount)
             {
-                Food *food = evolveState->noms.foodies + evolveState->noms.foodCount++;
+                Food *food = learnState->noms.foodies + learnState->noms.foodCount++;
                 init_food(food, vehicle->mover.position);
             }
-            *vehicle = evolveState->currentVehicles[--evolveState->vehicleCount];
+            destroy_vehicle(vehicle);
+            *vehicle = learnState->currentVehicles[--learnState->vehicleCount];
         }
     }
     
     {
         // NOTE(michiel): Random add food
-        if ((evolveState->noms.foodCount < evolveState->noms.maxFoodCount) && 
-            (random_unilateral(&evolveState->randomizer) < settings->foodSpawnRate))
+        if ((learnState->noms.foodCount < learnState->noms.maxFoodCount) && 
+            (random_unilateral(&learnState->randomizer) < settings->foodSpawnRate))
         {
-            Food *food = evolveState->noms.foodies + evolveState->noms.foodCount++;
-            init_food(food, random_in_bounds(&evolveState->randomizer, minBound, maxBound));
+            Food *food = learnState->noms.foodies + learnState->noms.foodCount++;
+            init_food(food, random_in_bounds(&learnState->randomizer, minBound, maxBound));
         }
         
         // NOTE(michiel): Random add poison
-        if ((evolveState->poison.foodCount < evolveState->poison.maxFoodCount) && 
-            (random_unilateral(&evolveState->randomizer) < settings->poisonSpawnRate))
+        if ((learnState->poison.foodCount < learnState->poison.maxFoodCount) && 
+            (random_unilateral(&learnState->randomizer) < settings->poisonSpawnRate))
         {
-            Food *food = evolveState->poison.foodies + evolveState->poison.foodCount++;
-            init_food(food, random_in_bounds(&evolveState->randomizer, minBound, maxBound));
+            Food *food = learnState->poison.foodies + learnState->poison.foodCount++;
+            init_food(food, random_in_bounds(&learnState->randomizer, minBound, maxBound));
         }
     }
     
@@ -399,9 +403,9 @@ DRAW_IMAGE(draw_image)
     v4 foodColour = V4(0, 1, 0, 1);
     v4 poisonColour = V4(0.6f, 0, 0.5f, 1);
     
-    for (u32 vehicleIndex = 0; vehicleIndex < evolveState->vehicleCount; ++vehicleIndex)
+    for (u32 vehicleIndex = 0; vehicleIndex < learnState->vehicleCount; ++vehicleIndex)
     {
-         EvolveVehicle *vehicle = evolveState->currentVehicles + vehicleIndex;
+        EvolveVehicle *vehicle = learnState->currentVehicles + vehicleIndex;
         
         v2 dir = vehicle->mover.velocity;
         dir = normalize(dir);
@@ -422,20 +426,20 @@ DRAW_IMAGE(draw_image)
         }
         
         front += vehicle->mover.position;
-         backUp += vehicle->mover.position;
-         backDo += vehicle->mover.position;
-         good += vehicle->mover.position;
-         bad += vehicle->mover.position;
+        backUp += vehicle->mover.position;
+        backDo += vehicle->mover.position;
+        good += vehicle->mover.position;
+        bad += vehicle->mover.position;
         
-        if (evolveState->debug)
+        if (learnState->debug)
         {
-        draw_line(image, vehicle->mover.position.x + 1, vehicle->mover.position.y + 1, 
-                  good.x, good.y, foodColour);
-        draw_line(image, vehicle->mover.position.x - 1, vehicle->mover.position.y - 1, 
-                  bad.x, bad.y, poisonColour);
-        outline_circle(image, vehicle->mover.position.x, vehicle->mover.position.y,
+            draw_line(image, vehicle->mover.position.x + 1, vehicle->mover.position.y + 1, 
+                      good.x, good.y, foodColour);
+            draw_line(image, vehicle->mover.position.x - 1, vehicle->mover.position.y - 1, 
+                      bad.x, bad.y, poisonColour);
+            outline_circle(image, vehicle->mover.position.x, vehicle->mover.position.y,
                            food_perception(settings, vehicle), 2.0f, foodColour);
-        outline_circle(image, vehicle->mover.position.x, vehicle->mover.position.y,
+            outline_circle(image, vehicle->mover.position.x, vehicle->mover.position.y,
                            poison_perception(settings, vehicle), 2.0f, poisonColour);
         }
         
@@ -446,16 +450,16 @@ DRAW_IMAGE(draw_image)
         
     }
     
-    for (u32 foodIndex = 0; foodIndex < evolveState->noms.foodCount; ++foodIndex)
+    for (u32 foodIndex = 0; foodIndex < learnState->noms.foodCount; ++foodIndex)
     {
-        Food *food = evolveState->noms.foodies + foodIndex;
+        Food *food = learnState->noms.foodies + foodIndex;
         fill_rectangle(image, food->position.x - 2, food->position.y - 2, 4, 4,
                        foodColour);
     }
     
-    for (u32 foodIndex = 0; foodIndex < evolveState->poison.foodCount; ++foodIndex)
+    for (u32 foodIndex = 0; foodIndex < learnState->poison.foodCount; ++foodIndex)
     {
-        Food *food = evolveState->poison.foodies + foodIndex;
+        Food *food = learnState->poison.foodies + foodIndex;
         fill_rectangle(image, food->position.x - 2, food->position.y - 2, 4, 4,
                        poisonColour);
     }
@@ -463,7 +467,7 @@ DRAW_IMAGE(draw_image)
     v2 boxAt = V2(10, 10);
     v2 boxSize = V2(10, 10);
     fill_rectangle(image, boxAt.x, boxAt.y, boxSize.x, boxSize.y, V4(1, 1, 1, 1));
-    if (evolveState->debug)
+    if (learnState->debug)
     {
         fill_rectangle(image, boxAt.x + 2, boxAt.y + 2, boxSize.x - 4, boxSize.y - 4,
                        V4(0, 0, 0, 1));
@@ -474,20 +478,20 @@ DRAW_IMAGE(draw_image)
         fill_rectangle(image, boxAt.x + 1, boxAt.y + 1, boxSize.x - 2, boxSize.y - 2,
                        V4(0, 0, 1, 0.5f));
         if ((mouse.mouseDowns & Mouse_Left) &&
-            !(evolveState->prevMouseDown & Mouse_Left))
+            !(learnState->prevMouseDown & Mouse_Left))
         {
-            evolveState->debug = !evolveState->debug;
+            learnState->debug = !learnState->debug;
         }
     }
     
-    evolveState->prevMouseDown = mouse.mouseDowns;
-    evolveState->seconds += dt;
-    ++evolveState->ticks;
-    if (evolveState->seconds >= 1.0f)
+    learnState->prevMouseDown = mouse.mouseDowns;
+    learnState->seconds += dt;
+    ++learnState->ticks;
+    if (learnState->seconds >= 1.0f)
     {
-        fprintf(stdout, "Frames: %d, %5.2fms\n", evolveState->ticks,
-                (evolveState->seconds * 1000.0f) / (f32)evolveState->ticks);
-        evolveState->seconds = 0.0f;
-        evolveState->ticks = 0;
+        fprintf(stdout, "Frames: %d, %5.2fms\n", learnState->ticks,
+                (learnState->seconds * 1000.0f) / (f32)learnState->ticks);
+        learnState->seconds = 0.0f;
+        learnState->ticks = 0;
     }
 }

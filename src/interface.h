@@ -30,6 +30,8 @@ typedef size_t   umm;
 
 #define U32_MAX 0xFFFFFFFF
 
+#define enum32(name) u32
+
 #define F32_SIGN_MASK                   0x80000000
 #define F32_EXP_MASK                    0x7F800000
 #define F32_FRAC_MASK                   0x007FFFFF
@@ -41,10 +43,23 @@ typedef size_t   umm;
 
 #define TAU32   6.28318530717958647692528676655900576838f
 
+internal inline f32
+fast_expf(f32 x, u32 approx = 10)
+{
+    f32 result = 1.0f;
+    result += x / (f32)(1 << approx);
+    for (u32 guess = 0; guess < approx; ++guess)
+    {
+    result *= result;
+    }
+    return result;
+}
+
 #define sin  __builtin_sinf
 #define cos  __builtin_cosf
 #define sqrt __builtin_sqrtf
-#define exp  __builtin_expf
+//#define exp  __builtin_expf
+#define exp  fast_expf
 
 #define kilobytes(a)   (1024ULL * a)
 #define megabytes(a)   (1024ULL * kilobytes(a))

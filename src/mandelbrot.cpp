@@ -155,6 +155,7 @@ draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
     work->palette = palette;
     draw_mandelbrot(work);
     #else
+    TempMemory temp = temporary_memory();
     
     u32 tileSize = 50;
     u32 workerEntries = (image->width / tileSize) * (image->height / tileSize);
@@ -187,9 +188,8 @@ draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
     yAxis += yStep;
             }
     
+    destroy_temporary(temp);
     platform_complete_all_work(queue);
-    
-    deallocate_array(workerEntries, workers);
     #endif
 }
 

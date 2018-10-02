@@ -4,9 +4,10 @@ set -e
 
 curDir="$(pwd)"
 codeDir="$curDir/src"
+testDir="$curDir/test"
 buildDir="$curDir/gebouw"
 
-flags="-O0 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
+flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
 
 exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces"
 
@@ -34,6 +35,10 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/mousemove.cpp" -o mousemove -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/evolving_vehicle.cpp" -o evolving-vehicle -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/evolving_salesman.cpp" -o evolving-salesman -lX11 -lGL &
-    clang++ $flags $exceptions "$codeDir/neural_network.cpp" -o neural-network -lX11 -lGL
+    clang++ $flags $exceptions "$codeDir/neural_network.cpp" -o neural-network -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/colour_predict.cpp" -o colour-predict -lX11 -lGL &
+
+    clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
+    clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net
 popd > /dev/null
 

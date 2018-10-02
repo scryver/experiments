@@ -22,25 +22,53 @@
 
 #define KEYCODE_ESCAPE 9
 
+struct MemBlock
+{
+    u32 maxSize;
+    u32 size;
+    u8 *memory;
+    
+    // TODO(michiel): More memory
+    //struct MemBlock *next;
+};
+
+global MemBlock memory;
+
+struct TempMemory
+{
+    u32 origSize;
+};
+
+internal inline TempMemory
+temporary_memory(void)
+{
+    TempMemory result = {};
+    result.origSize = memory.size;
+    return result;
+}
+
+internal inline void
+destroy_temporary(TempMemory temp)
+{
+    memory.size = temp.origSize;
+}
+
 #define allocate_struct(type) (type *)allocate_size(sizeof(type))
 #define allocate_array(type, count) (type *)allocate_size(sizeof(type) * (count))
 internal u8 *
 allocate_size(umm size)
 {
-    //return (u8 *)mmap(0, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
-    return (u8 *)calloc(size, 1);
-}
-
-#define deallocate_struct(addr) deallocate(sizeof(*addr), addr)
-#define deallocate_array(count, addr) deallocate(sizeof(*addr) * count, addr)
-internal void
-deallocate(umm size, void *data)
-{
-    if (data)
+    if (memory.maxSize == 0)
     {
-        //munmap(data, size);
-        free(data);
+        memory.maxSize = megabytes(256);
+        memory.memory = (u8 *)mmap(0, memory.maxSize, PROT_READ|PROT_WRITE,
+                                   MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
     }
+    
+    i_expect(memory.size + size <= memory.maxSize);
+    u8 *data = memory.memory + memory.size;
+    memory.size += size;
+    return data;
 }
 
 internal void
