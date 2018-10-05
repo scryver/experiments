@@ -68,3 +68,20 @@ slow_gaussian_choice(RandomSeriesPCG *series, u32 choiceCount, u32 gaussionCount
     sum /= gaussionCount;
     return sum;
 }
+
+inline f32
+slow_gaussian(RandomSeriesPCG *series)
+{
+    f32 f1 = random_bilateral(series);
+    f32 f2 = random_bilateral(series);
+    
+    f32 s = f1 * f1 + f2 * f2;
+    while ((s >= 1.0f) || (s == 0.0f))
+    {
+        f1 = random_bilateral(series);
+        f2 = random_bilateral(series);
+        s = f1 * f1 + f2 * f2;
+    }
+    s = sqrt((-2.0f * log(s)) / s);
+    return f1 * s;
+}

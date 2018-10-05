@@ -1,3 +1,6 @@
+#define NEURON_MUTATE(name) f32 name(f32 a, void *user)
+typedef NEURON_MUTATE(NeuronMutate);
+
 enum ArrayKind
 {
     Array_Float,
@@ -190,6 +193,94 @@ randomize_weights(RandomSeriesPCG *random, Neural *network)
     }
 }
 
+internal void
+neural_mixin(RandomSeriesPCG *random, Neural *source, Neural *dest, f32 rate = 0.5f)
+{
+    i_expect(source->inputCount == dest->inputCount);
+    i_expect(source->hiddenDepth == dest->hiddenDepth);
+    i_expect(source->hiddenCount[0] == dest->hiddenCount[0]);
+    i_expect(source->outputCount == dest->outputCount);
+    
+    for (u32 hIndex = 0; hIndex < source->hiddenCount[0] * source->inputCount; ++hIndex)
+    {
+        if (random_unilateral(random) < rate)
+        {
+        dest->i2hWeights[hIndex] = source->i2hWeights[hIndex];
+        }
+    }
+    u32 h2hOffset = 0;
+    for (u32 i = 1; i < source->hiddenDepth; ++i)
+    {
+        i_expect(source->hiddenCount[i] == dest->hiddenCount[i]);
+        u32 h2hWidth = source->hiddenCount[i] * source->hiddenCount[i - 1];
+        for (u32 hIndex = 0; hIndex < h2hWidth; ++hIndex)
+        {
+            if (random_unilateral(random) < rate)
+            {
+            dest->h2hWeights[hIndex + h2hOffset] = source->h2hWeights[hIndex + h2hOffset];
+            }
+        }
+        h2hOffset += h2hWidth;
+    }
+    for (u32 hIndex = 0; hIndex < source->hiddenTotal; ++hIndex)
+    {
+        if (random_unilateral(random) < rate)
+        {
+        dest->hiddenBias[hIndex] = source->hiddenBias[hIndex];
+        }
+    }
+    for (u32 oIndex = 0;
+         oIndex < source->outputCount * source->hiddenCount[source->hiddenDepth - 1];
+         ++oIndex)
+    {
+        if (random_unilateral(random) < rate)
+        {
+        dest->h2oWeights[oIndex] = source->h2oWeights[oIndex];
+        }
+    }
+    for (u32 oIndex = 0; oIndex < source->outputCount; ++oIndex)
+    {
+        if (random_unilateral(random) < rate)
+        {
+        dest->outputBias[oIndex] = source->outputBias[oIndex];
+        }
+    }
+}
+
+internal void
+neural_mutate(RandomSeriesPCG *random, Neural *network, NeuronMutate *mutateFunc,
+              void *user = 0)
+{
+    for (u32 hIndex = 0; hIndex < network->hiddenCount[0] * network->inputCount; ++hIndex)
+    {
+            network->i2hWeights[hIndex] = mutateFunc(network->i2hWeights[hIndex], user);
+    }
+    u32 h2hOffset = 0;
+    for (u32 i = 1; i < network->hiddenDepth; ++i)
+    {
+        u32 h2hWidth = network->hiddenCount[i] * network->hiddenCount[i - 1];
+        for (u32 hIndex = 0; hIndex < h2hWidth; ++hIndex)
+        {
+                network->h2hWeights[hIndex] = mutateFunc(network->h2hWeights[hIndex], user);
+            }
+        h2hOffset += h2hWidth;
+    }
+    for (u32 hIndex = 0; hIndex < network->hiddenTotal; ++hIndex)
+    {
+        network->hiddenBias[hIndex] = mutateFunc(network->hiddenBias[hIndex], user);
+    }
+    for (u32 oIndex = 0;
+         oIndex < network->outputCount * network->hiddenCount[network->hiddenDepth - 1];
+         ++oIndex)
+    {
+        network->h2oWeights[oIndex] = mutateFunc(network->h2oWeights[oIndex], user);
+    }
+    for (u32 oIndex = 0; oIndex < network->outputCount; ++oIndex)
+    {
+        network->outputBias[oIndex] = mutateFunc(network->outputBias[oIndex], user);
+    }
+}
+
 internal inline f32
 activation_function(f32 inp)
 {
@@ -376,6 +467,15 @@ train(Neural *network, u32 inputCount, f32 *inputs, u32 targetCount, f32 *target
     
     // E = T - O;
     subtract_array(network->outputCount, targets, network->outputs, currentErrors);
+
+#if 0    
+    for (u32 err = 0; err < network->outputCount; ++err)
+    {
+        f32 val = currentErrors[err];
+        currentErrors[err] = val * currentErrors[err] * 0.5f;
+    }
+    #endif
+
     // G = hadamard(1 / (1 - exp(-O)), E) * learningRate;
     calculate_gradient(network->outputCount, network->outputs, currentErrors,
                        network->trainGradient, learningRate);

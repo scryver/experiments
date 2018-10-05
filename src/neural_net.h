@@ -203,6 +203,12 @@ train(NeuralNetwork *network, u32 inputCount, f32 *inputs,
     Matrix outputErrors = create_matrix(answer.rows, answer.columns);
     matrix_copy(answer.rows, answer.columns, answer.m, outputErrors.m);
     outputErrors -= network->outputs;
+
+#if 0    
+    hadamard(outputErrors, &outputErrors);
+    outputErrors *= 0.5f;
+    #endif
+
     i_expect(outputErrors.columns == 1);
     
 #if 0    

@@ -37,6 +37,8 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/evolving_salesman.cpp" -o evolving-salesman -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/neural_network.cpp" -o neural-network -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/colour_predict.cpp" -o colour-predict -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/flappy_brain.cpp" -o flappy-brain -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/lissajous_curve.cpp" -o lissajous-curve -lX11 -lGL &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net

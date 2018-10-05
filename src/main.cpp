@@ -11,6 +11,7 @@
 
 #include <stdio.h>        // fprintf
 #include <stdlib.h>
+#include <string.h>       // memset
 
 // NOTE(michiel): X11 Windowing
 #include <X11/Xlib.h>
@@ -68,6 +69,7 @@ allocate_size(umm size)
     i_expect(memory.size + size <= memory.maxSize);
     u8 *data = memory.memory + memory.size;
     memory.size += size;
+    memset(data, 0, size);
     return data;
 }
 

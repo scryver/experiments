@@ -60,6 +60,7 @@ fast_expf(f32 x, u32 approx = 10)
 #define sqrt __builtin_sqrtf
 //#define exp  __builtin_expf
 #define exp  fast_expf
+#define log   __builtin_logf
 
 #define kilobytes(a)   (1024ULL * a)
 #define megabytes(a)   (1024ULL * kilobytes(a))

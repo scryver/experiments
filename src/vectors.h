@@ -178,6 +178,15 @@ operator /(v2u a, u32 b)
     return result;
 }
 
+internal inline v2u
+operator /(u32 a, v2u b)
+{
+    v2u result;
+    result.x = a / b.x;
+    result.y = a / b.y;
+    return result;
+}
+
 //
 // NOTE(michiel): V2S
 //
@@ -338,6 +347,15 @@ operator /(v2 a, f32 b)
 {
     v2 result = a;
     result /= b;
+    return result;
+}
+
+internal inline v2
+operator /(f32 a, v2 b)
+{
+    v2 result;
+    result.x = a / b.x;
+    result.y = a / b.y;
     return result;
 }
 

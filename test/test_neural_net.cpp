@@ -4,6 +4,7 @@
 
 #include "../src/interface.h"
 #include "../src/random.h"
+#define MATRIX_TEST 1
 #include "../src/matrix.h"
 
 struct MemBlock
@@ -60,6 +61,8 @@ allocate_size(umm size)
 
 int main(int argc, char **argv)
 {
+    test_matrix();
+    
     RandomSeriesPCG random = random_seed_pcg(120497190247, 19827491724124);
     NeuralNetwork oldNet = {};
     Neural newNet = {};
