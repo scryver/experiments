@@ -401,6 +401,15 @@ normalize(v2 a)
 }
 
 internal inline v2
+clamp01(v2 a)
+{
+    v2 result;
+    result.x = clamp01(a.x);
+    result.y = clamp01(a.y);
+    return result;
+}
+
+internal inline v2
 set_length(v2 a, f32 length)
 {
     v2 result = normalize(a);
@@ -810,6 +819,16 @@ normalize(v3 a)
     return result;
 }
 
+internal inline v3
+clamp01(v3 a)
+{
+    v3 result;
+    result.x = clamp01(a.x);
+    result.y = clamp01(a.y);
+    result.z = clamp01(a.z);
+    return result;
+}
+
 //
 // NOTE(michiel): V4
 //
@@ -1003,5 +1022,16 @@ internal inline v4
 normalize(v4 a)
 {
     v4 result = normalize(a, length(a));
+    return result;
+}
+
+internal inline v4
+clamp01(v4 a)
+{
+    v4 result;
+    result.x = clamp01(a.x);
+    result.y = clamp01(a.y);
+    result.z = clamp01(a.z);
+    result.w = clamp01(a.w);
     return result;
 }

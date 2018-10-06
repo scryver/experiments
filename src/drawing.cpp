@@ -2,20 +2,6 @@
 // NOTE(michiel): Colour mix helpers
 //
 
-internal inline f32 
-clamp01(f32 value)
-{
-    if (value < 0.0f) 
-    {
-        value = 0.0f;
-    }
-    if (value > 1.0f)
-    {
-        value = 1.0f;
-    }
-    return value;
-}
-
 internal inline v4 
 unpack_colour(u32 colour)
 {

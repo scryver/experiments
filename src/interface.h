@@ -79,6 +79,20 @@ fast_expf(f32 x, u32 approx = 10)
 #define i_expect(a)    do { \
     if (!(a)) { fprintf(stderr, "Expectance not met: " #a "\n"); __builtin_trap(); } } while (0)
 
+internal inline f32 
+clamp01(f32 value)
+{
+    if (value < 0.0f) 
+    {
+        value = 0.0f;
+    }
+    if (value > 1.0f)
+    {
+        value = 1.0f;
+    }
+    return value;
+}
+
 #include "vectors.h"
 #include "complex.h"
 #include "multithread.h"

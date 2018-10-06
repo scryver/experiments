@@ -7,7 +7,7 @@ codeDir="$curDir/src"
 testDir="$curDir/test"
 buildDir="$curDir/gebouw"
 
-flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
+flags="-O0 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
 
 exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces"
 
@@ -39,6 +39,8 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/colour_predict.cpp" -o colour-predict -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/flappy_brain.cpp" -o flappy-brain -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/lissajous_curve.cpp" -o lissajous-curve -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/chaos_game.cpp" -o chaos-game -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/path_finding.cpp" -o path-finding -lX11 -lGL &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net
