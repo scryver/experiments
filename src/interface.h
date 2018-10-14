@@ -70,7 +70,25 @@ fast_expf(f32 x, u32 approx = 10)
 #define maximum(a, b)  ((a) > (b) ? (a) : (b))
 #define absolute(a)    (((a) < 0) ? -(a) : (a))
 #define square(a)      ((a) * (a))
-#define round(f)       ((s32)((f) + 0.5f))
+#define round(f)       ((s32)((f) + ((f) < 0.0f ? -0.5f : 0.5f)))
+//#define round          __builtin_roundf
+
+#if 0
+inline s32
+round_f32_to_s32(f32 f)
+{
+    s32 result = _mm_cvtss_si32(_mm_set_ss(f));
+    return result;
+}
+
+inline u32
+round_f32_to_u32(f32 f)
+{
+    u32 result = (u32)_mm_cvtss_si32(_mm_set_ss(f));
+    return result;
+}
+#endif
+
 #define trunc(f)       ((s32)(f))
 #define lerp(t, a, b)  ((a) + (t) * ((b) - (a)))
 

@@ -335,7 +335,7 @@ DRAW_IMAGE(draw_image)
         flappy->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         
         // NOTE(michiel): Height = 10 meter
-        flappy->gravity.y = 9.81f * (f32)image->height / 10.0f;
+        flappy->gravity.y = 9.81f * (f32)image->height / 20.0f;
         
         for (u32 birdIndex = 0; birdIndex < array_count(flappy->birds); ++birdIndex)
         {
@@ -351,13 +351,14 @@ DRAW_IMAGE(draw_image)
 
     for (u32 cycle = 0; cycle < flappy->cycles; ++cycle)
     {
+        f32 innerDt = 0.01f; // dt / (f32)flappy->cycles;
         u32 maxX = 0;
     for (u32 pipe = 0; pipe < 16; ++pipe)
     {
         Pipe *p = flappy->pipes + pipe;
         if (p->active)
     {
-        update_pipe(p, dt);
+        update_pipe(p, innerDt);
                 
                 if (maxX < round(p->gapMax.x))
                 {
@@ -369,7 +370,7 @@ DRAW_IMAGE(draw_image)
         if (//(random_unilateral(&flappy->randomizer) < 0.005f) &&
             (maxX < image->width - 150.0f))
         {
-            init_pipe(flappy, size, 100.0f);
+            init_pipe(flappy, size, 120.0f);
         }
         
         Pipe *closestPipes[3] = {};
@@ -453,7 +454,7 @@ DRAW_IMAGE(draw_image)
         if (bird->alive)
         {
                 thinking(bird, array_count(closestPipes), closestPipes, oneOverSize);
-    update_bird(bird, flappy->gravity, dt);
+    update_bird(bird, flappy->gravity, innerDt);
     check_borders(bird, V2(0, 0), size);
         }
         

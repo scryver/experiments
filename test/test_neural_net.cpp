@@ -3,9 +3,6 @@
 #include <sys/mman.h>     // PROT_*, MAP_*, munmap
 
 #include "../src/interface.h"
-#include "../src/random.h"
-#define MATRIX_TEST 1
-#include "../src/matrix.h"
 
 struct MemBlock
 {
@@ -56,6 +53,9 @@ allocate_size(umm size)
     return data;
 }
 
+#include "../src/random.h"
+#define MATRIX_TEST 1
+#include "../src/matrix.h"
 #include "../src/neural_net.h"
 #include "../src/neurons.h"
 

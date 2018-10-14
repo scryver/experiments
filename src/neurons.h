@@ -51,6 +51,14 @@ init_neural_network(Neural *network, u32 inputCount,
 {
     network->inputCount = inputCount; // NOTE(michiel): For verification mostly
     
+    i_expect(network->hiddenCount == 0);
+    i_expect(network->hidden == 0);
+    i_expect(network->hiddenBias == 0);
+    i_expect(network->i2hWeights == 0);
+    i_expect(network->outputs == 0);
+    i_expect(network->outputBias == 0);
+    i_expect(network->h2oWeights == 0);
+    
 #if 0    
     u32 layerCount = 1 + hiddenDepth + 1; // NOTE(michiel): input + hidden + output
     network->layerCount.kind = Array_UInt;
@@ -73,14 +81,6 @@ init_neural_network(Neural *network, u32 inputCount,
         }
     }
 #endif
-    
-    i_expect(network->hiddenCount == 0);
-    i_expect(network->hidden == 0);
-    i_expect(network->hiddenBias == 0);
-    i_expect(network->i2hWeights == 0);
-    i_expect(network->outputs == 0);
-    i_expect(network->outputBias == 0);
-    i_expect(network->h2oWeights == 0);
     
     network->hiddenDepth = hiddenDepth;
     network->hiddenCount = allocate_array(u32, hiddenDepth);

@@ -219,6 +219,174 @@ V2S(v2u u)
     return result;
 }
 
+internal inline v2s
+operator -(v2s a)
+{
+    v2s result;
+    result.x = -a.x;
+    result.y = -a.y;
+    return result;
+}
+
+internal inline v2s &
+operator +=(v2s &a, v2s b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    return a;
+}
+
+internal inline v2s
+operator +(v2s a, v2s b)
+{
+    v2s result = a;
+    result += b;
+    return result;
+}
+
+internal inline v2s &
+operator -=(v2s &a, v2s b)
+{
+    a.x -= b.x;
+    a.y -= b.y;
+    return a;
+}
+
+internal inline v2s
+operator -(v2s a, v2s b)
+{
+    v2s result = a;
+    result -= b;
+    return result;
+}
+
+internal inline v2s &
+operator &=(v2s &a, u32 b)
+{
+    a.x &= b;
+    a.y &= b;
+    return a;
+}
+
+internal inline v2s
+operator &(v2s a, u32 b)
+{
+    v2s result = a;
+    result &= b;
+    return result;
+}
+
+internal inline v2s &
+operator |=(v2s &a, u32 b)
+{
+    a.x |= b;
+    a.y |= b;
+    return a;
+}
+
+internal inline v2s
+operator |(v2s a, u32 b)
+{
+    v2s result = a;
+    result |= b;
+    return result;
+}
+
+internal inline v2s &
+operator ^=(v2s &a, u32 b)
+{
+    a.x ^= b;
+    a.y ^= b;
+    return a;
+}
+
+internal inline v2s
+operator ^(v2s a, u32 b)
+{
+    v2s result = a;
+    result ^= b;
+    return result;
+}
+
+internal inline v2s &
+operator +=(v2s &a, s32 b)
+{
+    a.x += b;
+    a.y += b;
+    return a;
+}
+
+internal inline v2s
+operator +(v2s a, s32 b)
+{
+    v2s result = a;
+    result += b;
+    return result;
+}
+
+internal inline v2s &
+operator -=(v2s &a, s32 b)
+{
+    a.x -= b;
+    a.y -= b;
+    return a;
+}
+
+internal inline v2s
+operator -(v2s a, s32 b)
+{
+    v2s result = a;
+    result -= b;
+    return result;
+}
+
+internal inline v2s &
+operator *=(v2s &a, s32 b)
+{
+    a.x *= b;
+    a.y *= b;
+    return a;
+}
+
+internal inline v2s
+operator *(v2s a, s32 b)
+{
+    v2s result = a;
+    result *= b;
+    return result;
+}
+
+internal inline v2s
+operator *(s32 a, v2s b)
+{
+    return b * a;
+}
+
+internal inline v2s &
+operator /=(v2s &a, s32 b)
+{
+    a.x /= b;
+    a.y /= b;
+    return a;
+}
+
+internal inline v2s
+operator /(v2s a, s32 b)
+{
+    v2s result = a;
+    result /= b;
+    return result;
+}
+
+internal inline v2s
+operator /(s32 a, v2s b)
+{
+    v2s result;
+    result.x = a / b.x;
+    result.y = a / b.y;
+    return result;
+}
+
 //
 // NOTE(michiel): V2
 //
