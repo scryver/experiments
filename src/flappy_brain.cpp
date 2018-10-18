@@ -286,8 +286,8 @@ next_generation(RandomSeriesPCG *random, u32 birdCount, Bird *parentBirds, v2 sc
     for (u32 birdIndex = 0; birdIndex < birdCount; ++birdIndex)
     {
         Bird *bird = nextGen + birdIndex;
-        init_neural_network(&bird->brain, best->brain.inputCount, best->brain.hiddenDepth,
-                            best->brain.hiddenCount, best->brain.outputCount);
+        init_neural_network(&bird->brain, best->brain.inputCount, best->brain.layerCount - 1,
+                            best->brain.layerSizes, best->brain.outputCount);
         
         if (random_unilateral(random) < 0.2f)
         {

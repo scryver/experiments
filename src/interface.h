@@ -48,9 +48,18 @@ fast_expf(f32 x, u32 approx = 10)
 {
     f32 result = 1.0f;
     result += x / (f32)(1 << approx);
-    for (u32 guess = 0; guess < approx; ++guess)
+    u32 approx4 = approx >> 2;
+    u32 approxR = approx & 0x3;
+    for (u32 guess = 0; guess < approx4; ++guess)
     {
-    result *= result;
+        result *= result;
+        result *= result;
+        result *= result;
+        result *= result;
+    }
+    for (u32 guess = 0; guess < approxR; ++guess)
+    {
+        result *= result;
     }
     return result;
 }

@@ -79,7 +79,7 @@ int main(int argc, char **argv)
                         learningRate);
     init_neural_network(&newNet, inputCount, hiddenDepth, hiddenCount, outputCount);
     
-    f32 *h2hWeights = newNet.h2hWeights;
+    f32 *h2hWeights = newNet.weights;
     for (u32 row = 0; row < oldNet.inputToHiddenWeights.rows; ++row)
     {
         f32 *rowOld = oldNet.inputToHiddenWeights.m + row * oldNet.inputToHiddenWeights.columns;
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     for (u32 row = 0; row < oldNet.hiddenBias.rows; ++row)
     {
         f32 *rowOld = oldNet.hiddenBias.m + row * oldNet.hiddenBias.columns;
-        f32 *rowNew = newNet.hiddenBias + row * oldNet.hiddenBias.columns;
+        f32 *rowNew = newNet.biases + row * oldNet.hiddenBias.columns;
         for (u32 col = 0; col < oldNet.hiddenBias.columns; ++col)
         {
             rowNew[col] = rowOld[col];
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
     for (u32 row = 0; row < oldNet.outputBias.rows; ++row)
     {
         f32 *rowOld = oldNet.outputBias.m + row * oldNet.outputBias.columns;
-        f32 *rowNew = newNet.outputBias + row * oldNet.outputBias.columns;
+        f32 *rowNew = newNet.biases + newNet.totalNeurons - newNet.outputCount + row * oldNet.outputBias.columns;
         for (u32 col = 0; col < oldNet.outputBias.columns; ++col)
         {
             rowNew[col] = rowOld[col];

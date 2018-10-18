@@ -27,12 +27,12 @@ print_network(Neural *network)
     fprintf(stdout, "Network  : %p\n", (void *)network);
     
     fprintf(stdout, "  inputs : %d\n", network->inputCount);
-    fprintf(stdout, "  layers : %d\n", network->hiddenDepth);
+    fprintf(stdout, "  layers : %d\n", network->layerCount);
     fprintf(stdout, "           [");
-    for (u32 layerIndex = 0; layerIndex < network->hiddenDepth; ++layerIndex)
+    for (s32 layerIndex = 0; layerIndex < (s32)network->layerCount - 1; ++layerIndex)
     {
-        fprintf(stdout, "%d", network->hiddenCount[layerIndex]);
-        if (layerIndex == network->hiddenDepth - 1)
+        fprintf(stdout, "%d", network->layerSizes[layerIndex]);
+        if (layerIndex == network->layerCount - 2)
         {
             fprintf(stdout, "]\n");
         }
@@ -47,15 +47,15 @@ print_network(Neural *network)
     
     u32 rows = network->inputCount;
         f32 *hidden = network->hidden;
-    f32 *h2hWeight = network->h2hWeights;
-    f32 *hiddenBias = network->hiddenBias;
-    for (u32 layerIndex = 0; layerIndex < network->hiddenDepth + 1; ++layerIndex)
+    f32 *h2hWeight = network->weights;
+    f32 *hiddenBias = network->biases;
+    for (u32 layerIndex = 0; layerIndex < network->layerCount - 1; ++layerIndex)
     {
         u32 count;
         
-        if (layerIndex < network->hiddenDepth)
+        if (layerIndex < network->layerCount - 1)
         {
-         count = network->hiddenCount[layerIndex];
+            count = network->layerSizes[layerIndex];
         fprintf(stdout, "    hidden[%d]: [", layerIndex + 1);
         for (u32 index = 0; index < count; ++index)
         {
@@ -106,7 +106,7 @@ print_network(Neural *network)
         }
         else
         {
-            count = network->outputCount;
+            count = network->layerSizes[network->layerCount - 1];
             fprintf(stdout, "    outputWeights:\n");
             for (u32 row = 0; row < count; ++row)
             {
@@ -147,7 +147,7 @@ print_network(Neural *network)
     fprintf(stdout, "    outputBias: [");
     for (u32 index = 0; index < network->outputCount; ++index)
     {
-        fprintf(stdout, "%f", network->outputBias[index]);
+        fprintf(stdout, "%f", network->biases[index + network->totalNeurons - network->outputCount]);
         if (index == network->outputCount - 1)
         {
             fprintf(stdout, "]\n");
