@@ -32,13 +32,11 @@ struct Neural
     u32 *hiddenCount;
     f32 *hidden;
     f32 *hiddenBias;
-    f32 *i2hWeights;
     f32 *h2hWeights;
     
     u32 outputCount;
     f32 *outputs;
     f32 *outputBias;
-    f32 *h2oWeights;
     
     f32 *trainErrorsA;
     f32 *trainErrorsB;
@@ -50,14 +48,14 @@ init_neural_network(Neural *network, u32 inputCount,
                     u32 hiddenDepth, u32 *hiddenCounts, u32 outputCount)
 {
     network->inputCount = inputCount; // NOTE(michiel): For verification mostly
+    network->outputCount = outputCount;
     
     i_expect(network->hiddenCount == 0);
     i_expect(network->hidden == 0);
     i_expect(network->hiddenBias == 0);
-    i_expect(network->i2hWeights == 0);
+    i_expect(network->h2hWeights == 0);
     i_expect(network->outputs == 0);
     i_expect(network->outputBias == 0);
-    i_expect(network->h2oWeights == 0);
     
 #if 0    
     u32 layerCount = 1 + hiddenDepth + 1; // NOTE(michiel): input + hidden + output
@@ -93,29 +91,34 @@ init_neural_network(Neural *network, u32 inputCount,
     }
     network->hidden = allocate_array(f32, network->hiddenTotal);
     network->hiddenBias = allocate_array(f32, network->hiddenTotal);
-    network->i2hWeights = allocate_array(f32, network->hiddenCount[0] * inputCount);
     
-    u32 maxErrorLen = network->hiddenCount[0];
+    u32 maxErrorLen = 0; // network->hiddenCount[0];
     u32 h2hWeightLen = 0;
-    for (u32 i = 1; i < hiddenDepth; ++i)
+    u32 prevCount = network->inputCount;
+    for (u32 i = 0; i < hiddenDepth + 1; ++i)
     {
-        h2hWeightLen += network->hiddenCount[i] * network->hiddenCount[i - 1];
-        if (maxErrorLen < network->hiddenCount[i])
+        u32 count = 0;
+        if (i == hiddenDepth)
         {
-            maxErrorLen = network->hiddenCount[i];
+            count = network->outputCount;
+        }
+        else
+        {
+            count = network->hiddenCount[i];
+        }
+        h2hWeightLen += count * prevCount;
+        prevCount = count;
+        
+        if (maxErrorLen < count)
+        {
+            maxErrorLen = count;
         }
     }
     network->h2hWeights = allocate_array(f32, h2hWeightLen);
     
-    network->outputCount = outputCount;
     network->outputs = allocate_array(f32, outputCount);
     network->outputBias = allocate_array(f32, outputCount);
-    network->h2oWeights = allocate_array(f32, outputCount * network->hiddenCount[hiddenDepth - 1]);
     
-    if (maxErrorLen < outputCount)
-    {
-        maxErrorLen = outputCount;
-    }
     network->trainErrorsA = allocate_array(f32, maxErrorLen);
     network->trainErrorsB = allocate_array(f32, maxErrorLen);
     network->trainGradient = allocate_array(f32, maxErrorLen);
@@ -126,33 +129,35 @@ neural_copy(Neural *source, Neural *dest)
 {
     i_expect(source->inputCount == dest->inputCount);
     i_expect(source->hiddenDepth == dest->hiddenDepth);
-    i_expect(source->hiddenCount[0] == dest->hiddenCount[0]);
     i_expect(source->outputCount == dest->outputCount);
     
-    for (u32 hIndex = 0; hIndex < source->hiddenCount[0] * source->inputCount; ++hIndex)
-    {
-        dest->i2hWeights[hIndex] = source->i2hWeights[hIndex];
-    }
     u32 h2hOffset = 0;
-    for (u32 i = 1; i < source->hiddenDepth; ++i)
+    u32 prevCount = source->inputCount;
+    for (u32 i = 0; i < source->hiddenDepth + 1; ++i)
     {
+        u32 count = 0;
+        if (i == source->hiddenDepth)
+        {
+            count = source->outputCount;
+        }
+        else
+        {
         i_expect(source->hiddenCount[i] == dest->hiddenCount[i]);
-        u32 h2hWidth = source->hiddenCount[i] * source->hiddenCount[i - 1];
+            count = source->hiddenCount[i];
+        }
+            u32 h2hWidth = count * prevCount;
+        prevCount = count;
+        
         for (u32 hIndex = 0; hIndex < h2hWidth; ++hIndex)
         {
             dest->h2hWeights[hIndex + h2hOffset] = source->h2hWeights[hIndex + h2hOffset];
         }
+        
         h2hOffset += h2hWidth;
     }
     for (u32 hIndex = 0; hIndex < source->hiddenTotal; ++hIndex)
     {
         dest->hiddenBias[hIndex] = source->hiddenBias[hIndex];
-    }
-    for (u32 oIndex = 0;
-         oIndex < source->outputCount * source->hiddenCount[source->hiddenDepth - 1];
-         ++oIndex)
-    {
-        dest->h2oWeights[oIndex] = source->h2oWeights[oIndex];
     }
     for (u32 oIndex = 0; oIndex < source->outputCount; ++oIndex)
     {
@@ -163,14 +168,23 @@ neural_copy(Neural *source, Neural *dest)
 internal void
 randomize_weights(RandomSeriesPCG *random, Neural *network)
 {
-    for (u32 hIndex = 0; hIndex < network->hiddenCount[0] * network->inputCount; ++hIndex)
-    {
-        network->i2hWeights[hIndex] = random_bilateral(random);
-    }
     u32 h2hOffset = 0;
-        for (u32 i = 1; i < network->hiddenDepth; ++i)
+    u32 prevCount = network->inputCount;
+        for (u32 i = 0; i < network->hiddenDepth + 1; ++i)
     {
-        u32 h2hWidth = network->hiddenCount[i] * network->hiddenCount[i - 1];
+        u32 h2hWidth;
+        u32 count = 0;
+        if (i == network->hiddenDepth)
+        {
+            count = network->outputCount;
+        }
+        else
+        {
+            count = network->hiddenCount[i];
+        }
+        h2hWidth = count * prevCount;
+        prevCount = count;
+        
         for (u32 hIndex = 0; hIndex < h2hWidth; ++hIndex)
         {
             network->h2hWeights[hIndex + h2hOffset] = random_bilateral(random);
@@ -180,12 +194,6 @@ randomize_weights(RandomSeriesPCG *random, Neural *network)
     for (u32 hIndex = 0; hIndex < network->hiddenTotal; ++hIndex)
     {
         network->hiddenBias[hIndex] = random_bilateral(random);
-    }
-    for (u32 oIndex = 0;
-         oIndex < network->outputCount * network->hiddenCount[network->hiddenDepth - 1];
-         ++oIndex)
-    {
-        network->h2oWeights[oIndex] = random_bilateral(random);
     }
     for (u32 oIndex = 0; oIndex < network->outputCount; ++oIndex)
     {
@@ -198,21 +206,26 @@ neural_mixin(RandomSeriesPCG *random, Neural *source, Neural *dest, f32 rate = 0
 {
     i_expect(source->inputCount == dest->inputCount);
     i_expect(source->hiddenDepth == dest->hiddenDepth);
-    i_expect(source->hiddenCount[0] == dest->hiddenCount[0]);
     i_expect(source->outputCount == dest->outputCount);
     
-    for (u32 hIndex = 0; hIndex < source->hiddenCount[0] * source->inputCount; ++hIndex)
-    {
-        if (random_unilateral(random) < rate)
-        {
-        dest->i2hWeights[hIndex] = source->i2hWeights[hIndex];
-        }
-    }
     u32 h2hOffset = 0;
-    for (u32 i = 1; i < source->hiddenDepth; ++i)
+    u32 prevCount = source->inputCount;
+    for (u32 i = 0; i < source->hiddenDepth + 1; ++i)
     {
-        i_expect(source->hiddenCount[i] == dest->hiddenCount[i]);
-        u32 h2hWidth = source->hiddenCount[i] * source->hiddenCount[i - 1];
+        u32 h2hWidth;
+        u32 count = 0;
+        if (i == source->hiddenDepth)
+        {
+            count = source->outputCount;
+        }
+        else
+        {
+            i_expect(source->hiddenCount[i] == dest->hiddenCount[i]);
+            count = source->hiddenCount[i];
+        }
+        h2hWidth = count * prevCount;
+        prevCount = count;
+        
         for (u32 hIndex = 0; hIndex < h2hWidth; ++hIndex)
         {
             if (random_unilateral(random) < rate)
@@ -229,15 +242,6 @@ neural_mixin(RandomSeriesPCG *random, Neural *source, Neural *dest, f32 rate = 0
         dest->hiddenBias[hIndex] = source->hiddenBias[hIndex];
         }
     }
-    for (u32 oIndex = 0;
-         oIndex < source->outputCount * source->hiddenCount[source->hiddenDepth - 1];
-         ++oIndex)
-    {
-        if (random_unilateral(random) < rate)
-        {
-        dest->h2oWeights[oIndex] = source->h2oWeights[oIndex];
-        }
-    }
     for (u32 oIndex = 0; oIndex < source->outputCount; ++oIndex)
     {
         if (random_unilateral(random) < rate)
@@ -251,29 +255,32 @@ internal void
 neural_mutate(RandomSeriesPCG *random, Neural *network, NeuronMutate *mutateFunc,
               void *user = 0)
 {
-    for (u32 hIndex = 0; hIndex < network->hiddenCount[0] * network->inputCount; ++hIndex)
-    {
-            network->i2hWeights[hIndex] = mutateFunc(network->i2hWeights[hIndex], user);
-    }
     u32 h2hOffset = 0;
-    for (u32 i = 1; i < network->hiddenDepth; ++i)
+    u32 prevCount = network->inputCount;
+    for (u32 i = 0; i < network->hiddenDepth + 1; ++i)
     {
-        u32 h2hWidth = network->hiddenCount[i] * network->hiddenCount[i - 1];
+        u32 h2hWidth;
+        u32 count = 0;
+        if (i == network->hiddenDepth)
+        {
+            count = network->outputCount;
+        }
+        else
+        {
+            count = network->hiddenCount[i];
+        }
+        h2hWidth = count * prevCount;
+        prevCount = count;
+        
         for (u32 hIndex = 0; hIndex < h2hWidth; ++hIndex)
         {
-                network->h2hWeights[hIndex] = mutateFunc(network->h2hWeights[hIndex], user);
+            network->h2hWeights[hIndex + h2hOffset] = mutateFunc(network->h2hWeights[hIndex + h2hOffset], user);
             }
         h2hOffset += h2hWidth;
     }
     for (u32 hIndex = 0; hIndex < network->hiddenTotal; ++hIndex)
     {
         network->hiddenBias[hIndex] = mutateFunc(network->hiddenBias[hIndex], user);
-    }
-    for (u32 oIndex = 0;
-         oIndex < network->outputCount * network->hiddenCount[network->hiddenDepth - 1];
-         ++oIndex)
-    {
-        network->h2oWeights[oIndex] = mutateFunc(network->h2oWeights[oIndex], user);
     }
     for (u32 oIndex = 0; oIndex < network->outputCount; ++oIndex)
     {
@@ -325,28 +332,24 @@ predict(Neural *network, u32 inputCount, f32 *inputs)
     {
         u32 inCount = 0;
         u32 outCount = 0;
-        f32 *in = 0;
-        f32 *weights = 0;
-        f32 *bias = 0;
-        f32 *out = 0;
+        f32 *in = network->hidden + hiddenOffset;
+        f32 *weights = network->h2hWeights + h2hOffset;
+        f32 *bias = network->hiddenBias + hiddenOffset;
+        f32 *out = network->hidden + hiddenOffset;
+        
         if (layerIndex == 0)
         {
             // H[0] = map(WIH * I + HB[0]);
             inCount = network->inputCount;
-            outCount = network->hiddenCount[0];
+            outCount = network->hiddenCount[layerIndex];
             in = inputs;
-            weights = network->i2hWeights;
-            bias = network->hiddenBias;
-            out = network->hidden;
         }
         else if (layerIndex == network->hiddenDepth)
         {
             // O = map(WHO * H[d-1] + OB);
             inCount = network->hiddenCount[layerIndex - 1];
             outCount = network->outputCount;
-            in = network->hidden + hiddenOffset;
-            weights = network->h2oWeights;
-            bias = network->outputBias;
+             bias = network->outputBias;
             out = network->outputs;
         }
         else
@@ -356,13 +359,13 @@ predict(Neural *network, u32 inputCount, f32 *inputs)
             // H[d-1] = map(WHH[d-2] * H[d-2] + HB[d-1]);
             inCount = network->hiddenCount[layerIndex - 1];
             outCount = network->hiddenCount[layerIndex];
-            in = network->hidden + hiddenOffset;
-            weights = network->h2hWeights + h2hOffset;
+            
             hiddenOffset += inCount;
-            h2hOffset += inCount * outCount;
-            bias = network->hiddenBias + hiddenOffset;
-            out = network->hidden + hiddenOffset;
+             bias = network->hiddenBias + hiddenOffset;
+             out = network->hidden + hiddenOffset;
         }
+        
+        h2hOffset += inCount * outCount;
         
         predict_layer(inCount, outCount, in, weights, bias, out);
     }
@@ -450,13 +453,17 @@ train(Neural *network, u32 inputCount, f32 *inputs, u32 targetCount, f32 *target
     
     predict(network, inputCount, inputs);
     
-    u32 hiddenDepthIndex = network->hiddenDepth - 1;
-    u32 hiddenIndex = 0;
-    u32 h2hIndex = 0;
-    for (u32 i = 0; i < network->hiddenDepth - 1; ++i)
+    s32 hiddenDepthIndex = network->hiddenDepth;
+    s32 hiddenIndex = 0;
+    s32 h2hIndex = 0;
+    for (u32 i = 0; i < network->hiddenDepth; ++i)
     {
         hiddenIndex += network->hiddenCount[i];
-        if (i > 0)
+        if (i == 0)
+        {
+            h2hIndex += network->hiddenCount[i] * network->inputCount;
+        }
+        else
         {
             h2hIndex += network->hiddenCount[i] * network->hiddenCount[i - 1];
         }
@@ -468,50 +475,74 @@ train(Neural *network, u32 inputCount, f32 *inputs, u32 targetCount, f32 *target
     // E = T - O;
     subtract_array(network->outputCount, targets, network->outputs, currentErrors);
 
-#if 0    
+#if 0
     for (u32 err = 0; err < network->outputCount; ++err)
     {
         f32 val = currentErrors[err];
-        currentErrors[err] = val * currentErrors[err] * 0.5f;
+        currentErrors[err] = val * val * 0.5f;
     }
     #endif
-
-    // G = hadamard(1 / (1 - exp(-O)), E) * learningRate;
-    calculate_gradient(network->outputCount, network->outputs, currentErrors,
-                       network->trainGradient, learningRate);
-    // OB += G
-    add_to_array(network->outputCount, network->trainGradient, network->outputBias);
-    // OW += G * transpose(H[-1]);
-    add_weights(network->outputCount, network->hiddenCount[hiddenDepthIndex], 
-                network->trainGradient, network->hidden + hiddenIndex, network->h2oWeights);
     
-    f32 *weights = network->h2oWeights;
-    u32 currentCount = network->outputCount;
-
-for (; hiddenDepthIndex > 0; --hiddenDepthIndex)
+    f32 *weights = 0; // network->h2hWeights + h2hIndex;
+    u32 currentCount = 0; // network->outputCount;
+    
+for (; hiddenDepthIndex >= 0; --hiddenDepthIndex)
     {
-        u32 layerCount = network->hiddenCount[hiddenDepthIndex];
+        u32 layerCount = 0;
+        f32 *neurons = network->hidden + hiddenIndex;
+        f32 *bias = network->hiddenBias + hiddenIndex;
+        if (hiddenDepthIndex == network->hiddenDepth)
+        {
+            layerCount = network->outputCount;
+            neurons = network->outputs;
+            bias = network->outputBias;
+            
+            f32 *tempError = currentErrors;
+            currentErrors = nextErrors;
+            nextErrors = tempError;
+        }
+        else
+        {
+         layerCount = network->hiddenCount[hiddenDepthIndex];
         // E = transpose(weights) * E;
         transpose_multiply(layerCount, currentCount, weights, currentErrors, nextErrors);
+        }
         
         // G = hadamard(1 / (1 - exp(-H[d])), E) * learningRate;
-        calculate_gradient(layerCount, network->hidden + hiddenIndex,
-                           nextErrors, network->trainGradient, learningRate);
+        calculate_gradient(layerCount, neurons, nextErrors, network->trainGradient,
+                           learningRate);
         // HB[d] += G;
-        add_to_array(layerCount, network->trainGradient, network->hiddenBias + hiddenIndex);
+        add_to_array(layerCount, network->trainGradient, bias);
         
-        u32 prevCount = network->hiddenCount[hiddenDepthIndex - 1];
-        hiddenIndex -= prevCount;
+        u32 prevCount;
+        if (hiddenDepthIndex == 0)
+        {
+            prevCount = network->inputCount;
+        }
+        else
+        {
+         prevCount = network->hiddenCount[hiddenDepthIndex - 1];
+        }
         
         // weights = HW[d-1];
-        // HW[d-1] += G * transpose(H[d-1]);
         weights = network->h2hWeights + h2hIndex;
-        add_weights(layerCount, prevCount, network->trainGradient,
-                    network->hidden + hiddenIndex, weights);
-        
-        if (hiddenDepthIndex > 1)
+        hiddenIndex -= prevCount;
+        f32 *transposed = network->hidden + hiddenIndex;
+        if (hiddenDepthIndex == 0)
         {
-            h2hIndex -= prevCount * network->hiddenCount[hiddenDepthIndex - 2];;
+            transposed = inputs;
+        }
+        
+        // HW[d-1] += G * transpose(H[d-1]);
+        add_weights(layerCount, prevCount, network->trainGradient, transposed, weights);
+        
+        if (hiddenDepthIndex == 1)
+        {
+            h2hIndex -= prevCount * network->inputCount;
+        }
+        else if (hiddenDepthIndex > 1)
+        {
+            h2hIndex -= prevCount * network->hiddenCount[hiddenDepthIndex - 2];
         }
         
         f32 *tempError = currentErrors;
@@ -520,18 +551,7 @@ for (; hiddenDepthIndex > 0; --hiddenDepthIndex)
         currentCount = layerCount;
     }
     
-    i_expect(hiddenDepthIndex == 0);
-    i_expect(hiddenIndex == 0);
+    i_expect(hiddenDepthIndex == -1);
+    i_expect(hiddenIndex < 0);
     i_expect(h2hIndex == 0);
-    // E = transpose(weights) * E;
-    transpose_multiply(network->hiddenCount[0], currentCount, weights, 
-                       currentErrors, nextErrors);
-    // G = hadamard(1 / (1 - exp(-H[0])), E) * learningRate;
-    calculate_gradient(network->hiddenCount[0], network->hidden, nextErrors,
-                       network->trainGradient, learningRate);
-    // HB[0] += G;
-    add_to_array(network->hiddenCount[0], network->trainGradient, network->hiddenBias);
-    // IW += G * transpose(I);
-    add_weights(network->hiddenCount[0], network->inputCount, network->trainGradient,
-                inputs, network->i2hWeights);
 }

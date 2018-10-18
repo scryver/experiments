@@ -45,32 +45,17 @@ print_network(Neural *network)
     
     fprintf(stdout, "  internals:\n");
     
-    fprintf(stdout, "    inputWeights:\n");
-    for (u32 row = 0; row < network->hiddenCount[0]; ++row)
-    {
-        fprintf(stdout, "      [");
-        f32 *rowI2H = network->i2hWeights + row * network->inputCount;
-        for (u32 col = 0; col < network->inputCount; ++col)
-        {
-            fprintf(stdout, "% 5.2f", rowI2H[col]);
-            if (col == network->inputCount - 1)
-            {
-                fprintf(stdout, "]\n");
-            }
-            else
-            {
-                fprintf(stdout, ", ");
-            }
-        }
-    }
-    
     u32 rows = network->inputCount;
         f32 *hidden = network->hidden;
     f32 *h2hWeight = network->h2hWeights;
     f32 *hiddenBias = network->hiddenBias;
-    for (u32 layerIndex = 0; layerIndex < network->hiddenDepth; ++layerIndex)
+    for (u32 layerIndex = 0; layerIndex < network->hiddenDepth + 1; ++layerIndex)
     {
-        u32 count = network->hiddenCount[layerIndex];
+        u32 count;
+        
+        if (layerIndex < network->hiddenDepth)
+        {
+         count = network->hiddenCount[layerIndex];
         fprintf(stdout, "    hidden[%d]: [", layerIndex + 1);
         for (u32 index = 0; index < count; ++index)
         {
@@ -85,8 +70,6 @@ print_network(Neural *network)
             }
         }
         
-        if (layerIndex > 0)
-        {
         fprintf(stdout, "    hiddenWeight[%d]:\n", layerIndex + 1);
         for (u32 row = 0; row < count; ++row)
         {
@@ -106,7 +89,6 @@ print_network(Neural *network)
         }
             
             h2hWeight += count * rows;
-        }
         
         fprintf(stdout, "    hiddenBias[%d]: [", layerIndex + 1);
         for (u32 index = 0; index < count; ++index)
@@ -121,8 +103,29 @@ print_network(Neural *network)
                 fprintf(stdout, ", ");
             }
         }
-        
-                rows = count;
+        }
+        else
+        {
+            count = network->outputCount;
+            fprintf(stdout, "    outputWeights:\n");
+            for (u32 row = 0; row < count; ++row)
+            {
+                fprintf(stdout, "      [");
+                for (u32 col = 0; col < rows; ++col)
+                {
+                    fprintf(stdout, "% 5.2f", h2hWeight[row * rows + col]);
+                    if (col == rows - 1)
+                    {
+                        fprintf(stdout, "]\n");
+                    }
+                    else
+                    {
+                        fprintf(stdout, ", ");
+                    }
+                }
+            }
+        }
+        rows = count;
         hidden += count;
         hiddenBias += count;
     }
@@ -138,25 +141,6 @@ print_network(Neural *network)
         else
         {
             fprintf(stdout, ", ");
-        }
-    }
-    
-    fprintf(stdout, "    outputWeights:\n");
-    for (u32 row = 0; row < network->outputCount; ++row)
-    {
-        fprintf(stdout, "      [");
-        f32 *rowH2O = network->h2oWeights + row * network->hiddenCount[network->hiddenDepth - 1];
-        for (u32 col = 0; col < network->hiddenCount[network->hiddenDepth - 1]; ++col)
-        {
-            fprintf(stdout, "% 5.2f", rowH2O[col]);
-            if (col == network->hiddenCount[network->hiddenDepth - 1] - 1)
-            {
-                fprintf(stdout, "]\n");
-            }
-            else
-            {
-                fprintf(stdout, ", ");
-            }
         }
     }
     

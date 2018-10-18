@@ -335,7 +335,7 @@ DRAW_IMAGE(draw_image)
         flappy->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         
         // NOTE(michiel): Height = 10 meter
-        flappy->gravity.y = 9.81f * (f32)image->height / 20.0f;
+        flappy->gravity.y = 9.81f * (f32)image->height / 10.0f;
         
         for (u32 birdIndex = 0; birdIndex < array_count(flappy->birds); ++birdIndex)
         {
