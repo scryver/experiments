@@ -42,6 +42,10 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/chaos_game.cpp" -o chaos-game -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/path_finding.cpp" -o path-finding -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/hexmap.cpp" -o hexmap -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/mnist_parser.cpp" -o mnist-parser -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/handwriting.cpp" -o handwriting -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/neuroning.cpp" -o neuroning -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/neurons_calc.cpp" -o neurons-calc -lX11 -lGL &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net

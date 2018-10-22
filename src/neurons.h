@@ -1,6 +1,14 @@
 #define NEURON_MUTATE(name) f32 name(f32 a, void *user)
 typedef NEURON_MUTATE(NeuronMutate);
 
+#define NEURON_ACTIVATE(name) f32 name(f32 a, void *user)
+typedef NEURON_ACTIVATE(NeuronActivate);
+#define NEURON_DELTA_ACTIVATE(name) f32 name(f32 a, void *user)
+typedef NEURON_MUTATE(NeuronDeltaActivate);
+
+#define NEURON_EVALUATE(name) u32 name(u32 count, f32 *targets, f32 *outputs)
+typedef NEURON_EVALUATE(NeuronEvalutation);
+
 enum ArrayKind
 {
     Array_Float,
@@ -36,6 +44,7 @@ struct Neural
     
     // NOTE(michiel): Calculated state
     u32 totalNeurons;
+    u32 totalWeights;
     f32 *hidden;
     f32 *outputs;
     
@@ -44,6 +53,27 @@ struct Neural
     f32 *trainErrorsB;
     f32 *trainGradient;
 };
+
+struct Training
+{
+    u32 inputCount;
+    f32 *inputs;
+    
+    u32 outputCount;
+    f32 *outputs;
+};
+
+internal void
+shuffle(RandomSeriesPCG *random, u32 dataCount, Training *data)
+{
+    for (u32 x = 0; x < dataCount; ++x)
+    {
+        u32 indexB = random_choice(random, dataCount);
+        Training t = data[x];
+        data[x] = data[indexB];
+        data[indexB] = t;
+    }
+}
 
 internal void
 init_neural_network(Neural *network, u32 inputCount, 
@@ -97,12 +127,12 @@ init_neural_network(Neural *network, u32 inputCount,
     network->biases = allocate_array(f32, network->totalNeurons);
     
     u32 maxErrorLen = 0; // network->layerSizes[0];
-    u32 h2hWeightLen = 0;
+     network->totalWeights = 0;
     u32 prevCount = network->inputCount;
     for (u32 i = 0; i < network->layerCount; ++i)
     {
         u32 count = network->layerSizes[i];
-        h2hWeightLen += count * prevCount;
+        network->totalWeights += count * prevCount;
         prevCount = count;
         
         if (maxErrorLen < count)
@@ -110,7 +140,7 @@ init_neural_network(Neural *network, u32 inputCount,
             maxErrorLen = count;
         }
     }
-    network->weights = allocate_array(f32, h2hWeightLen);
+    network->weights = allocate_array(f32, network->totalWeights);
     
     network->outputs = network->hidden + network->totalNeurons - outputCount;
     
@@ -150,20 +180,17 @@ neural_copy(Neural *source, Neural *dest)
 internal void
 randomize_weights(RandomSeriesPCG *random, Neural *network)
 {
-    u32 h2hOffset = 0;
     u32 prevCount = network->inputCount;
-        for (u32 i = 0; i < network->layerCount; ++i)
+    f32 *weights = network->weights;
+        for (u32 l = 0; l < network->layerCount; ++l)
     {
-        u32 h2hWidth;
-        u32 count = network->layerSizes[i];
-        h2hWidth = count * prevCount;
-        prevCount = count;
-        
-        for (u32 hIndex = 0; hIndex < h2hWidth; ++hIndex)
+        u32 count = network->layerSizes[l];
+        f32 oneOverSqrtX = 1.0f / sqrt(prevCount);
+        for (u32 i = 0; i < count * prevCount; ++i)
         {
-            network->weights[hIndex + h2hOffset] = random_bilateral(random);
+            weights[i] = random_bilateral(random) * oneOverSqrtX;
         }
-        h2hOffset += h2hWidth;
+        prevCount = count;
     }
     for (u32 hIndex = 0; hIndex < network->totalNeurons; ++hIndex)
     {
@@ -208,19 +235,9 @@ internal void
 neural_mutate(RandomSeriesPCG *random, Neural *network, NeuronMutate *mutateFunc,
               void *user = 0)
 {
-    u32 h2hOffset = 0;
-    u32 prevCount = network->inputCount;
-    for (u32 i = 0; i < network->layerCount + 1; ++i)
+    for (u32 i = 0; i < network->totalWeights; ++i)
     {
-        u32 count = network->layerSizes[i];
-        u32 h2hWidth = count * prevCount;
-        prevCount = count;
-        
-        for (u32 hIndex = 0; hIndex < h2hWidth; ++hIndex)
-        {
-            network->weights[hIndex + h2hOffset] = mutateFunc(network->weights[hIndex + h2hOffset], user);
-            }
-        h2hOffset += h2hWidth;
+            network->weights[i] = mutateFunc(network->weights[i], user);
     }
     for (u32 hIndex = 0; hIndex < network->totalNeurons; ++hIndex)
     {
@@ -228,20 +245,21 @@ neural_mutate(RandomSeriesPCG *random, Neural *network, NeuronMutate *mutateFunc
     }
 }
 
-internal inline f32
-activation_function(f32 inp)
+internal inline
+NEURON_ACTIVATE(activation_function)
 {
-    return 1.0f / (1.0f + exp(-inp));
+    return 1.0f / (1.0f + exp(-a));
 }
 
-internal inline f32
-delta_activation_function(f32 inp)
+internal inline 
+NEURON_DELTA_ACTIVATE(delta_activation_function)
 {
-    return inp * (1.0f - inp);
+    return a * (1.0f - a);
 }
 
 internal void
-predict_layer(u32 inCount, u32 outCount, f32 *inputs, f32 *weights, f32 *bias, f32 *outputs)
+predict_layer(u32 inCount, u32 outCount, f32 *inputs, f32 *weights, f32 *bias, f32 *outputs,
+              NeuronActivate *activation = activation_function, void *user = 0)
 {
     // O = sigmoid(W * I + B);
     f32 *W = weights;
@@ -277,31 +295,31 @@ predict_layer(u32 inCount, u32 outCount, f32 *inputs, f32 *weights, f32 *bias, f
         result += bias[row];
         
         // NOTE(michiel): Sigmoid and store
-        outputs[row] = activation_function(result);
+        outputs[row] = activation(result, user);
         }
 }
 
 internal void
-predict(Neural *network, u32 inputCount, f32 *inputs)
+predict(u32 inputCount, f32 *inputs, u32 layerCount, u32 *layerSizes,
+        f32 *hidden, f32 *weights, f32 *biases,
+        NeuronActivate *activation = activation_function, void *user = 0)
 {
-    i_expect(inputCount == network->inputCount);
-    
     u32 hiddenOffset = 0;
     u32 h2hOffset = 0;
-    for (u32 layerIndex = 0; layerIndex < network->layerCount; ++layerIndex)
+    for (u32 layerIndex = 0; layerIndex < layerCount; ++layerIndex)
     {
         u32 inCount = 0;
         u32 outCount = 0;
-        f32 *in = network->hidden + hiddenOffset;
-        f32 *weights = network->weights + h2hOffset;
+        f32 *in = hidden + hiddenOffset;
+        f32 *w = weights + h2hOffset;
         f32 *bias = 0;
         f32 *out = 0;
         
         if (layerIndex == 0)
         {
             // H[0] = map(WIH * I + HB[0]);
-            inCount = network->inputCount;
-            outCount = network->layerSizes[layerIndex];
+            inCount = inputCount;
+            outCount = layerSizes[layerIndex];
             in = inputs;
         }
         else
@@ -309,18 +327,29 @@ predict(Neural *network, u32 inputCount, f32 *inputs)
             // H[1] = map(WHH[0] * H[0] + HB[1]);
             // H[2] = map(WHH[1] * H[1] + HB[2]);
             // H[d-1] = map(WHH[d-2] * H[d-2] + HB[d-1]);
-            inCount = network->layerSizes[layerIndex - 1];
-                outCount = network->layerSizes[layerIndex];
+            inCount = layerSizes[layerIndex - 1];
+            outCount = layerSizes[layerIndex];
             
             hiddenOffset += inCount;
         }
-        bias = network->biases + hiddenOffset;
-        out = network->hidden + hiddenOffset;
+        bias = biases + hiddenOffset;
+        out = hidden + hiddenOffset;
         
         h2hOffset += inCount * outCount;
         
-        predict_layer(inCount, outCount, in, weights, bias, out);
+        predict_layer(inCount, outCount, in, w, bias, out, activation, user);
     }
+}
+
+internal void
+predict(Neural *network, u32 inputCount, f32 *inputs, 
+        NeuronActivate *activation = activation_function, void *user = 0)
+{
+    i_expect(inputCount == network->inputCount);
+    
+    predict(inputCount, inputs, network->layerCount, network->layerSizes,
+            network->hidden, network->weights, network->biases,
+            activation, user);
 }
 
 internal void
@@ -343,11 +372,13 @@ subtract_array(u32 count, f32 *a, f32 *b, f32 *result)
 }
 
 internal void
-calculate_gradient(u32 count, f32 *inputs, f32 *errors, f32 *result, f32 learningRate)
+calculate_gradient(u32 count, f32 *inputs, f32 *errors, f32 *result, f32 learningRate,
+                   NeuronDeltaActivate *delta_activate = delta_activation_function,
+                   void *user = 0)
 {
     for (u32 index = 0; index < count; ++index)
     {
-        result[index] = errors[index] * delta_activation_function(inputs[index]) * learningRate;
+        result[index] = errors[index] * delta_activate(inputs[index], user) * learningRate;
     }
 }
 
@@ -398,7 +429,8 @@ teach_layer(u32 inputCount, u32 outputCount, f32 *inputs, f32 *errors,)
 
 internal void
 train(Neural *network, u32 inputCount, f32 *inputs, u32 targetCount, f32 *targets,
-      f32 learningRate = 0.1f)
+      f32 learningRate = 0.1f, NeuronDeltaActivate *delta_activate = delta_activation_function,
+      void *user = 0)
 {
     i_expect(network->inputCount == inputCount);
     i_expect(network->layerSizes[network->layerCount - 1] == targetCount);
@@ -457,7 +489,7 @@ for (; layerCountIndex >= 0; --layerCountIndex)
         
         // G = hadamard(1 / (1 - exp(-H[d])), E) * learningRate;
         calculate_gradient(layerCount, neurons, nextErrors, network->trainGradient,
-                           learningRate);
+                           learningRate, delta_activate, user);
         // HB[d] += G;
         add_to_array(layerCount, network->trainGradient, bias);
         
@@ -501,4 +533,398 @@ for (; layerCountIndex >= 0; --layerCountIndex)
     i_expect(layerCountIndex == -1);
     i_expect(hiddenIndex < 0);
     i_expect(h2hIndex == 0);
+}
+
+internal inline f32
+delta_function(f32 a)
+{
+    return a * (1.0f - a);
+}
+
+#if 1
+internal inline f32
+cost_function(f32 a)
+{
+    return 1.0f;
+}
+#else
+internal inline f32
+cost_function(f32 a)
+{
+    return delta_function(a);
+}
+#endif
+
+internal void
+back_propagate(u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *biases,
+               u32 totalNeurons, u32 totalWeights, 
+               Training *training, f32 *deltaWeights, f32 *deltaBiases,
+               NeuronActivate *activate = activation_function, void *user = 0)
+{
+    predict(training->inputCount, training->inputs,
+            layerCount, layerSizes, hidden, weights, biases, activate, user);
+    
+    TempMemory tempMem = temporary_memory();
+    
+    // NOTE(michiel): Backward pass
+    
+    u32 offset = totalNeurons - layerSizes[layerCount - 1];
+    f32 *activation = hidden + offset;
+    
+    f32 *w = weights + totalWeights;
+    
+    f32 *dnb = deltaBiases + totalNeurons;
+    f32 *dnw = deltaWeights + totalWeights;
+    f32 *temp = allocate_array(f32, totalNeurons);
+    f32 *temp2 = allocate_array(f32, totalNeurons);
+    
+    for (s32 layerIdx = layerCount - 1; layerIdx >= 0; --layerIdx)
+    {
+        u32 count = layerSizes[layerIdx];
+        u32 prevCount = training->inputCount;
+        if (layerIdx > 0)
+        {
+            prevCount = layerSizes[layerIdx - 1];
+        }
+        
+        dnb -= count;
+        dnw -= count * prevCount;
+        
+        if (layerIdx == layerCount - 1)
+        {
+            subtract_array(count, activation, training->outputs, temp);
+            
+            for (u32 bIdx = 0; bIdx < count; ++bIdx)
+            {
+                temp[bIdx] *= cost_function(activation[bIdx]);
+            }
+        }
+        else
+        {
+            u32 nextCount = layerSizes[layerIdx + 1];
+            
+                f32 *colC = temp2;
+                for (u32 row = 0; row < count; ++row)
+                {
+                    f32 *rowW = w + row;
+                    f32 *rowT = temp + row;
+                    *rowT = 0.0f;
+                    for (u32 s = 0; s < nextCount; ++s)
+                    {
+                        *rowT += rowW[s * count] * colC[s];
+                    }
+                     *rowT *= delta_function(activation[row]);
+                }
+        }
+        
+        w -= count * prevCount;
+        
+        for (u32 bIdx = 0; bIdx < count; ++bIdx)
+        {
+            dnb[bIdx] += temp[bIdx];
+        }
+        
+        activation -= prevCount;
+        if (activation < hidden)
+        {
+            activation = training->inputs;
+        }
+        
+        add_weights(count, prevCount, temp, activation, dnw);
+        
+        prevCount = count;
+        
+        f32 *tempP = temp;
+        temp = temp2;
+        temp2 = tempP;
+    }
+    
+    i_expect(dnb == deltaBiases);
+    i_expect(dnw == deltaWeights);
+    
+    destroy_temporary(tempMem);
+}
+
+internal void
+back_propagate(Neural *network, Training *training, f32 *deltaWeights, f32 *deltaBiases,
+               NeuronActivate *activation = activation_function, void *user = 0)
+{
+    i_expect(training->inputCount == network->inputCount);
+    i_expect(training->outputCount == network->outputCount);
+    
+    back_propagate(network->layerCount, network->layerSizes, 
+                   network->hidden, network->weights, network->biases,
+                   network->totalNeurons, network->totalWeights, 
+                    training, deltaWeights, deltaBiases,
+                   activation, user);
+}
+
+internal void
+update_mini_batch(u32 batchSize, Training *training, f32 learningRate, 
+                  f32 lambda, u32 totalTrainingCount,
+                  u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *biases,
+                  u32 totalNeurons, u32 totalWeights,
+                  NeuronActivate *activation = activation_function, void *user = 0)
+{
+    TempMemory temp = temporary_memory();
+    
+    f32 *nw = allocate_array(f32, totalWeights);
+    f32 *nb = allocate_array(f32, totalNeurons);
+    
+    for (u32 item = 0; item < batchSize; ++item)
+    {
+        Training *sample = training + item;
+        back_propagate(layerCount, layerSizes, hidden, weights, biases, 
+                       totalNeurons, totalWeights, sample, nw, nb,
+                       activation, user);
+    }
+    
+    f32 mod = learningRate / (f32)batchSize;
+    f32 modReg = 1.0f - learningRate * (lambda / (f32)totalTrainingCount);
+    for (u32 i = 0; i < totalWeights; ++i)
+    {
+        weights[i] = modReg * weights[i] - mod * nw[i];
+    }
+    for (u32 i = 0; i < totalNeurons; ++i)
+    {
+        biases[i] -= mod * nb[i];
+    }
+    
+    destroy_temporary(temp);
+}
+
+internal void
+update_mini_batch(Neural *network, u32 batchSize, Training *training, f32 learningRate,
+                  f32 lambda, u32 totalTrainingCount,
+                  NeuronActivate *activation = activation_function, void *user = 0)
+{
+    update_mini_batch(batchSize, training, learningRate, lambda, totalTrainingCount,
+                      network->layerCount, network->layerSizes, network->hidden,
+                      network->weights, network->biases, network->totalNeurons,
+                      network->totalWeights, activation, user);
+}
+
+internal
+NEURON_EVALUATE(eval_neurons)
+{
+    u32 maxInt = U32_MAX;
+    f32 max = 0.0f;
+    u32 targetInt = U32_MAX;
+    
+    for (u32 o = 0; o < count; ++o)
+    {
+        f32 out = outputs[o];
+        if (max < out)
+        {
+            max = out;
+            maxInt = o;
+        }
+        
+        if (targets[o] == 1.0f)
+        {
+            targetInt = o;
+        }
+    }
+    
+    if (maxInt == targetInt)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+internal
+NEURON_EVALUATE(eval_single)
+{
+    u32 correct = 0;
+    for (u32 i = 0; i < count; ++i)
+    {
+        if (((outputs[i] >= 0.5f) &&
+             (targets[i] == 1.0f)) ||
+            ((outputs[i] < 0.5f) &&
+             (targets[i] == 0.0f)))
+        {
+            ++correct;
+        }
+    }
+    
+    return (correct > 0) ? 1 : 0;
+}
+
+internal u32
+evaluate(Neural *network, u32 testCount, Training *tests, 
+         NeuronEvalutation *evaluation = eval_neurons)
+{
+    u32 correct = 0;
+    
+    for (u32 item = 0; item < testCount; ++item)
+    {
+        Training *test = tests + item;
+        predict(network, test->inputCount, test->inputs);
+        
+        correct += evaluation(test->outputCount, test->outputs, network->outputs);
+    }
+    
+    return correct;
+}
+
+internal void
+stochastic_gradient_descent(RandomSeriesPCG *random, Neural *network, 
+                            u32 epochs, u32 miniBatchSize, f32 learningRate,
+                            u32 trainingCount, Training *training, f32 lambda = 0.0f,
+                            u32 validationCount = 0, Training *validation = 0,
+                            NeuronEvalutation *validateEval = eval_neurons,
+                            b32 info = false)
+{
+    for (u32 epoch = 0; epoch < epochs; ++epoch)
+    {
+        shuffle(random, trainingCount, training);
+        
+        for (u32 batchAt = 0; 
+             batchAt <= (trainingCount - miniBatchSize); 
+             batchAt += miniBatchSize)
+        {
+            update_mini_batch(network, miniBatchSize, training + batchAt, learningRate,
+                              lambda, trainingCount);
+        }
+        
+        if (validation)
+        {
+            u32 correct = evaluate(network, validationCount, validation, validateEval);
+            fprintf(stdout, "Epoch %u completed. (%u / %u)\n", epoch + 1, 
+                    correct, validationCount);
+        }
+        else if (info)
+        {
+            fprintf(stdout, "Epoch %u completed.\n", epoch + 1);
+        }
+    }
+}
+
+//
+// NOTE(michiel): Print functions
+//
+
+internal void
+print_hidden(u32 layerCount, u32 *layerSizes, f32 *hidden,
+             char *spacing = "  ")
+{
+    // NOTE(michiel): Can be used for biases as well
+    
+    /*
+    * ------  ------  ------
+    * | 0.1|  |-0.4|  | 0.6|
+    * |-0.3|  | 0.5|  ------
+    * | 0.2|  ------
+    * ------
+*/
+    u32 maxRows = 0;
+    for (u32 layerIdx = 0; layerIdx < layerCount; ++layerIdx)
+    {
+        u32 count = layerSizes[layerIdx];
+        if (maxRows < count)
+        {
+            maxRows = count;
+        }
+        fprintf(stdout, "-------------%s", layerIdx < (layerCount - 1) ? spacing : "\n");
+    }
+    
+    for (u32 r = 0; r < maxRows + 1; ++r)
+    {
+        f32 *h = hidden + r;
+        
+        for (u32 layerIdx = 0; layerIdx < layerCount; ++layerIdx)
+        {
+            u32 count = layerSizes[layerIdx];
+            if (r < count)
+            {
+                fprintf(stdout, "|% .8f|%s", *h, layerIdx < (layerCount - 1) ? spacing : "\n");
+            }
+            else if (r == count)
+            {
+                fprintf(stdout, "-------------%s", layerIdx < (layerCount - 1) ? spacing : "\n");
+            }
+            else
+            {
+                fprintf(stdout, "             %s", layerIdx < (layerCount - 1) ? spacing : "\n");
+            }
+            h += count;
+        }
+    }
+}
+
+internal void
+print_weights(u32 inputCount, u32 layerCount, u32 *layerSizes, f32 *weights,
+              char *spacing = "  ")
+{
+    /*
+    * -----------  ----------------  -----------
+    * | 0.3  0.6|  |-1.0  0.4 -2.0|  |-1.2  0.3|
+    * |-1.0  0.7|  | 3.0  0.5 -1.0|  -----------
+    * | 0.7  0.3|  ----------------
+    * -----------
+    */
+    u32 prevCount = inputCount;
+    u32 maxRows = 0;
+    for (u32 layerIdx = 0; layerIdx < layerCount; ++layerIdx)
+    {
+        u32 count = layerSizes[layerIdx];
+        if (maxRows < count)
+        {
+            maxRows = count;
+        }
+        fprintf(stdout, "-");
+        for (u32 p = 0; p < prevCount; ++p)
+        {
+            fprintf(stdout, "------------");
+        }
+        fprintf(stdout, "%s", layerIdx < (layerCount - 1) ? spacing : "\n");
+        prevCount = count;
+    }
+    
+    f32 *w = weights;
+    
+    for (u32 r = 0; r < maxRows + 1; ++r)
+    {
+        prevCount = inputCount;
+        w = weights;
+        
+        for (u32 layerIdx = 0; layerIdx < layerCount; ++layerIdx)
+        {
+            u32 count = layerSizes[layerIdx];
+            if (r < count)
+            {
+                f32 *wInner = w + r * prevCount;
+                fprintf(stdout, "|");
+                for (u32 p = 0; p < prevCount; ++p)
+                {
+                    fprintf(stdout, "% .8f%s", *wInner++, p < (prevCount - 1) ? "," : "");
+                }
+                fprintf(stdout, "|%s", layerIdx < (layerCount - 1) ? spacing : "\n");
+                
+                w += prevCount * count;
+            }
+            else if (r == count)
+            {
+                fprintf(stdout, "-");
+                for (u32 p = 0; p < prevCount; ++p)
+                {
+                    fprintf(stdout, "------------");
+                }
+                fprintf(stdout, "%s", layerIdx < (layerCount - 1) ? spacing : "\n");
+            }
+            else
+            {
+                for (u32 p = 0; p < prevCount; ++p)
+                {
+                    fprintf(stdout, "          %s", p < (prevCount - 1) ? " " : "");
+                }
+                fprintf(stdout, "%s", layerIdx < (layerCount - 1) ? spacing : "\n");
+            }
+            prevCount = count;
+        }
+    }
 }

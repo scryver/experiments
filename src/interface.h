@@ -44,7 +44,7 @@ typedef size_t   umm;
 #define TAU32   6.28318530717958647692528676655900576838f
 
 internal inline f32
-fast_expf(f32 x, u32 approx = 10)
+fast_expf(f32 x, u32 approx = 12)
 {
     f32 result = 1.0f;
     result += x / (f32)(1 << approx);
@@ -67,8 +67,8 @@ fast_expf(f32 x, u32 approx = 10)
 #define sin  __builtin_sinf
 #define cos  __builtin_cosf
 #define sqrt __builtin_sqrtf
-//#define exp  __builtin_expf
-#define exp  fast_expf
+#define exp  __builtin_expf
+//#define exp  fast_expf
 #define log   __builtin_logf
 
 #define kilobytes(a)   (1024ULL * a)
