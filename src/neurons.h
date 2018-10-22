@@ -178,14 +178,18 @@ neural_copy(Neural *source, Neural *dest)
 }
 
 internal void
-randomize_weights(RandomSeriesPCG *random, Neural *network)
+randomize_weights(RandomSeriesPCG *random, Neural *network, b32 compensateWeights = true)
 {
     u32 prevCount = network->inputCount;
     f32 *weights = network->weights;
         for (u32 l = 0; l < network->layerCount; ++l)
     {
         u32 count = network->layerSizes[l];
-        f32 oneOverSqrtX = 1.0f / sqrt(prevCount);
+        f32 oneOverSqrtX = 1.0f;
+        if (compensateWeights)
+        {
+            oneOverSqrtX /= sqrt(prevCount);
+        }
         for (u32 i = 0; i < count * prevCount; ++i)
         {
             weights[i] = random_bilateral(random) * oneOverSqrtX;
@@ -259,10 +263,12 @@ NEURON_DELTA_ACTIVATE(delta_activation_function)
 
 internal void
 predict_layer(u32 inCount, u32 outCount, f32 *inputs, f32 *weights, f32 *bias, f32 *outputs,
+              b32 softmax = false,
               NeuronActivate *activation = activation_function, void *user = 0)
 {
     // O = sigmoid(W * I + B);
     f32 *W = weights;
+    f32 sum = 0.0f;
     for (u32 row = 0; row < outCount; ++row)
     {
         f32 result = 0.0f;
@@ -294,14 +300,31 @@ predict_layer(u32 inCount, u32 outCount, f32 *inputs, f32 *weights, f32 *bias, f
         // NOTE(michiel): Bias
         result += bias[row];
         
-        // NOTE(michiel): Sigmoid and store
+        if (softmax)
+        {
+            sum += result;
+            outputs[row] = result;
+        }
+        else
+        {
+            // NOTE(michiel): Sigmoid and store
         outputs[row] = activation(result, user);
         }
+        }
+    
+    if (softmax)
+    {
+        f32 oneOverSum = 1.0f / sum;
+        for (u32 row = 0; row < outCount; ++row)
+        {
+            outputs[row] *= oneOverSum;
+        }
+    }
 }
 
 internal void
 predict(u32 inputCount, f32 *inputs, u32 layerCount, u32 *layerSizes,
-        f32 *hidden, f32 *weights, f32 *biases,
+        f32 *hidden, f32 *weights, f32 *biases, b32 softmax = false,
         NeuronActivate *activation = activation_function, void *user = 0)
 {
     u32 hiddenOffset = 0;
@@ -314,6 +337,7 @@ predict(u32 inputCount, f32 *inputs, u32 layerCount, u32 *layerSizes,
         f32 *w = weights + h2hOffset;
         f32 *bias = 0;
         f32 *out = 0;
+        b32 layerSoftmax = false;
         
         if (layerIndex == 0)
         {
@@ -331,24 +355,30 @@ predict(u32 inputCount, f32 *inputs, u32 layerCount, u32 *layerSizes,
             outCount = layerSizes[layerIndex];
             
             hiddenOffset += inCount;
+            
+            if (layerIndex == layerCount - 1)
+            {
+                // NOTE(michiel): Output
+                layerSoftmax = softmax;
+                }
         }
         bias = biases + hiddenOffset;
         out = hidden + hiddenOffset;
         
         h2hOffset += inCount * outCount;
         
-        predict_layer(inCount, outCount, in, w, bias, out, activation, user);
+        predict_layer(inCount, outCount, in, w, bias, out, layerSoftmax, activation, user);
     }
 }
 
 internal void
-predict(Neural *network, u32 inputCount, f32 *inputs, 
+predict(Neural *network, u32 inputCount, f32 *inputs, b32 softmax = false,
         NeuronActivate *activation = activation_function, void *user = 0)
 {
     i_expect(inputCount == network->inputCount);
     
     predict(inputCount, inputs, network->layerCount, network->layerSizes,
-            network->hidden, network->weights, network->biases,
+            network->hidden, network->weights, network->biases, softmax,
             activation, user);
 }
 
@@ -558,11 +588,12 @@ cost_function(f32 a)
 internal void
 back_propagate(u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *biases,
                u32 totalNeurons, u32 totalWeights, 
-               Training *training, f32 *deltaWeights, f32 *deltaBiases,
+               Training *training, f32 *deltaWeights, f32 *deltaBiases, b32 softmax = false,
                NeuronActivate *activate = activation_function, void *user = 0)
 {
     predict(training->inputCount, training->inputs,
-            layerCount, layerSizes, hidden, weights, biases, activate, user);
+            layerCount, layerSizes, hidden, weights, biases, 
+            softmax, activate, user);
     
     TempMemory tempMem = temporary_memory();
     
@@ -613,7 +644,7 @@ back_propagate(u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *
                     {
                         *rowT += rowW[s * count] * colC[s];
                     }
-                     *rowT *= delta_function(activation[row]);
+                *rowT *= delta_function(activation[row]);
                 }
         }
         
@@ -647,6 +678,7 @@ back_propagate(u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *
 
 internal void
 back_propagate(Neural *network, Training *training, f32 *deltaWeights, f32 *deltaBiases,
+               b32 softmax = false,
                NeuronActivate *activation = activation_function, void *user = 0)
 {
     i_expect(training->inputCount == network->inputCount);
@@ -655,7 +687,7 @@ back_propagate(Neural *network, Training *training, f32 *deltaWeights, f32 *delt
     back_propagate(network->layerCount, network->layerSizes, 
                    network->hidden, network->weights, network->biases,
                    network->totalNeurons, network->totalWeights, 
-                    training, deltaWeights, deltaBiases,
+                    training, deltaWeights, deltaBiases, softmax,
                    activation, user);
 }
 
@@ -663,7 +695,7 @@ internal void
 update_mini_batch(u32 batchSize, Training *training, f32 learningRate, 
                   f32 lambda, u32 totalTrainingCount,
                   u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *biases,
-                  u32 totalNeurons, u32 totalWeights,
+                  u32 totalNeurons, u32 totalWeights, b32 softmax = false,
                   NeuronActivate *activation = activation_function, void *user = 0)
 {
     TempMemory temp = temporary_memory();
@@ -675,7 +707,7 @@ update_mini_batch(u32 batchSize, Training *training, f32 learningRate,
     {
         Training *sample = training + item;
         back_propagate(layerCount, layerSizes, hidden, weights, biases, 
-                       totalNeurons, totalWeights, sample, nw, nb,
+                       totalNeurons, totalWeights, sample, nw, nb, softmax,
                        activation, user);
     }
     
@@ -695,13 +727,13 @@ update_mini_batch(u32 batchSize, Training *training, f32 learningRate,
 
 internal void
 update_mini_batch(Neural *network, u32 batchSize, Training *training, f32 learningRate,
-                  f32 lambda, u32 totalTrainingCount,
+                  f32 lambda, u32 totalTrainingCount, b32 softmax = false,
                   NeuronActivate *activation = activation_function, void *user = 0)
 {
     update_mini_batch(batchSize, training, learningRate, lambda, totalTrainingCount,
                       network->layerCount, network->layerSizes, network->hidden,
                       network->weights, network->biases, network->totalNeurons,
-                      network->totalWeights, activation, user);
+                      network->totalWeights, softmax, activation, user);
 }
 
 internal
@@ -775,6 +807,7 @@ internal void
 stochastic_gradient_descent(RandomSeriesPCG *random, Neural *network, 
                             u32 epochs, u32 miniBatchSize, f32 learningRate,
                             u32 trainingCount, Training *training, f32 lambda = 0.0f,
+                            b32 softmax = false,
                             u32 validationCount = 0, Training *validation = 0,
                             NeuronEvalutation *validateEval = eval_neurons,
                             b32 info = false)
@@ -788,7 +821,7 @@ stochastic_gradient_descent(RandomSeriesPCG *random, Neural *network,
              batchAt += miniBatchSize)
         {
             update_mini_batch(network, miniBatchSize, training + batchAt, learningRate,
-                              lambda, trainingCount);
+                              lambda, trainingCount, softmax);
         }
         
         if (validation)

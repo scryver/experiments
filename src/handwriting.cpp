@@ -68,13 +68,13 @@ DRAW_IMAGE(draw_image)
     HandwriteState *handwrite = (HandwriteState *)state->memory;
     if (!state->initialized)
     {
-        handwrite->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
-        //handwrite->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
+        //handwrite->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
+        handwrite->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         
         handwrite->inputCount = 784; // 28 * 28 pixels
         handwrite->inputs = allocate_array(f32, handwrite->inputCount);
         
-        u32 hiddenCounts[] = {30};
+        u32 hiddenCounts[] = {100};
         init_neural_network(&handwrite->brain, handwrite->inputCount, 
                             array_count(hiddenCounts), hiddenCounts, 10);
         randomize_weights(&handwrite->randomizer, &handwrite->brain);
@@ -104,7 +104,7 @@ DRAW_IMAGE(draw_image)
     stochastic_gradient_descent(&handwrite->randomizer, &handwrite->brain,
                                 epochs, 10, 0.5f,
                                 handwrite->trainCount, handwrite->training,
-                                5.0f);
+                                5.0f, false);
     handwrite->count += epochs;
     
     u32 postCorrect = evaluate(&handwrite->brain,

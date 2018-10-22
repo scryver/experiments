@@ -33,7 +33,7 @@ DRAW_IMAGE(draw_image)
         handwrite->inputCount = 2;
         handwrite->inputs = allocate_array(f32, handwrite->inputCount);
         
-        u32 hiddenCounts[] = {10};
+        u32 hiddenCounts[] = {10, 4};
         init_neural_network(&handwrite->brain, handwrite->inputCount,
                             array_count(hiddenCounts), hiddenCounts, 1);
         randomize_weights(&handwrite->randomizer, &handwrite->brain);
@@ -80,7 +80,7 @@ DRAW_IMAGE(draw_image)
         }
     }
     
-    u32 resolution = 40;
+    u32 resolution = 5;
     u32 rows = image->height / resolution;
     u32 columns = image->width / resolution;
     for (u32 y = 0; y < rows; ++y)
