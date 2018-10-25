@@ -7,6 +7,7 @@ DRAW_IMAGE(draw_image);
 #include "drawing.cpp"
 
 #include "matrix.h"
+#include "aitraining.h"
 #include "neurons.h"
 
 struct HandwriteState
@@ -64,10 +65,14 @@ DRAW_IMAGE(draw_image)
         train[2].outputs = outputs + 2;
         train[3].outputs = outputs + 3;
         
-        u32 preCorrect = evaluate(&handwrite->brain, 4, train, eval_single);
+        TrainingSet t = {};
+        t.count = array_count(train);
+        t.set = train;
+        
+        u32 preCorrect = evaluate(&handwrite->brain, t, eval_single);
         stochastic_gradient_descent(&handwrite->randomizer, &handwrite->brain,
-                                    30, 2, 0.8f, 4, train);
-        u32 postCorrect = evaluate(&handwrite->brain, 4, train, eval_single);
+                                    30, 2, 0.8f, t);
+        u32 postCorrect = evaluate(&handwrite->brain, t, eval_single);
 
         if ((handwrite->ticks % 20) == 0)
         {    

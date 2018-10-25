@@ -4,6 +4,7 @@ DRAW_IMAGE(draw_image);
 #include "main.cpp"
 
 #include "random.h"
+#include "aitraining.h"
 #include "neurons.h"
 #include "drawing.cpp"
 

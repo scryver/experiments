@@ -54,27 +54,6 @@ struct Neural
     f32 *trainGradient;
 };
 
-struct Training
-{
-    u32 inputCount;
-    f32 *inputs;
-    
-    u32 outputCount;
-    f32 *outputs;
-};
-
-internal void
-shuffle(RandomSeriesPCG *random, u32 dataCount, Training *data)
-{
-    for (u32 x = 0; x < dataCount; ++x)
-    {
-        u32 indexB = random_choice(random, dataCount);
-        Training t = data[x];
-        data[x] = data[indexB];
-        data[indexB] = t;
-    }
-}
-
 internal void
 init_neural_network(Neural *network, u32 inputCount, 
                     u32 hiddenDepth, u32 *hiddenCounts, u32 outputCount)
@@ -127,7 +106,7 @@ init_neural_network(Neural *network, u32 inputCount,
     network->biases = allocate_array(f32, network->totalNeurons);
     
     u32 maxErrorLen = 0; // network->layerSizes[0];
-     network->totalWeights = 0;
+    network->totalWeights = 0;
     u32 prevCount = network->inputCount;
     for (u32 i = 0; i < network->layerCount; ++i)
     {
@@ -160,7 +139,7 @@ neural_copy(Neural *source, Neural *dest)
     for (u32 i = 0; i < source->layerCount; ++i)
     {
         i_expect(source->layerSizes[i] == dest->layerSizes[i]);
-            u32 count = source->layerSizes[i];
+        u32 count = source->layerSizes[i];
         u32 h2hWidth = count * prevCount;
         prevCount = count;
         
@@ -182,7 +161,7 @@ randomize_weights(RandomSeriesPCG *random, Neural *network, b32 compensateWeight
 {
     u32 prevCount = network->inputCount;
     f32 *weights = network->weights;
-        for (u32 l = 0; l < network->layerCount; ++l)
+    for (u32 l = 0; l < network->layerCount; ++l)
     {
         u32 count = network->layerSizes[l];
         f32 oneOverSqrtX = 1.0f;
@@ -213,7 +192,7 @@ neural_mixin(RandomSeriesPCG *random, Neural *source, Neural *dest, f32 rate = 0
     for (u32 i = 0; i < source->layerCount; ++i)
     {
         i_expect(source->layerSizes[i] == dest->layerSizes[i]);
-            u32 count = source->layerSizes[i];
+        u32 count = source->layerSizes[i];
         u32 h2hWidth = count * prevCount;
         prevCount = count;
         
@@ -221,7 +200,7 @@ neural_mixin(RandomSeriesPCG *random, Neural *source, Neural *dest, f32 rate = 0
         {
             if (random_unilateral(random) < rate)
             {
-            dest->weights[hIndex + h2hOffset] = source->weights[hIndex + h2hOffset];
+                dest->weights[hIndex + h2hOffset] = source->weights[hIndex + h2hOffset];
             }
         }
         h2hOffset += h2hWidth;
@@ -230,7 +209,7 @@ neural_mixin(RandomSeriesPCG *random, Neural *source, Neural *dest, f32 rate = 0
     {
         if (random_unilateral(random) < rate)
         {
-        dest->biases[hIndex] = source->biases[hIndex];
+            dest->biases[hIndex] = source->biases[hIndex];
         }
     }
 }
@@ -241,7 +220,7 @@ neural_mutate(RandomSeriesPCG *random, Neural *network, NeuronMutate *mutateFunc
 {
     for (u32 i = 0; i < network->totalWeights; ++i)
     {
-            network->weights[i] = mutateFunc(network->weights[i], user);
+        network->weights[i] = mutateFunc(network->weights[i], user);
     }
     for (u32 hIndex = 0; hIndex < network->totalNeurons; ++hIndex)
     {
@@ -273,7 +252,7 @@ predict_layer(u32 inCount, u32 outCount, f32 *inputs, f32 *weights, f32 *bias, f
     {
         f32 result = 0.0f;
         // NOTE(michiel): Weights
-
+        
 #if 1
         u32 inCount4 = inCount >> 2;
         u32 inCountR = inCount & 0x3;
@@ -285,32 +264,33 @@ predict_layer(u32 inCount, u32 outCount, f32 *inputs, f32 *weights, f32 *bias, f
             result += (*W++) * inputs[(col4 << 2) + 2];
             result += (*W++) * inputs[(col4 << 2) + 3];
         }
-
+        
         for (u32 colR = 0; colR < inCountR; ++colR)
         {
             result += (*W++) * inputs[(inCount4 << 2) + colR];
         }
-        #else
+#else
         for (u32 col = 0; col < inCount; ++col)
         {
             result += (*W++) * inputs[col];
         }
-        #endif
+#endif
         
         // NOTE(michiel): Bias
         result += bias[row];
         
         if (softmax)
         {
+            result = exp(result);
             sum += result;
             outputs[row] = result;
         }
         else
         {
             // NOTE(michiel): Sigmoid and store
-        outputs[row] = activation(result, user);
+            outputs[row] = activation(result, user);
         }
-        }
+    }
     
     if (softmax)
     {
@@ -360,7 +340,7 @@ predict(u32 inputCount, f32 *inputs, u32 layerCount, u32 *layerSizes,
             {
                 // NOTE(michiel): Output
                 layerSoftmax = softmax;
-                }
+            }
         }
         bias = biases + hiddenOffset;
         out = hidden + hiddenOffset;
@@ -416,7 +396,7 @@ internal void
 add_weights(u32 multCount, u32 transpCount, f32 *multiplier, f32 *transposer, f32 *weights)
 {
     // weights += multiplier * transpose(transposer) (matrix multiply of 2 vectors)
-for (u32 row = 0; row < multCount; ++row)
+    for (u32 row = 0; row < multCount; ++row)
     {
         f32 rowM = multiplier[row];
         f32 *rowW = weights + row * transpCount;
@@ -489,7 +469,7 @@ train(Neural *network, u32 inputCount, f32 *inputs, u32 targetCount, f32 *target
     f32 *weights = 0; // network->weights + h2hIndex;
     u32 currentCount = 0; // network->outputCount;
     
-for (; layerCountIndex >= 0; --layerCountIndex)
+    for (; layerCountIndex >= 0; --layerCountIndex)
     {
         u32 layerCount = network->layerSizes[layerCountIndex];
         f32 *neurons = network->hidden + hiddenIndex;
@@ -501,7 +481,7 @@ for (; layerCountIndex >= 0; --layerCountIndex)
             
             // E = T - O;
             subtract_array(layerCount, targets, neurons, nextErrors);
-            #if 0
+#if 0
             for (u32 err = 0; err < layerCount; ++err)
             {
                 f32 val = nextErrors[err];
@@ -513,8 +493,8 @@ for (; layerCountIndex >= 0; --layerCountIndex)
         {
             // NOTE(michiel): Hidden layer
             
-        // E = transpose(weights) * E;
-        transpose_multiply(layerCount, currentCount, weights, currentErrors, nextErrors);
+            // E = transpose(weights) * E;
+            transpose_multiply(layerCount, currentCount, weights, currentErrors, nextErrors);
         }
         
         // G = hadamard(1 / (1 - exp(-H[d])), E) * learningRate;
@@ -530,7 +510,7 @@ for (; layerCountIndex >= 0; --layerCountIndex)
         }
         else
         {
-         prevCount = network->layerSizes[layerCountIndex - 1];
+            prevCount = network->layerSizes[layerCountIndex - 1];
         }
         
         // weights = HW[d-1];
@@ -634,18 +614,18 @@ back_propagate(u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *
         {
             u32 nextCount = layerSizes[layerIdx + 1];
             
-                f32 *colC = temp2;
-                for (u32 row = 0; row < count; ++row)
+            f32 *colC = temp2;
+            for (u32 row = 0; row < count; ++row)
+            {
+                f32 *rowW = w + row;
+                f32 *rowT = temp + row;
+                *rowT = 0.0f;
+                for (u32 s = 0; s < nextCount; ++s)
                 {
-                    f32 *rowW = w + row;
-                    f32 *rowT = temp + row;
-                    *rowT = 0.0f;
-                    for (u32 s = 0; s < nextCount; ++s)
-                    {
-                        *rowT += rowW[s * count] * colC[s];
-                    }
-                *rowT *= delta_function(activation[row]);
+                    *rowT += rowW[s * count] * colC[s];
                 }
+                *rowT *= delta_function(activation[row]);
+            }
         }
         
         w -= count * prevCount;
@@ -687,7 +667,7 @@ back_propagate(Neural *network, Training *training, f32 *deltaWeights, f32 *delt
     back_propagate(network->layerCount, network->layerSizes, 
                    network->hidden, network->weights, network->biases,
                    network->totalNeurons, network->totalWeights, 
-                    training, deltaWeights, deltaBiases, softmax,
+                   training, deltaWeights, deltaBiases, softmax,
                    activation, user);
 }
 
@@ -731,6 +711,17 @@ update_mini_batch(Neural *network, u32 batchSize, Training *training, f32 learni
                   NeuronActivate *activation = activation_function, void *user = 0)
 {
     update_mini_batch(batchSize, training, learningRate, lambda, totalTrainingCount,
+                      network->layerCount, network->layerSizes, network->hidden,
+                      network->weights, network->biases, network->totalNeurons,
+                      network->totalWeights, softmax, activation, user);
+}
+
+internal void
+update_mini_batch(Neural *network, TrainingSet training, f32 learningRate,
+                  f32 lambda, u32 totalTrainingCount, b32 softmax = false,
+                  NeuronActivate *activation = activation_function, void *user = 0)
+{
+    update_mini_batch(training.count, training.set, learningRate, lambda, totalTrainingCount,
                       network->layerCount, network->layerSizes, network->hidden,
                       network->weights, network->biases, network->totalNeurons,
                       network->totalWeights, softmax, activation, user);
@@ -786,15 +777,15 @@ NEURON_EVALUATE(eval_single)
     return (correct > 0) ? 1 : 0;
 }
 
-internal u32
-evaluate(Neural *network, u32 testCount, Training *tests, 
+internal inline u32
+evaluate(Neural *network, TrainingSet tests,
          NeuronEvalutation *evaluation = eval_neurons)
 {
     u32 correct = 0;
     
-    for (u32 item = 0; item < testCount; ++item)
+    for (u32 item = 0; item < tests.count; ++item)
     {
-        Training *test = tests + item;
+        Training *test = tests.set + item;
         predict(network, test->inputCount, test->inputs);
         
         correct += evaluation(test->outputCount, test->outputs, network->outputs);
@@ -806,29 +797,31 @@ evaluate(Neural *network, u32 testCount, Training *tests,
 internal void
 stochastic_gradient_descent(RandomSeriesPCG *random, Neural *network, 
                             u32 epochs, u32 miniBatchSize, f32 learningRate,
-                            u32 trainingCount, Training *training, f32 lambda = 0.0f,
+                            TrainingSet training, f32 lambda = 0.0f,
                             b32 softmax = false,
-                            u32 validationCount = 0, Training *validation = 0,
+                            TrainingSet validation = {},
                             NeuronEvalutation *validateEval = eval_neurons,
                             b32 info = false)
 {
     for (u32 epoch = 0; epoch < epochs; ++epoch)
     {
-        shuffle(random, trainingCount, training);
+        shuffle(random, training.count, training.set);
         
         for (u32 batchAt = 0; 
-             batchAt <= (trainingCount - miniBatchSize); 
+             batchAt <= (training.count - miniBatchSize); 
              batchAt += miniBatchSize)
         {
-            update_mini_batch(network, miniBatchSize, training + batchAt, learningRate,
-                              lambda, trainingCount, softmax);
+            TrainingSet batch = {};
+            batch.count = miniBatchSize;
+            batch.set = training.set + batchAt;
+            update_mini_batch(network, batch, learningRate, lambda, training.count, softmax);
         }
         
-        if (validation)
+        if (validation.set)
         {
-            u32 correct = evaluate(network, validationCount, validation, validateEval);
+            u32 correct = evaluate(network, validation, validateEval);
             fprintf(stdout, "Epoch %u completed. (%u / %u)\n", epoch + 1, 
-                    correct, validationCount);
+                    correct, validation.count);
         }
         else if (info)
         {

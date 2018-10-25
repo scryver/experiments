@@ -104,7 +104,10 @@ round_f32_to_u32(f32 f)
 #define array_count(a) (sizeof(a) / sizeof(a[0]))
 
 #define i_expect(a)    do { \
-    if (!(a)) { fprintf(stderr, "Expectance not met: " #a "\n"); __builtin_trap(); } } while (0)
+    if (!(a)) { fprintf(stderr, "%s:%d::Expectance not met: '%s'\n", __FILE__, __LINE__, #a); __builtin_trap(); } } while (0)
+
+#define INVALID_CODE_PATH    i_expect(!"Invalid code path!");
+#define INVALID_DEFAULT_CASE default: { i_expect(!"Invalid default case!"); } break
 
 internal inline f32 
 clamp01(f32 value)

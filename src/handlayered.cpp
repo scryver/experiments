@@ -6,9 +6,8 @@ DRAW_IMAGE(draw_image);
 #include "random.h"
 #include "drawing.cpp"
 
-#include "matrix.h"
 #include "aitraining.h"
-#include "neurons.h"
+#include "neuronlayer.h"
 
 #include "mnist.h"
 
@@ -21,9 +20,9 @@ struct HandwriteState
     TrainingSet test;
     TrainingSet validation;
     
-    Neural brain;
+    NeuralCake brain;
     
-    u32 count;
+    u32 epochCount;
     
     u32 inputCount;
     f32 *inputs;
@@ -42,9 +41,13 @@ DRAW_IMAGE(draw_image)
         handwrite->inputCount = 784; // 28 * 28 pixels
         handwrite->inputs = allocate_array(f32, handwrite->inputCount);
         
-        u32 hiddenCounts[] = {100};
-        init_neural_network(&handwrite->brain, handwrite->inputCount, 
-                            array_count(hiddenCounts), hiddenCounts, 10);
+        init_neural_network(&handwrite->brain, 2);
+        add_fully_connected_layer(&handwrite->brain, 784, 100);
+        add_fully_connected_layer(&handwrite->brain, 100, 10, true);
+        //add_max_pooling_feature_map_layer(&handwrite->brain, 20, 28, 28, 5, 5, 2, 2);
+        //add_fully_connected_layer(&handwrite->brain, 20 * 12 * 12, 10, true);
+        finish_network(&handwrite->brain);
+        
         randomize_weights(&handwrite->randomizer, &handwrite->brain);
         
         handwrite->train = parse_training("data/mnist-f32train");
@@ -56,37 +59,46 @@ DRAW_IMAGE(draw_image)
     
     u32 preCorrect = evaluate(&handwrite->brain, handwrite->validation);
     
-    u32 epochs = 5;
+    u32 epochs = 1;
     stochastic_gradient_descent(&handwrite->randomizer, &handwrite->brain,
-                                epochs, 10, 0.5f, handwrite->train,
-                                5.0f, true, handwrite->test);
-    handwrite->count += epochs;
+                                epochs, 10, 0.5f, handwrite->train, 5.0f);
+    handwrite->epochCount += epochs;
     
     u32 postCorrect = evaluate(&handwrite->brain, handwrite->validation);
     
     f32 preProcent = 100.0f * (f32)preCorrect / (f32)handwrite->validation.count;
     f32 postProcent = 100.0f * (f32)postCorrect / (f32)handwrite->validation.count;
     fprintf(stdout, "%4d: From %4u to %4u in %4d epoch%s. (%2.2f%% -> %2.2f%%, %+0.2f%%)\n",
-            handwrite->count,
+            handwrite->epochCount,
             preCorrect, postCorrect, epochs, epochs == 1 ? "" : "s",
             preProcent, postProcent, postProcent - preProcent);
-    
+
+#if 0    
+    NeuralLayer *feature = handwrite->brain.layers;
     u32 resolution = 40;
-    u32 rows = image->height / resolution;
-    u32 columns = image->width / resolution;
-    for (u32 y = 0; y < rows; ++y)
+    u32 rows = 5;
+    u32 columns = 5;
+    u32 xOffset = 10;
+    u32 yOffset = 10;
+    f32 *weights = feature->featureMap.weights;
+    for (u32 m = 0; m < 3; ++m)
     {
+        f32 *wMap = weights + m * rows * columns;
+        for (u32 y = 0; y < rows; ++y)
+    {
+            f32 *wRow = wMap + y * columns;
         for (u32 x = 0; x < columns; ++x)
         {
-            f32 iX = (f32)x / (f32)columns;
-            f32 iY = (f32)y / (f32)rows;
-            f32 gray = iX * iY;
+            f32 gray = activate_neuron(wRow[x]);
             v4 colour = V4(gray, gray, gray, 1);
-            fill_rectangle(image, x * resolution, y * resolution, resolution, resolution,
-                           colour);
+            fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
+                           resolution, resolution, colour);
         }
     }
-    //fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+        
+        xOffset += resolution * columns + 5;
+    }
+    #endif
+
     ++handwrite->ticks;
 }

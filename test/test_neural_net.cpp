@@ -4,6 +4,18 @@
 
 #include "../src/interface.h"
 
+struct ReadFile
+{
+    u32 size;
+    u8 *data;
+};
+
+internal inline ReadFile
+read_entire_file(char *a)
+{
+    return {};
+}
+
 struct MemBlock
 {
     u32 maxSize;
@@ -56,6 +68,7 @@ allocate_size(umm size)
 #include "../src/random.h"
 #define MATRIX_TEST 1
 #include "../src/matrix.h"
+#include "../src/aitraining.h"
 #include "../src/neural_net.h"
 #include "../src/neurons.h"
 

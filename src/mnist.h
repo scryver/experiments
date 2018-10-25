@@ -101,3 +101,31 @@ split_mnist(MnistSet *base, u32 splitAt)
     base->count = splitAt;
     return result;
 }
+
+internal TrainingSet
+mnist_to_training(MnistSet *mnist)
+{
+    TrainingSet result = {};
+    result.count = mnist->count;
+    result.set = allocate_array(Training, mnist->count);
+    
+    for (u32 tIdx = 0; tIdx < mnist->count; ++tIdx)
+    {
+        Training *item = result.set + tIdx;
+        u8 label = mnist->labels[tIdx];
+        Image *image = mnist->images + tIdx;
+        
+        item->inputCount = image->width * image->height;
+        item->inputs = allocate_array(f32, item->inputCount);
+        item->outputCount = 10;
+        item->outputs = allocate_array(f32, item->outputCount);
+        
+        for (u32 iIdx = 0; iIdx < item->inputCount; ++iIdx)
+        {
+            item->inputs[iIdx] = (f32)(((u8 *)image->pixels)[iIdx]) / 255.0f;
+        }
+        item->outputs[(u32)label] = 1.0f;
+    }
+    
+    return result;
+}
