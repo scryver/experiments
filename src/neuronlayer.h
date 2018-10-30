@@ -18,6 +18,7 @@ struct FeatureMap
     u32 poolWidth; // NOTE(michiel): If 0 no pooling
     u32 poolHeight;
     
+    u32 *poolIndices; // NOTE(michiel): Backprop cache
     f32 *prePool;
     f32 *weights;
     f32 *biases;
@@ -138,6 +139,7 @@ add_feature_map_layer(NeuralCake *network, u32 maps,
     layer->featureMap.poolHeight = 0;
     //layer->featureMap.stride = stride;
     
+    layer->featureMap.poolIndices = 0;
     layer->featureMap.weights = 0;
     layer->featureMap.biases = 0;
 }
@@ -186,6 +188,7 @@ add_max_pooling_feature_map_layer(NeuralCake *network, u32 maps,
     layer->featureMap.poolHeight = poolHeight;
     //layer->featureMap.stride = stride;
     
+    layer->featureMap.poolIndices = 0;
     layer->featureMap.weights = 0;
     layer->featureMap.biases = 0;
     }
@@ -198,6 +201,7 @@ finish_network(NeuralCake *network)
     u32 neuronCount = 0;
     u32 weightCount = 0;
     u32 biasCount = 0;
+    u32 poolIdxCount = 0;
     for (u32 l = 0; l < network->layerCount; ++l)
     {
         NeuralLayer *layer = network->layers + l;
@@ -223,10 +227,12 @@ finish_network(NeuralCake *network)
                 
                 if (layer->featureMap.poolWidth)
                 {
+                    i_expect(layer->featureMap.poolHeight);
                     neuronCount +=
                         (layer->featureMap.inputWidth - layer->featureMap.featureWidth + 1) *
                         (layer->featureMap.inputHeight - layer->featureMap.featureHeight + 1) *
                         layer->featureMap.mapCount;
+                    poolIdxCount += layer->outputCount;
                 }
             } break;
             
@@ -242,15 +248,17 @@ finish_network(NeuralCake *network)
     network->totalWeights = weightCount;
     network->totalBiases = biasCount;
     
-    f32 *allTheValues = allocate_array(f32, neuronCount + weightCount + biasCount);
+    f32 *allTheValues = allocate_array(f32, neuronCount + weightCount + biasCount + poolIdxCount);
     
     f32 *neurons = allTheValues;
     f32 *weights = neurons + neuronCount;
     f32 *biases = weights + weightCount;
+    u32 *poolIndices = (u32 *)(biases + biasCount);
     
     f32 *n = neurons;
     f32 *w = weights;
     f32 *b = biases;
+    u32 *p = poolIndices;
     
     for (u32 l = 0; l < network->layerCount; ++l)
     {
@@ -290,6 +298,8 @@ finish_network(NeuralCake *network)
                 if (pW)
                 {
                     i_expect(pH);
+                    layer->featureMap.poolIndices = p;
+                    p += layer->outputCount;
                     layer->featureMap.prePool = n;
                     n += (inW - fW + 1) * (inH - fH + 1) * maps;
                 }
@@ -360,7 +370,7 @@ randomize_weights(RandomSeriesPCG *random, NeuralCake *network, b32 compensateWe
                 }
                 for (u32 b = 0; b < layer->featureMap.mapCount; ++b)
                 {
-                    layer->featureMap.biases[b] = random_bilateral(random);
+                    layer->featureMap.biases[b] = 0.0f; // random_bilateral(random);
                 }
                 } break;
             
@@ -440,7 +450,16 @@ predict_layer(NeuralLayer *layer)
         
         case Neural_FeatureMap:
         {
-            b32 usePool = layer->featureMap.poolWidth != 0;
+            u32 inW = layer->featureMap.inputWidth;
+            u32 inH = layer->featureMap.inputHeight;
+            u32 fW = layer->featureMap.featureWidth;
+            u32 fH = layer->featureMap.featureHeight;
+            u32 pW = layer->featureMap.poolWidth;
+            u32 pH = layer->featureMap.poolHeight;
+            u32 outW = inW - fW + 1;
+            u32 outH = inH - fH + 1;
+            
+            b32 usePool = pW && pH;
             
             f32 *out = layer->outputs;
             if (usePool)
@@ -448,14 +467,9 @@ predict_layer(NeuralLayer *layer)
                 out = layer->featureMap.prePool;
             }
             
-            u32 inW = layer->featureMap.inputWidth;
-            u32 inH = layer->featureMap.inputHeight;
-            u32 fW = layer->featureMap.featureWidth;
-            u32 fH = layer->featureMap.featureHeight;
-            u32 outW = inW - fW + 1;
-            u32 outH = inH - fH + 1;
-            f32 *w = layer->featureMap.weights;
-            f32 *b = layer->featureMap.biases;
+            f32 *in = layer->inputs;
+            f32 *weights = layer->featureMap.weights;
+            f32 *biases = layer->featureMap.biases;
             
             for (u32 m = 0; m < layer->featureMap.mapCount; ++m)
             {
@@ -468,42 +482,42 @@ predict_layer(NeuralLayer *layer)
                     f32 val = 0.0f;
                     for (u32 fy = 0; fy < fH; ++fy)
                     {
-                        f32 *inFRow = inRow + fy * inW;
-                            f32 *wRow = w + fy * fW;
+                        f32 *inFRow = inRow + x + fy * inW;
+                            f32 *wRow = weights + fy * fW;
                         for (u32 fx = 0; fx < fW; ++fx)
                         {
                                 val += wRow[fx] * inFRow[fx];
                         }
                     }
-                        outRow[x] = val + *b;
+                        outRow[x] = activate_neuron(val + biases[0]);
                 }
             }
                 out += outW * outH;
-                w += fW * fH;
-                ++b;
+                weights += fW * fH;
+                ++biases;
             }
             
             if (usePool)
             {
                 out = layer->outputs;
+                u32 *indxs = layer->featureMap.poolIndices;
                 
-                u32 pW = layer->featureMap.poolWidth;
-                u32 pH = layer->featureMap.poolHeight;
                 u32 outPW = outW / pW;
                 u32 outPH = outH / pH;
                 i_expect((outPW * outPH * layer->featureMap.mapCount) == layer->outputCount);
                 
-                f32 *inputs = layer->featureMap.prePool;
+                 in = layer->featureMap.prePool;
                 
                 for (u32 m = 0; m < layer->featureMap.mapCount; ++m)
                 {
                     for (u32 y = 0; y < outPH; ++y)
                     {
                         f32 *outRow = out + y * outPW;
-                        f32 *inputRow = inputs + y * outW * pW;
+                        f32 *inputRow = in + y * outW * pW;
                         for (u32 x = 0; x < outPW; ++x)
                         {
                             f32 max = F32_MIN;
+                            u32 maxIdx = U32_MAX;
                             for (u32 py = 0; py < pH; ++py)
                             {
                                 f32 *inputPRow = inputRow + py * outW;
@@ -512,14 +526,18 @@ predict_layer(NeuralLayer *layer)
                                     if (max < inputPRow[px])
                                     {
                                         max = inputPRow[px];
+                                        maxIdx = (u64)(inputPRow + px - in);
                                     }
                                 }
                             }
-                            outRow[x] = max;
-                        }
+                            indxs[x] = maxIdx;
+                        outRow[x] = max;
+                            }
                     }
                     
+                    in += outW * outH;
                     out += outPW * outPH;
+                    indxs += outPW * outPH;
                 }
             }
         } break;
@@ -539,6 +557,12 @@ predict(NeuralCake *network, u32 inputCount, f32 *inputs)
         NeuralLayer *layer = network->layers + layerIndex;
         predict_layer(layer);
     }
+}
+
+internal void
+predict(NeuralCake *network, Training *input)
+{
+    predict(network, input->inputCount, input->inputs);
 }
 
 internal void
@@ -567,15 +591,199 @@ for (u32 row = 0; row < multCount; ++row)
 }
 
 internal void
+back_propagate_fully_connected(NeuralLayer *layer, Training *training, b32 finalLayer,
+                               f32 **dnw, f32 **dnb, f32 *prevError, f32 *error)
+{
+    u32 count = layer->outputCount;
+    u32 prevCount = layer->inputCount;
+    
+    *dnb -= count;
+    *dnw -= count * prevCount;
+    
+    if (finalLayer)
+    {
+        i_expect(training->outputCount == layer->outputCount);
+        
+        subtract_array(count, layer->outputs, training->outputs, error);
+        
+        for (u32 bIdx = 0; bIdx < count; ++bIdx)
+        {
+            error[bIdx] *= log_likely_cost_neuron(layer->outputs[bIdx]);
+        }
+    }
+    else
+    {
+        NeuralLayer *nextLayer = layer + 1;
+        if (nextLayer->kind == Neural_FullyConnected)
+        {
+            u32 nextCount = nextLayer->outputCount;
+            
+            f32 *colC = prevError;
+            for (u32 row = 0; row < count; ++row)
+            {
+                f32 *rowW = nextLayer->fullyConnected.weights + row;
+                f32 *rowT = error + row;
+                f32 val = 0.0f;
+                for (u32 s = 0; s < nextCount; ++s)
+                {
+                    val += rowW[s * count] * colC[s];
+                }
+                val *= delta_neuron(layer->outputs[row]);
+                *rowT = val;
+            }
+        }
+        else
+        {
+            INVALID_CODE_PATH;
+        }
+    }
+    
+    for (u32 bIdx = 0; bIdx < count; ++bIdx)
+    {
+        *dnb[bIdx] += error[bIdx];
+    }
+    
+    add_weights(count, prevCount, error, layer->inputs, *dnw);
+}
+
+internal void
+back_propagate_feature_map(NeuralLayer *layer, Training *training, b32 finalLayer,
+                               f32 **dnw, f32 **dnb, f32 *prevError, f32 *error)
+{
+    i_expect(!finalLayer); // NOTE(michiel): Can't be the last layer
+    
+    u32 maps = layer->featureMap.mapCount;
+    
+    u32 inW = layer->featureMap.inputWidth;
+    u32 inH = layer->featureMap.inputHeight;
+    u32 fW = layer->featureMap.featureWidth;
+    u32 fH = layer->featureMap.featureHeight;
+    u32 pW = layer->featureMap.poolWidth;
+    u32 pH = layer->featureMap.poolHeight;
+    u32 outW = inW - fW + 1;
+    u32 outH = inH - fH + 1;
+    
+    i_expect(fW <= outW);
+    
+    b32 usePool = pW && pH;
+    
+    if (usePool)
+    {
+        u32 outPW = outW / pW;
+        u32 outPH = outH / pH;
+        
+        u32 *pIdxs = layer->featureMap.poolIndices;
+        f32 *pErr = prevError;
+        f32 *err = error;
+        
+        for (u32 map = 0; map < maps; ++map)
+        {
+            for (u32 y = 0; y < outH; ++y)
+            {
+                f32 *errRow = err + y * outW;
+                for (u32 x = 0; x < outW; ++x)
+                {
+                    errRow[x] = 0.0f;
+                }
+            }
+            
+            for (u32 i = 0; i < outPW * outPH; ++i)
+            {
+                u32 index = pIdxs[i];
+                err[index] = pErr[i];
+            }
+            
+            pIdxs += outPW * outPH;
+            pErr += outPW * outPH;
+            err += outW * outH;
+        }
+        
+        f32 *t = prevError;
+        prevError = error;
+        error = t;
+    }
+    
+    for (u32 y = 0; y < inH; ++y)
+    {
+        for (u32 x = 0; x < inW; ++x)
+        {
+            error[y * inW + x] = 0.0f;
+        }
+    }
+    
+    f32 *output = layer->outputs;
+    f32 *pErr = prevError;
+    f32 *weights = layer->featureMap.weights;
+    
+    for (u32 map = 0; map < maps; ++map)
+    {
+        *dnw -= fW * fH;
+        --(*dnb);
+        
+        for (u32 fY = 0; fY < fH; ++fY)
+        {
+            f32 *wRow = *dnw + fY * fW;
+            f32 *inGRow = layer->inputs + fY * inW;
+            for (u32 fX = 0; fX < fW; ++fX)
+            {
+                f32 val = 0.0f;
+                for (u32 y = 0; y < outH; ++y)
+                {
+                    f32 *inRow = inGRow + fX + y * inW;
+                    f32 *outRow = pErr + y * outW;
+                    for (u32 x = 0; x < outW; ++x)
+                    {
+                        val += inRow[x] * delta_neuron(outRow[x]);
+                    }
+                }
+                wRow[fX] += val;
+            }
+        }
+        
+        for (u32 inY = 0; inY < inH; ++inY)
+        {
+            f32 *inRow = error + inY * inW;
+            for (u32 inX = 0; inX < inW; ++inX)
+            {
+                f32 val = 0.0f;
+                for (u32 fy = 0; fy < fH; ++fy)
+                {
+                    s32 yOff = inY - fH + 1 + fy;
+                    if ((yOff >= 0) && (yOff < outH))
+                    {
+                        f32 *wRow = weights + fy * fW;
+                        f32 *outRow = pErr + inX + yOff;
+                        for (u32 fx = 0; fx < fW; ++fx)
+                        {
+                            s32 xOff = inX - fW + 1 + fx;
+                            if ((xOff >= 0) && (xOff < outW))
+                            {
+                                val += wRow[fx] * delta_neuron(outRow[xOff]);
+                            }
+                        }
+                    }
+                }
+                
+                inRow[inX] += val;
+            }
+        }
+        
+        weights += fW * fH;
+        pErr += outW * outH;
+        output += outW * outH;
+    }
+}
+
+internal void
 back_propagate(NeuralCake *network, Training *training, f32 *deltaWeights, f32 *deltaBiases)
 {
-    predict(network, training->inputCount, training->inputs);
+    predict(network, training);
     
     TempMemory tempMem = temporary_memory();
     
     // NOTE(michiel): Backward pass
-    f32 *dnw = deltaWeights;
-    f32 *dnb = deltaBiases;
+    f32 *dnw = deltaWeights + network->totalWeights;
+    f32 *dnb = deltaBiases + network->totalBiases; 
     u32 maxNeurons = 0;
     
     for (u32 layerIdx = 0; layerIdx < network->layerCount; ++layerIdx)
@@ -583,28 +791,27 @@ back_propagate(NeuralCake *network, Training *training, f32 *deltaWeights, f32 *
         u32 l = network->layerCount - layerIdx - 1;
         NeuralLayer *layer = network->layers + l;
         
+        if (maxNeurons < layer->inputCount)
+        {
+            maxNeurons = layer->inputCount;
+        }
         if (maxNeurons < layer->outputCount)
         {
             maxNeurons = layer->outputCount;
         }
         
-        switch (layer->kind)
-        {
-            case Neural_FullyConnected:
+        if (layer->kind == Neural_FeatureMap)
             {
-                dnb += layer->outputCount;
-                dnw += layer->inputCount * layer->outputCount;
-            } break;
-            
-            case Neural_FeatureMap:
-            {
-                dnw += layer->featureMap.featureWidth * layer->featureMap.featureHeight * layer->featureMap.mapCount;
-                dnb += layer->featureMap.mapCount;
-            } break;
-            
-            INVALID_DEFAULT_CASE;
+                if (layer->featureMap.poolWidth && layer->featureMap.poolHeight)
+                {
+                    u32 interSize = layer->outputCount * layer->featureMap.poolWidth * layer->featureMap.poolHeight;
+                    if (maxNeurons < interSize)
+                    {
+                        maxNeurons = interSize;
+                    }
+                }
+            }
         }
-    }
     
     f32 *error = allocate_array(f32, maxNeurons);
     f32 *prevError = allocate_array(f32, maxNeurons);
@@ -618,70 +825,22 @@ back_propagate(NeuralCake *network, Training *training, f32 *deltaWeights, f32 *
         {
             case Neural_FullyConnected:
             {
-                u32 count = layer->outputCount;
-                u32 prevCount = layer->inputCount;
-                
-                dnb -= count;
-                dnw -= count * prevCount;
-                
-                if (layerIdx == 0)
-                {
-                    i_expect(training->outputCount == layer->outputCount);
-                    
-                    subtract_array(count, layer->outputs, training->outputs, error);
-                    
-                    for (u32 bIdx = 0; bIdx < count; ++bIdx)
-                    {
-                        error[bIdx] *= log_likely_cost_neuron(layer->outputs[bIdx]);
-                    }
-                }
-                else
-                {
-                    NeuralLayer *nextLayer = layer + 1;
-                    if (nextLayer->kind == Neural_FullyConnected)
-                    {
-                    u32 nextCount = nextLayer->outputCount;
-                    
-                    f32 *colC = prevError;
-                    for (u32 row = 0; row < count; ++row)
-                    {
-                        f32 *rowW = nextLayer->fullyConnected.weights + row;
-                        f32 *rowT = error + row;
-                        f32 val = 0.0f;
-                        for (u32 s = 0; s < nextCount; ++s)
-                        {
-                             val += rowW[s * count] * colC[s];
-                        }
-                        val *= delta_neuron(layer->outputs[row]);
-                        *rowT = val;
-                    }
-                    }
-                    else
-                    {
-                        INVALID_CODE_PATH;
-                    }
-                }
-                
-                for (u32 bIdx = 0; bIdx < count; ++bIdx)
-                {
-                    dnb[bIdx] += error[bIdx];
-                }
-                
-                add_weights(count, prevCount, error, layer->inputs, dnw);
-                
-                prevCount = count;
-                f32 *t = prevError;
-                prevError = error;
-                error = t;
+                back_propagate_fully_connected(layer, training, layerIdx == 0,
+                                               &dnw, &dnb, prevError, error);
             } break;
             
             case Neural_FeatureMap:
             {
-                
+                back_propagate_feature_map(layer, training, layerIdx == 0,
+                                           &dnw, &dnb, prevError, error);
             } break;
             
             INVALID_DEFAULT_CASE;
         }
+        
+        f32 *t = prevError;
+        prevError = error;
+        error = t;
     }
     
     destroy_temporary(tempMem);

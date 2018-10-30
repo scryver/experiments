@@ -23,6 +23,12 @@ struct Grid
     u32 currentActive;
 };
 
+enum RunState
+{
+    RunState_Paused,
+    RunState_Slow,
+    RunState_Normal,
+};
 struct GoLState
 {
     RandomSeriesPCG randomizer;
@@ -31,7 +37,7 @@ struct GoLState
     u32 prevMouseDown;
     
     b32 border;
-    b32 running;
+    RunState running;
     
     u32 cellCount;
     Grid grid;
@@ -156,7 +162,13 @@ DRAW_IMAGE(draw_image)
     if ((mouse.mouseDowns & Mouse_Right) &&
         !(gameState->prevMouseDown & Mouse_Right))
     {
-        gameState->running = !gameState->running;
+        switch(gameState->running)
+        {
+            case RunState_Paused: { gameState->running = RunState_Slow; } break;
+            case RunState_Slow: { gameState->running = RunState_Normal; } break;
+            case RunState_Normal: { gameState->running = RunState_Paused; } break;
+            INVALID_DEFAULT_CASE;
+        }
     }
     
     if ((mouse.mouseDowns & Mouse_Extended1) &&
@@ -179,7 +191,9 @@ DRAW_IMAGE(draw_image)
     
     gameState->prevMouseDown = mouse.mouseDowns;
     
-    if (gameState->running) //  && ((gameState->ticks % 30) == 0))
+    if ((gameState->running == RunState_Normal) ||
+        ((gameState->running == RunState_Slow) &&
+         ((gameState->ticks % 30) == 0)))
     {
         u32 nextActive = (grid->currentActive + 1) & 1;
         for (u32 row = 0; row < grid->rows; ++row)

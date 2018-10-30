@@ -41,11 +41,10 @@ DRAW_IMAGE(draw_image)
         handwrite->inputCount = 784; // 28 * 28 pixels
         handwrite->inputs = allocate_array(f32, handwrite->inputCount);
         
-        init_neural_network(&handwrite->brain, 2);
-        add_fully_connected_layer(&handwrite->brain, 784, 100);
+        init_neural_network(&handwrite->brain, 3);
+        add_max_pooling_feature_map_layer(&handwrite->brain, 20, 28, 28, 5, 5, 2, 2);
+        add_fully_connected_layer(&handwrite->brain, 20 * 12 * 12, 100);
         add_fully_connected_layer(&handwrite->brain, 100, 10, true);
-        //add_max_pooling_feature_map_layer(&handwrite->brain, 20, 28, 28, 5, 5, 2, 2);
-        //add_fully_connected_layer(&handwrite->brain, 20 * 12 * 12, 10, true);
         finish_network(&handwrite->brain);
         
         randomize_weights(&handwrite->randomizer, &handwrite->brain);
@@ -57,31 +56,14 @@ DRAW_IMAGE(draw_image)
         state->initialized = true;
     }
     
-    u32 preCorrect = evaluate(&handwrite->brain, handwrite->validation);
-    
-    u32 epochs = 1;
-    stochastic_gradient_descent(&handwrite->randomizer, &handwrite->brain,
-                                epochs, 10, 0.5f, handwrite->train, 5.0f);
-    handwrite->epochCount += epochs;
-    
-    u32 postCorrect = evaluate(&handwrite->brain, handwrite->validation);
-    
-    f32 preProcent = 100.0f * (f32)preCorrect / (f32)handwrite->validation.count;
-    f32 postProcent = 100.0f * (f32)postCorrect / (f32)handwrite->validation.count;
-    fprintf(stdout, "%4d: From %4u to %4u in %4d epoch%s. (%2.2f%% -> %2.2f%%, %+0.2f%%)\n",
-            handwrite->epochCount,
-            preCorrect, postCorrect, epochs, epochs == 1 ? "" : "s",
-            preProcent, postProcent, postProcent - preProcent);
-
-#if 0    
     NeuralLayer *feature = handwrite->brain.layers;
-    u32 resolution = 40;
+    u32 resolution = 20;
     u32 rows = 5;
     u32 columns = 5;
     u32 xOffset = 10;
     u32 yOffset = 10;
     f32 *weights = feature->featureMap.weights;
-    for (u32 m = 0; m < 3; ++m)
+    for (u32 m = 0; m < feature->featureMap.mapCount && m < 7 * 5; ++m)
     {
         f32 *wMap = weights + m * rows * columns;
         for (u32 y = 0; y < rows; ++y)
@@ -97,8 +79,32 @@ DRAW_IMAGE(draw_image)
     }
         
         xOffset += resolution * columns + 5;
+        
+        if (((m + 1) % 7) == 0)
+        {
+            yOffset += resolution * rows + 5;
+            xOffset = 10;
+        }
     }
-    #endif
-
+    
+    if (handwrite->ticks)
+    {
+    u32 preCorrect = evaluate(&handwrite->brain, handwrite->validation);
+    
+    u32 epochs = 1;
+    stochastic_gradient_descent(&handwrite->randomizer, &handwrite->brain,
+                                epochs, 10, 0.5f, handwrite->train, 5.0f);
+    handwrite->epochCount += epochs;
+    
+    u32 postCorrect = evaluate(&handwrite->brain, handwrite->validation);
+    
+    f32 preProcent = 100.0f * (f32)preCorrect / (f32)handwrite->validation.count;
+    f32 postProcent = 100.0f * (f32)postCorrect / (f32)handwrite->validation.count;
+    fprintf(stdout, "%4d: From %4u to %4u in %4d epoch%s. (%2.2f%% -> %2.2f%%, %+0.2f%%)\n",
+            handwrite->epochCount,
+            preCorrect, postCorrect, epochs, epochs == 1 ? "" : "s",
+            preProcent, postProcent, postProcent - preProcent);
+    }
+    
     ++handwrite->ticks;
 }
