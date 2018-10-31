@@ -7,7 +7,7 @@ codeDir="$curDir/src"
 testDir="$curDir/test"
 buildDir="$curDir/gebouw"
 
-flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
+flags="-O0 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
 
 exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces"
 
@@ -45,8 +45,21 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/chaos_game.cpp" -o chaos-game -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/path_finding.cpp" -o path-finding -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/hexmap.cpp" -o hexmap -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/mnist_parser.cpp" -o mnist-parser -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/handwriting.cpp" -o handwriting -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/neuroning.cpp" -o neuroning -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/neurons_calc.cpp" -o neurons-calc -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/handlayered.cpp" -o handlayered -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/convoluted.cpp" -o convoluted -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/acoustics1.cpp" -o acoustics1 -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/acoustics2.cpp" -o acoustics2 -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/mechanics1.cpp" -o mechanics1 -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/x11mouse.cpp" -o x11mouse -lX11 &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net
+    clang++ $flags $exceptions "$testDir/test_neural_layer.cpp" -o test-neural-layer
 popd > /dev/null
 
+#flagsC="-O0 -g -ggdb -Wall -Werror -pedantic -pthread"
+#clang $flagsC $exceptions "$testDir/test_waves.c" -o test-waves -lX11 -lm &

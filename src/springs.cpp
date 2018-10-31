@@ -29,13 +29,14 @@ DRAW_IMAGE(draw_image)
         
         f32 restLength = 400.0f;
         springState->origin = V2(center.x, 0);
-        springState->bob = create_mover(V2(center.x, restLength + 50.0f));
+        springState->bob = create_mover(V2(center.x, restLength + 50.0f), 10.0f);
         springState->restLength = restLength;
         
         state->initialized = true;
     }
 
     apply_spring(&springState->bob, springState->origin, springState->restLength);
+    apply_drag(&springState->bob, 0.1f);
     
     update(&springState->bob);
     

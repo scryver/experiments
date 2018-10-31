@@ -61,7 +61,7 @@ allocate_size(umm size)
 {
     if (memory.maxSize == 0)
     {
-        memory.maxSize = megabytes(256);
+        memory.maxSize = megabytes(512);
         memory.memory = (u8 *)mmap(0, memory.maxSize, PROT_READ|PROT_WRITE,
                                    MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
     }
@@ -77,6 +77,36 @@ internal void
 print_error(char *message)
 {
     fprintf(stderr, "ERROR: %s\n", message);
+}
+
+struct ReadFile
+{
+    u32 size;
+    u8 *data;
+};
+
+internal ReadFile
+read_entire_file(char *filename)
+{
+    ReadFile result = {};
+    
+    FILE *f = fopen(filename, "rb");
+    if (f)
+    {
+        fseek(f, 0, SEEK_END);
+        u64 size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        i_expect(size < U32_MAX);
+        
+        result.data = (u8 *)allocate_size(size);
+        i_expect(result.data);
+        result.size = size;
+        
+        fread(result.data, size, 1, f);
+        fclose(f);
+    }
+    
+    return result;
 }
 
 //

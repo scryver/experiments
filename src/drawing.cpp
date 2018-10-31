@@ -182,6 +182,39 @@ draw_line_slow(Image *image, s32 startX, s32 startY, s32 endX, s32 endY, u32 col
     draw_line_slow(image, startX, startY, endX, endY, unpack_colour(colour));
 }
 
+internal void
+draw_lines(Image *image, u32 pointCount, v2 *points, v4 colour)
+{
+    i_expect(pointCount);
+    v2 prevP = points[0];
+    for (u32 pointIdx = 1; pointIdx < pointCount; ++pointIdx)
+    {
+        v2 P = points[pointIdx];
+        draw_line(image, round(prevP.x), round(prevP.y), round(P.x), round(P.y), colour);
+        prevP = P;
+    }
+}
+
+internal void
+draw_lines(Image *image, u32 pointCount, v2 *points, v2 offset, v2 scale = V2(1, 1),
+           v4 colour = V4(1, 1, 1, 1))
+{
+    i_expect(pointCount);
+    v2 prevP = points[0];
+    prevP.x *= scale.x;
+    prevP.y *= scale.y;
+    prevP += offset;
+    for (u32 pointIdx = 1; pointIdx < pointCount; ++pointIdx)
+    {
+        v2 P = points[pointIdx];
+        P.x *= scale.x;
+        P.y *= scale.y;
+        P += offset;
+        draw_line(image, round(prevP.x), round(prevP.y), round(P.x), round(P.y), colour);
+        prevP = P;
+    }
+}
+
 //
 // NOTE(michiel): Outlines
 //

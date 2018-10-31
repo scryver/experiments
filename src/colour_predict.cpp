@@ -7,6 +7,7 @@ DRAW_IMAGE(draw_image);
 #include "drawing.cpp"
 
 #include "matrix.h"
+#include "aitraining.h"
 #include "neural_net.h"
 #include "neurons.h"
 

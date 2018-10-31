@@ -404,12 +404,12 @@ DRAW_IMAGE(draw_image)
         
         hexer->layout.orientation = pointyLayout;
         hexer->layout.size = V2(20.0f, 20.0f);
-        hexer->layout.origin = 0.5f * size;
+        hexer->layout.origin = 0.1f * size;
         
-        hexer->maxCellCount = 128;
+        s32 roundSize = 15;
+        hexer->maxCellCount = roundSize * roundSize;
         hexer->cells = allocate_array(HexCell, hexer->maxCellCount);
         hexer->line = allocate_array(HexCell, hexer->maxCellCount);
-        s32 roundSize = 7;
         //hexer->hexCellCount = create_hexagrid(hexer->maxCellCount, hexer->cells, roundSize);
         //hexer->hexCellCount = create_trianglegrid(hexer->maxCellCount, hexer->cells, roundSize);
         hexer->hexCellCount = create_rectangulargrid(hexer->maxCellCount, hexer->cells, roundSize, roundSize);
@@ -439,6 +439,16 @@ Mouse: (320.000000, 148.000000) | Tile: (-2, -4, 6)
 Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
 */
         
+        TempMemory temp = temporary_memory();
+        f32 *randWeights = allocate_array(f32, hexer->hexCellCount);
+        for (u32 hexIndex = 0; hexIndex < hexer->hexCellCount; ++hexIndex)
+        {
+            randWeights[hexIndex] = random_unilateral(&hexer->randomizer);
+        }
+        init_rand_list(&hexer->randomizer, &hexer->randList, randWeights, hexer->cells);
+        
+        destroy_temporary(temp);
+        
         state->initialized = true;
     }
     
@@ -465,26 +475,15 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
         }
         }
     
-    if ((mouse.mouseDowns & Mouse_Extended1) &&
-        !(hexer->prevMouseDown & Mouse_Extended1))
-    {
-        TempMemory temp = temporary_memory();
-        f32 *randWeights = allocate_array(f32, hexer->hexCellCount);
-        for (u32 hexIndex = 0; hexIndex < hexer->hexCellCount; ++hexIndex)
-        {
-            randWeights[hexIndex] = random_unilateral(&hexer->randomizer);
-        }
-        init_rand_list(&hexer->randomizer, &hexer->randList, randWeights, hexer->cells);
-        
-        destroy_temporary(temp);
-    }
-    
     if ((mouse.mouseDowns & Mouse_Extended2) &&
         !(hexer->prevMouseDown & Mouse_Extended2))
     {
         RandomListEntry choice = random_entry(&hexer->randList);
+        if (choice.data)
+        {
         HexCell *cell = (HexCell *)choice.data;
         hexer->startCell = *cell;
+        }
     }
     
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
