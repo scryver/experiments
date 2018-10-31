@@ -606,7 +606,10 @@ int main(int argc, char **argv)
     
     struct timespec lastTime = get_wall_clock();
     
+    if (glXSwapIntervalEXT)
+    {
     glXSwapIntervalEXT(display, window, 1);
+    }
     
     bool isRunning = true;
     while (isRunning)

@@ -59,8 +59,9 @@ struct FlowState
     
     FlowField field;
     
-    u32 vehicleCount;
-    Vehicle *vehicles;
+    Array vehicles;
+    //u32 vehicleCount;
+    //Vehicle *vehicles;
 };
 
 DRAW_IMAGE(draw_image)
