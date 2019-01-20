@@ -1,9 +1,11 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
+
 #include "drawing.cpp"
 
 struct OscillationState
@@ -25,7 +27,7 @@ DRAW_IMAGE(draw_image)
         oscillation->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         
         oscillation->amplitude = (f32)image->height * 0.5f;
-        oscillation->angleStep = TAU32 / 100.0f; // NOTE(michiel): In period per amount of frames
+        oscillation->angleStep = F32_TAU / 100.0f; // NOTE(michiel): In period per amount of frames
         
         state->initialized = true;
     }
@@ -44,9 +46,9 @@ DRAW_IMAGE(draw_image)
     }
     
     oscillation->angle += oscillation->angleStep;
-    if (oscillation->angle > TAU32)
+    if (oscillation->angle > F32_TAU)
     {
-        oscillation->angle -= TAU32;
+        oscillation->angle -= F32_TAU;
     }
     
     ++oscillation->ticks;

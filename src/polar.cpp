@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct PolarState
@@ -41,9 +42,9 @@ DRAW_IMAGE(draw_image)
     fill_circle(image, round(xy.x), round(xy.y), 20.0f, V4(1, 1, 1, 1));
               
     polar->angle += polar->angleVel;
-    if (polar->angle > TAU32)
+    if (polar->angle > F32_TAU)
     {
-        polar->angle -= TAU32;
+        polar->angle -= F32_TAU;
     }
     polar->angleVel += polar->angleAcc;
     if (polar->angleVel > 1.0f)

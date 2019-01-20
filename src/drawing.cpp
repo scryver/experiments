@@ -502,3 +502,48 @@ draw_image(Image *screen, u32 xStart, u32 yStart, Image *image, v4 modColour = V
         }
     }
 }
+
+//
+// NOTE(michiel): Font drawing
+//
+
+internal inline void
+draw_text(BitmapFont *font, Image *image, u32 xStart, u32 yStart, char *text,
+          v4 colour = {1, 1, 1, 1})
+{
+    f32 x = xStart;
+    f32 y = yStart + get_starting_baseline_y(&font->info);
+    
+    u32 prevPoint = 0;
+    char *source = text;
+    while (*source)
+    {
+        u32 codePoint = (u32)(*source);
+        f32 advance = 0.0f;
+        
+        if (codePoint == (u32)'\n')
+        {
+            x = xStart;
+            y += get_line_advance_for(&font->info);
+        }
+        else
+        {
+            advance = get_horizontal_advance_for_pair(font, prevPoint, codePoint);
+            x += advance;
+        }
+        
+        if (codePoint != ' ')
+        {
+            u32 glyphIndex = get_glyph_from_code_point(font, codePoint);
+            
+            if (glyphIndex)
+            {
+                FontGlyph *glyph = font->glyphs + glyphIndex;
+                draw_image(image, x, y + glyph->yOffset, &glyph->bitmap, colour);
+            }
+        }
+        
+        prevPoint = codePoint;
+        ++source;
+    }
+}

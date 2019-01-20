@@ -2,71 +2,12 @@
 #include <stdlib.h>
 #include <sys/mman.h>     // PROT_*, MAP_*, munmap
 
+#include "../libberdip/platform.h"
+#include "../libberdip/std_file.c"
 #include "../src/interface.h"
 #include "test_interface.h"
 
-struct ReadFile
-{
-    u32 size;
-    u8 *data;
-};
-
-internal inline ReadFile
-read_entire_file(char *a)
-{
-    return {};
-}
-
-struct MemBlock
-{
-    u32 maxSize;
-    u32 size;
-    u8 *memory;
-    
-    // TODO(michiel): More memory
-    //struct MemBlock *next;
-};
-
-global MemBlock memory;
-
-struct TempMemory
-{
-    u32 origSize;
-};
-
-internal inline TempMemory
-temporary_memory(void)
-{
-    TempMemory result = {};
-    result.origSize = memory.size;
-    return result;
-}
-
-internal inline void
-destroy_temporary(TempMemory temp)
-{
-    memory.size = temp.origSize;
-}
-
-#define allocate_struct(type) (type *)allocate_size(sizeof(type))
-#define allocate_array(type, count) (type *)allocate_size(sizeof(type) * (count))
-internal u8 *
-allocate_size(umm size)
-{
-    if (memory.maxSize == 0)
-    {
-        memory.maxSize = megabytes(256);
-        memory.memory = (u8 *)mmap(0, memory.maxSize, PROT_READ|PROT_WRITE,
-                                   MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
-    }
-    
-    i_expect(memory.size + size <= memory.maxSize);
-    u8 *data = memory.memory + memory.size;
-    memory.size += size;
-    return data;
-}
-
-#include "../src/random.h"
+#include "../libberdip/random.h"
 #define MATRIX_TEST 1
 #include "../src/matrix.h"
 #include "../src/aitraining.h"

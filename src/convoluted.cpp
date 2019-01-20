@@ -1,10 +1,13 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
+
+#include "../libberdip/std_file.c"
 
 #include "aitraining.h"
 #include "neuronlayer.h"
@@ -225,10 +228,10 @@ DRAW_IMAGE(draw_image)
     }
 
     {
-        TempMemory tempMem = temporary_memory();
+            Arena tempArena = {0};
         
-        f32 *deltaWeights = allocate_array(f32, 3 * 3 * feature->featureMap.mapCount);
-        f32 *deltaBias = allocate_array(f32, feature->featureMap.mapCount);
+        f32 *deltaWeights = arena_allocate_array(&tempArena, f32, 3 * 3 * feature->featureMap.mapCount);
+            f32 *deltaBias = arena_allocate_array(&tempArena, f32, feature->featureMap.mapCount);
     back_propagate(&handwrite->brain, train, deltaWeights, deltaBias);
         
         xOffset = xBase;
@@ -288,7 +291,7 @@ DRAW_IMAGE(draw_image)
             outputs += outputStep;
         }
         
-        destroy_temporary(tempMem);
+            arena_free(&tempArena);
     }
     }
     

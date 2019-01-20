@@ -7,12 +7,12 @@ struct Matrix
 };
 
 internal Matrix
-create_matrix(u32 rows, u32 columns)
+create_matrix(Arena *arena, u32 rows, u32 columns)
 {
     Matrix result;
     result.rows = rows;
     result.columns = columns;
-    result.m = allocate_array(f32, rows * columns);
+    result.m = arena_allocate_array(arena, f32, rows * columns);
     return result;
 }
 
@@ -111,6 +111,8 @@ MATRIX_MAP(sigmoid)
 
 struct NeuralNetwork
 {
+    Arena arena;
+    
     u32 inputCount;
     u32 hiddenCount;
     u32 outputCount;
@@ -143,24 +145,24 @@ init_neural_network(RandomSeriesPCG *random, NeuralNetwork *network,
     i_expect(network->hidden.m == 0);
     i_expect(network->outputs.m == 0);
     
-    network->inputToHiddenWeights = create_matrix(hidden, inputs);
-    network->hiddenToOutputWeights = create_matrix(outputs, hidden);
+    network->inputToHiddenWeights = create_matrix(&network->arena, hidden, inputs);
+    network->hiddenToOutputWeights = create_matrix(&network->arena, outputs, hidden);
     randomize_matrix(random, &network->inputToHiddenWeights);
     randomize_matrix(random, &network->hiddenToOutputWeights);
     
-    network->hiddenBias = create_matrix(hidden, 1);
-    network->outputBias = create_matrix(outputs, 1);
+    network->hiddenBias = create_matrix(&network->arena, hidden, 1);
+    network->outputBias = create_matrix(&network->arena, outputs, 1);
     randomize_matrix(random, &network->hiddenBias);
     randomize_matrix(random, &network->outputBias);
     
-    network->hidden = create_matrix(hidden, 1);
-    network->outputs = create_matrix(outputs, 1);
+    network->hidden = create_matrix(&network->arena, hidden, 1);
+    network->outputs = create_matrix(&network->arena, outputs, 1);
 }
 
 internal void
 feed_forward(NeuralNetwork *network, u32 inputCount, f32 *inputs)
 {
-    TempMemory temp = temporary_memory();
+    TempMemory temp = temporary_memory(&network->arena);
     
     i_expect(inputCount == network->inputCount);
     Matrix input = matrix_from_array(inputCount, 1, inputs);
@@ -190,7 +192,7 @@ internal void
 train(NeuralNetwork *network, u32 inputCount, f32 *inputs,
       u32 answerCount, f32 *answers)
 {
-    TempMemory temp = temporary_memory();
+    TempMemory temp = temporary_memory(&network->arena);
     
     i_expect(network->inputCount == inputCount);
     i_expect(network->outputCount == answerCount);
@@ -200,7 +202,7 @@ train(NeuralNetwork *network, u32 inputCount, f32 *inputs,
     Matrix answer = matrix_from_array(answerCount, 1, answers);
     
     // NOTE(michiel): Calculate errors
-    Matrix outputErrors = create_matrix(answer.rows, answer.columns);
+    Matrix outputErrors = create_matrix(&network->arena, answer.rows, answer.columns);
     matrix_copy(answer.rows, answer.columns, answer.m, outputErrors.m);
     outputErrors -= network->outputs;
 
@@ -218,16 +220,16 @@ train(NeuralNetwork *network, u32 inputCount, f32 *inputs,
 #endif
     
     // NOTE(michiel): Calculate output gradient
-    Matrix gradients = create_matrix(network->outputs.rows, network->outputs.columns);
+    Matrix gradients = create_matrix(&network->arena, network->outputs.rows, network->outputs.columns);
     matrix_copy(gradients.rows, gradients.columns, network->outputs.m, gradients.m);
     map(&gradients, dsigmoid);
     hadamard(outputErrors, &gradients);
     gradients *= network->learningRate;
     
     // NOTE(michiel): Calculate hidden weight deltas
-    Matrix hiddenT = create_matrix(network->hidden.columns, network->hidden.rows);
+    Matrix hiddenT = create_matrix(&network->arena, network->hidden.columns, network->hidden.rows);
         transpose(network->hidden, &hiddenT);
-    Matrix weightsHDeltas = create_matrix(gradients.rows, hiddenT.columns);
+    Matrix weightsHDeltas = create_matrix(&network->arena, gradients.rows, hiddenT.columns);
     multiply(gradients, hiddenT, &weightsHDeltas);
     
     // NOTE(michiel): Add the deltas
@@ -236,14 +238,14 @@ train(NeuralNetwork *network, u32 inputCount, f32 *inputs,
     
     
     // NOTE(michiel): Blame hidden layers
-    Matrix weightsHTranspose = create_matrix(network->hiddenToOutputWeights.columns, network->hiddenToOutputWeights.rows);
+    Matrix weightsHTranspose = create_matrix(&network->arena, network->hiddenToOutputWeights.columns, network->hiddenToOutputWeights.rows);
     transpose(network->hiddenToOutputWeights, &weightsHTranspose);
-    Matrix hiddenErrors = create_matrix(weightsHTranspose.rows, outputErrors.columns);
+    Matrix hiddenErrors = create_matrix(&network->arena, weightsHTranspose.rows, outputErrors.columns);
     multiply(weightsHTranspose, outputErrors, &hiddenErrors);
     i_expect(hiddenErrors.columns == 1);
     
     // NOTE(michiel): Calculate hidden gradient
-    Matrix hiddenGradients = create_matrix(network->hidden.rows, network->hidden.columns);
+    Matrix hiddenGradients = create_matrix(&network->arena, network->hidden.rows, network->hidden.columns);
     matrix_copy(hiddenGradients.rows, hiddenGradients.columns, network->hidden.m,
                 hiddenGradients.m);
     map(&hiddenGradients, dsigmoid);
@@ -251,9 +253,9 @@ train(NeuralNetwork *network, u32 inputCount, f32 *inputs,
     hiddenGradients *= network->learningRate;
     
     // NOTE(michiel): Calculate hidden weight deltas
-    Matrix inputT = create_matrix(1, inputCount);
+    Matrix inputT = create_matrix(&network->arena, 1, inputCount);
     transpose(matrix_from_array(inputCount, 1, inputs), &inputT);
-    Matrix weightsIDeltas = create_matrix(hiddenGradients.rows, inputT.columns);
+    Matrix weightsIDeltas = create_matrix(&network->arena, hiddenGradients.rows, inputT.columns);
     multiply(hiddenGradients, inputT, &weightsIDeltas);
     
     // NOTE(michiel): Add the deltas

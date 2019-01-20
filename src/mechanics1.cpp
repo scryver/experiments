@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct Wheel
@@ -49,9 +50,9 @@ update_wheel(Wheel *wheel, f32 dt)
 {
     f32 angStep = wheel->angularVel * dt;
     wheel->angularS += angStep;
-    if (wheel->angularS > TAU32)
+    if (wheel->angularS > F32_TAU)
     {
-        wheel->angularS -= TAU32;
+        wheel->angularS -= F32_TAU;
     }
     wheel->dir.x = cos(wheel->angularS);
     wheel->dir.y = sin(wheel->angularS);
@@ -147,7 +148,7 @@ DRAW_IMAGE(draw_image)
         basics->wheel.pos = V2(100.0f, 300.0f);
         basics->wheel.radius = 50.0f;
         basics->wheel.dir = V2(0, -1);
-        basics->wheel.angularVel = 1.0f * TAU32;
+        basics->wheel.angularVel = 1.0f * F32_TAU;
 
         basics->rotToUp.startPos = get_wheel_connection(&basics->wheel);
         basics->rotToUp.length = 110.0f;

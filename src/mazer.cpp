@@ -1,3 +1,4 @@
+#include "../libberdip/platform.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -5,7 +6,7 @@ DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
+#include "../libberdip/random.h"
 
 enum Walls
 {

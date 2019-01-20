@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct FractalState
@@ -88,7 +89,7 @@ draw_mandelbrot(DrawMandelbrotWork *work)
     {
         for (s32 x = work->minDraw.x; x < work->maxDraw.x; ++x)
         {
-            #if 0
+            #if 1
             Complex64 point;
             point.real = map((f64)x, (f64)work->minDraw.x, (f64)work->maxDraw.x,
                              (f64)work->min.x, (f64)work->max.x);
@@ -155,7 +156,7 @@ draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
     work->palette = palette;
     draw_mandelbrot(work);
     #else
-    TempMemory temp = temporary_memory();
+    Arena tempArena = {0};
     
     u32 tileSize = 50;
     u32 workerEntries = (image->width / tileSize) * (image->height / tileSize);
@@ -164,7 +165,7 @@ draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
     f32 xStep = (max.x - min.x) * (f32)tileSize / (f32)image->width;
     f32 yStep = (max.y - min.y) * (f32)tileSize / (f32)image->height;
     
-    DrawMandelbrotWork *workers = allocate_array(DrawMandelbrotWork, workerEntries);
+    DrawMandelbrotWork *workers = arena_allocate_array(&tempArena, DrawMandelbrotWork, workerEntries);
     u32 workerIndex = 0;
     
     f32 yAxis = min.y;
@@ -188,8 +189,9 @@ draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
     yAxis += yStep;
             }
     
-    destroy_temporary(temp);
     platform_complete_all_work(queue);
+    
+    arena_free(&tempArena);
     #endif
 }
 
@@ -288,7 +290,7 @@ draw_mandelbrot(PlatformWorkQueue *queue, FractalState *state)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(FractalState) <= state->memorySize);
-    v2 size = V2((f32)image->width, (f32)image->height);
+    //v2 size = V2((f32)image->width, (f32)image->height);
     
     FractalState *fractalState = (FractalState *)state->memory;
     if (!state->initialized)
@@ -352,30 +354,35 @@ DRAW_IMAGE(draw_image)
     if ((mouse.mouseDowns & Mouse_Left) &&
         !(fractalState->prevMouseDown & Mouse_Left))
     {
-        fractalState->mouseSelectStart = mouse.pixelPosition;
+        fractalState->mouseSelectStart = mouse.relativePosition;
     }
     
     if (mouse.mouseDowns & Mouse_Left)
     {
         v2 min = fractalState->mouseSelectStart;
         v2 max = fractalState->mouseSelectStart;
-        if (min.x > mouse.pixelPosition.x)
+        if (min.x > (f32)mouse.relativePosition.x)
         {
-            min.x = mouse.pixelPosition.x;
+            min.x = (f32)mouse.relativePosition.x;
         }
-        if (max.x < mouse.pixelPosition.x)
+        if (max.x < (f32)mouse.relativePosition.x)
         {
-            max.x = mouse.pixelPosition.x;
+            max.x = (f32)mouse.relativePosition.x;
         }
         
-        if (min.y > mouse.pixelPosition.y)
+        if (min.y > (f32)mouse.relativePosition.y)
         {
-            min.y = mouse.pixelPosition.y;
+            min.y = (f32)mouse.relativePosition.y;
         }
-        if (max.y < mouse.pixelPosition.y)
+        if (max.y < (f32)mouse.relativePosition.y)
         {
-            max.y = mouse.pixelPosition.y;
+            max.y = (f32)mouse.relativePosition.y;
         }
+        
+        min.x *= image->width;
+        max.x *= image->width;
+        min.y *= image->height;
+        max.y *= image->height;
         
         fill_rectangle(image, min.x, min.y, max.x - min.x, max.y - min.y,
                        V4(0, 0, 0.5f, 0.7f));
@@ -386,27 +393,27 @@ DRAW_IMAGE(draw_image)
     {
         v2 mouseMin = fractalState->mouseSelectStart;
         v2 mouseMax = fractalState->mouseSelectStart;
-        if (mouseMin.x > mouse.pixelPosition.x)
+        if (mouseMin.x > (f32)mouse.relativePosition.x)
         {
-            mouseMin.x = mouse.pixelPosition.x;
+            mouseMin.x = (f32)mouse.relativePosition.x;
         }
-        if (mouseMax.x < mouse.pixelPosition.x)
+        if (mouseMax.x < (f32)mouse.relativePosition.x)
         {
-            mouseMax.x = mouse.pixelPosition.x;
+            mouseMax.x = (f32)mouse.relativePosition.x;
         }
         
-        if (mouseMin.y > mouse.pixelPosition.y)
+        if (mouseMin.y > (f32)mouse.relativePosition.y)
         {
-            mouseMin.y = mouse.pixelPosition.y;
+            mouseMin.y = (f32)mouse.relativePosition.y;
         }
-        if (mouseMax.y < mouse.pixelPosition.y)
+        if (mouseMax.y < (f32)mouse.relativePosition.y)
         {
-            mouseMax.y = mouse.pixelPosition.y;
+            mouseMax.y = (f32)mouse.relativePosition.y;
         }
         
         // NOTE(michiel): 32 bit floats
-        v2 min = map(mouseMin, V2(0, 0), size, fractalState->minDraw, fractalState->maxDraw);
-        v2 max = map(mouseMax, V2(0, 0), size, fractalState->minDraw, fractalState->maxDraw);
+        v2 min = map(mouseMin, V2(0, 0), V2(1, 1), fractalState->minDraw, fractalState->maxDraw);
+        v2 max = map(mouseMax, V2(0, 0), V2(1, 1), fractalState->minDraw, fractalState->maxDraw);
         fractalState->minDraw = min;
         fractalState->maxDraw = max;
         
@@ -435,16 +442,16 @@ DRAW_IMAGE(draw_image)
     if ((mouse.mouseDowns & Mouse_Right) &&
         !(fractalState->prevMouseDown & Mouse_Right))
     {
-        fractalState->mouseDragStart = mouse.pixelPosition;
+        fractalState->mouseDragStart = mouse.relativePosition;
     }
     
     if (mouse.mouseDowns & Mouse_Right)
     {
-        v2 mouseS = map(fractalState->mouseDragStart, V2(0, 0), size, fractalState->minDraw, fractalState->maxDraw);
-        v2 mouseP = map(mouse.pixelPosition, V2(0, 0), size, fractalState->minDraw, fractalState->maxDraw);
+        v2 mouseS = map(fractalState->mouseDragStart, V2(0, 0), V2(1, 1), fractalState->minDraw, fractalState->maxDraw);
+        v2 mouseP = map(mouse.relativePosition, V2(0, 0), V2(1, 1), fractalState->minDraw, fractalState->maxDraw);
         v2 diff = mouseS - mouseP;
         
-        fractalState->mouseDragStart = mouse.pixelPosition;
+        fractalState->mouseDragStart = mouse.relativePosition;
         
         // NOTE(michiel): 32 bit floats
         fractalState->minDraw += diff;

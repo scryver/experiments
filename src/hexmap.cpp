@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct HexCell
@@ -229,7 +230,7 @@ internal v2
 hex_corner_offset(Layout *layout, s32 corner)
 {
     v2 result = layout->size;
-    f32 angle = TAU32 * (layout->orientation.startAngle + (f32)corner) / 6.0f;
+    f32 angle = F32_TAU * (layout->orientation.startAngle + (f32)corner) / 6.0f;
     
     result.x *= cos(angle);
     result.y *= sin(angle);
@@ -248,13 +249,14 @@ get_polygon_corners(Layout *layout, HexCell c, v2 *corners)
     }
 }
 
+// TODO(michiel): Rewrite lerp
 internal FractionalHexCell
 hex_lerp(f32 t, HexCell a, HexCell b)
 {
     FractionalHexCell result = {};
-    result.q = lerp(t, (f32)a.v.x, (f32)b.v.x);
-    result.r = lerp(t, (f32)a.v.y, (f32)b.v.y);
-    result.s = lerp(t, (f32)get_s(a), (f32)get_s(b));
+    result.q = lerp((f32)a.v.x, t, (f32)b.v.x);
+    result.r = lerp((f32)a.v.y, t, (f32)b.v.y);
+    result.s = lerp((f32)get_s(a), t, (f32)get_s(b));
     return result;
 }
 
@@ -262,9 +264,9 @@ internal FractionalHexCell
 hex_lerp(f32 t, FractionalHexCell a, FractionalHexCell b)
 {
     FractionalHexCell result = {};
-    result.q = lerp(t, a.q, b.q);
-    result.r = lerp(t, a.r, b.r);
-    result.s = lerp(t, a.s, b.s);
+    result.q = lerp(a.q, t, b.q);
+    result.r = lerp(a.r, t, b.r);
+    result.s = lerp(a.s, t, b.s);
     return result;
 }
 
@@ -373,6 +375,8 @@ create_rectangulargrid(u32 maxCount, HexCell *cells, s32 width, s32 height)
 
 struct HexState
 {
+    Arena memory;
+    
     RandomSeriesPCG randomizer;
     f32 seconds;
     u32 ticks;
@@ -408,12 +412,13 @@ DRAW_IMAGE(draw_image)
         
         s32 roundSize = 15;
         hexer->maxCellCount = roundSize * roundSize;
-        hexer->cells = allocate_array(HexCell, hexer->maxCellCount);
-        hexer->line = allocate_array(HexCell, hexer->maxCellCount);
+        hexer->cells = arena_allocate_array(&hexer->memory, HexCell, hexer->maxCellCount);
+        hexer->line = arena_allocate_array(&hexer->memory, HexCell, hexer->maxCellCount);
         //hexer->hexCellCount = create_hexagrid(hexer->maxCellCount, hexer->cells, roundSize);
         //hexer->hexCellCount = create_trianglegrid(hexer->maxCellCount, hexer->cells, roundSize);
         hexer->hexCellCount = create_rectangulargrid(hexer->maxCellCount, hexer->cells, roundSize, roundSize);
         
+        // TODO(michiel): Arena variant
         hexer->randList = allocate_rand_list(hexer->maxCellCount);
         //hexer->randList.series = &hexer->randomizer;
         
@@ -439,8 +444,8 @@ Mouse: (320.000000, 148.000000) | Tile: (-2, -4, 6)
 Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
 */
         
-        TempMemory temp = temporary_memory();
-        f32 *randWeights = allocate_array(f32, hexer->hexCellCount);
+        TempMemory temp = temporary_memory(&hexer->memory);
+        f32 *randWeights = arena_allocate_array(&hexer->memory, f32, hexer->hexCellCount);
         for (u32 hexIndex = 0; hexIndex < hexer->hexCellCount; ++hexIndex)
         {
             randWeights[hexIndex] = random_unilateral(&hexer->randomizer);
@@ -452,13 +457,13 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
         state->initialized = true;
     }
     
-    HexCell mouseHover = hex_round(pixel_to_hex(&hexer->layout, mouse.pixelPosition));
+    HexCell mouseHover = hex_round(pixel_to_hex(&hexer->layout, V2(mouse.pixelPosition)));
     
     if ((mouse.mouseDowns & Mouse_Right) &&
         !(hexer->prevMouseDown & Mouse_Right))
     {
         fprintf(stdout, "Mouse: (%f, %f) | Tile: (%d, %d, %d)\n",
-                mouse.pixelPosition.x, mouse.pixelPosition.y,
+                (f32)mouse.pixelPosition.x, (f32)mouse.pixelPosition.y,
                 mouseHover.v.x, mouseHover.v.y, get_s(mouseHover));
     }
     

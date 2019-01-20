@@ -47,6 +47,8 @@ struct NeuralLayer
 
 struct NeuralCake
 {
+    Arena arena;
+    
     // NOTE(michiel): Real state
     u32 layerCount;
     NeuralLayer *layers;
@@ -64,7 +66,7 @@ init_neural_network(NeuralCake *network, u32 layers)
 {
     i_expect(network->layers == 0);
     network->layerCount = layers;
-    network->layers = allocate_array(NeuralLayer, layers);
+    network->layers = arena_allocate_array(&network->arena, NeuralLayer, layers);
     network->layersFilled = 0;
 }
 
@@ -239,16 +241,17 @@ finish_network(NeuralCake *network)
             INVALID_DEFAULT_CASE;
         }
         
-        //layer->fullyConnected.weights = allocate_array(f32, inputCount * outputCount);
-        //layer->fullyConnected.biases  = allocate_array(f32, outputCount);
+        //layer->fullyConnected.weights = arena_allocate_array(&network->arena, f32, inputCount * outputCount);
+        //layer->fullyConnected.biases  = arena_allocate_array(&network->arena, f32, outputCount);
         
-        //layer->featureMap.weights = allocate_array(f32, featureWidth * featureHeight)
+        //layer->featureMap.weights = arena_allocate_array(&network->arena, f32, featureWidth * featureHeight)
     }
     
     network->totalWeights = weightCount;
     network->totalBiases = biasCount;
     
-    f32 *allTheValues = allocate_array(f32, neuronCount + weightCount + biasCount + poolIdxCount);
+    f32 *allTheValues = arena_allocate_array(&network->arena, f32,
+                                             neuronCount + weightCount + biasCount + poolIdxCount);
     
     f32 *neurons = allTheValues;
     f32 *weights = neurons + neuronCount;
@@ -779,7 +782,7 @@ back_propagate(NeuralCake *network, Training *training, f32 *deltaWeights, f32 *
 {
     predict(network, training);
     
-    TempMemory tempMem = temporary_memory();
+    TempMemory tempMem = temporary_memory(&network->arena);
     
     // NOTE(michiel): Backward pass
     f32 *dnw = deltaWeights + network->totalWeights;
@@ -813,8 +816,8 @@ back_propagate(NeuralCake *network, Training *training, f32 *deltaWeights, f32 *
             }
         }
     
-    f32 *error = allocate_array(f32, maxNeurons);
-    f32 *prevError = allocate_array(f32, maxNeurons);
+    f32 *error = arena_allocate_array(&network->arena, f32, maxNeurons);
+    f32 *prevError = arena_allocate_array(&network->arena, f32, maxNeurons);
     
     for (u32 layerIdx = 0; layerIdx < network->layerCount; ++layerIdx)
     {
@@ -850,10 +853,10 @@ internal void
 update_mini_batch(NeuralCake *network, TrainingSet training, f32 learningRate,
                   f32 lambda = 0.0f, u32 totalTrainingCount = 0)
 {
-    TempMemory temp = temporary_memory();
+    TempMemory temp = temporary_memory(&network->arena);
     
-    f32 *nw = allocate_array(f32, network->totalWeights);
-    f32 *nb = allocate_array(f32, network->totalBiases);
+    f32 *nw = arena_allocate_array(&network->arena, f32, network->totalWeights);
+    f32 *nb = arena_allocate_array(&network->arena, f32, network->totalBiases);
     
     for (u32 item = 0; item < training.count; ++item)
     {

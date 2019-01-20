@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 // NOTE(michiel): For drawing mostly
@@ -326,8 +327,8 @@ DRAW_IMAGE(draw_image)
         f32 x = cell->p.x * wh;
         f32 y = cell->p.y * wh;
         
-        if ((x <= mouse.pixelPosition.x) && (mouse.pixelPosition.x < (x + wh)) &&
-            (y <= mouse.pixelPosition.y) && (mouse.pixelPosition.y < (y + wh)))
+        if ((x <= (f32)mouse.pixelPosition.x) && ((f32)mouse.pixelPosition.x < (x + wh)) &&
+            (y <= (f32)mouse.pixelPosition.y) && ((f32)mouse.pixelPosition.y < (y + wh)))
             {
             pathState->pathStart = cell;
             }

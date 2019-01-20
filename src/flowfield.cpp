@@ -1,10 +1,11 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
+#include "../libberdip/perlin.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
-#include "perlin.h"
 #include "forces.h"
 #include "vehicle.h"
 #include "flowfield.h"
@@ -28,7 +29,7 @@ init_flow_field(FlowField *field, u32 width, u32 height, u32 tileSize,
     {
         for (u32 col = 0; col < field->size.x; ++col)
         {
-            f32 theta = random_unilateral(random) * TAU32;
+            f32 theta = random_unilateral(random) * F32_TAU;
             field->grid[row * field->size.x + col] = polar_to_cartesian(1.0f, theta);
         }
     }
@@ -43,7 +44,7 @@ update_flow_field(FlowField *field, PerlinNoise *random, f32 z = 0.0f)
         {
             f32 theta = perlin_noise(random, V3(col / (f32)field->size.x, 
                                                          row / (f32)field->size.y,
-                                                       z)) * TAU32;
+                                                       z)) * F32_TAU;
             field->grid[row * field->size.x + col] = polar_to_cartesian(1.0f, theta);
         }
     }
@@ -88,7 +89,7 @@ DRAW_IMAGE(draw_image)
         state->initialized = true;
     }
     
-    v2 mouseP = mouse.pixelPosition;
+    v2 mouseP = V2(mouse.pixelPosition);
     
     update_flow_field(&flow->field, &flow->perlin, flow->zMod);
         
