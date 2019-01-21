@@ -547,3 +547,10 @@ draw_text(BitmapFont *font, Image *image, u32 xStart, u32 yStart, char *text,
         ++source;
     }
 }
+
+internal inline void
+draw_text(BitmapFont *font, Image *image, u32 xStart, u32 yStart, String text,
+          v4 colour = {1, 1, 1, 1})
+{
+    draw_text(font, image, xStart, yStart, (char *)text.data, colour);
+}

@@ -16,7 +16,9 @@ struct FXState
     u32 ticks;
     u32 prevMouseDown;
     
-    BitmapFont font;
+    b32 check1;
+    b32 check2;
+    
     UIState ui;
 };
 
@@ -31,36 +33,51 @@ DRAW_IMAGE(draw_image)
     {
         // fxer->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         fxer->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        fxer->ui.screen = image;
         
-        ApiFile fontFile = read_entire_file("data/output.font");
-        i_expect(fontFile.content.size);
-        unpack_font(fontFile.content.data, &fxer->font);
+        init_ui(&fxer->ui, image, 64, "data/output.font");
         
         state->initialized = true;
     }
     
     fxer->ui.mouse = hadamard(mouse.relativePosition, size);
-    fxer->ui.clicked = (!mouse.mouseDowns && fxer->prevMouseDown);
+    // NOTE(michiel): UI buttons only return true if the mouse click is released
+    //fxer->ui.clicked = (!mouse.mouseDowns && fxer->prevMouseDown);
+    // NOTE(michiel): UI buttons return true if the mouse is down
+    fxer->ui.clicked = mouse.mouseDowns;
     
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
-    UILayout layout = ui_begin_layout(&fxer->ui, 20, 20, image->width - 40, image->height - 40);
-    if (ui_button(&fxer->ui, &layout, "Hallo"))
+    UILayout *layout = ui_begin(&fxer->ui, Layout_Vertical, 
+                                      20, 20, image->width - 40, image->height - 40, 0);
+    
+    UILayout *innerLayout = ui_layout(&fxer->ui, layout, Layout_Horizontal, 5);
+    if (ui_button_imm(&fxer->ui, innerLayout, "Hallo"))
     {
         fill_rectangle(image, 0, 0, image->width, image->height, V4(1, 1, 1, 1));
     }
-    if (ui_button(&fxer->ui, &layout, "Doop"))
+    if (ui_button_imm(&fxer->ui, innerLayout, "Doop"))
     {
         fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 1, 0, 1));
     }
-    if (ui_button(&fxer->ui, &layout, "Dap"))
+    
+    UILayout *bottomLayout = ui_layout(&fxer->ui, layout, Layout_Horizontal, 5);
+    if (ui_checkbox_imm(&fxer->ui, bottomLayout, fxer->check1))
+    {
+        fill_rectangle(image, 0, 50, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
+        fxer->check1 = !fxer->check1;
+    }
+    if (ui_checkbox_imm(&fxer->ui, bottomLayout, fxer->check2))
+    {
+        fill_rectangle(image, 100, 50, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
+        fxer->check2 = !fxer->check2;
+    }
+    
+    if (ui_button_imm(&fxer->ui, bottomLayout, "Dap"))
     {
         fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 1, 1));
     }
-    ui_end_layout(&fxer->ui, &layout);
     
-    draw_text(&fxer->font, image, 40, 40, "<Testing 1- 2+>");
+    ui_end(&fxer->ui);
     
     fxer->prevMouseDown = mouse.mouseDowns;
     fxer->seconds += dt;
