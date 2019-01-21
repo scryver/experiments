@@ -311,17 +311,10 @@ ui_match_id(UIState *state, UIID id, Rectangle2u rect)
         state->hotItem = gNullUIID;
     }
     
-    if (result && state->clicked)
+    if ((state->activeItem == gNullUIID) && result && state->clicked)
     {
         state->activeItem = id;
 }
-    #if 1
-    // NOTE(michiel): Disable this if you want the single end update
-    else if (state->activeItem == id)
-    {
-        state->activeItem = gNullUIID;
-    }
-#endif
     
     return result;
 }
@@ -593,14 +586,10 @@ ui_end(UIState *state)
     UIItem *baseLayout = state->items;
     i_expect(baseLayout->kind == UIItem_Layout);
 
-#if 0
-    // NOTE(michiel): This can be used, but I liked it more when the widget itself does the
-    //   clearing, it seems more natural
     if (!state->clicked)
     {
         state->activeItem = gNullUIID;
     }
-    #endif
 
     if (!state->layedOut) 
     {
@@ -708,7 +697,7 @@ ui_checkbox_is_clicked(UIState *state, UICheckbox *checkbox)
 internal inline b32
 ui_slider_is_set(UIState *state, UISlider *slider)
 {
-    return ui_id_is_clicked(state, slider->id);
+    return (!state->clicked && (state->activeItem == slider->id));
 }
 
 internal inline b32
