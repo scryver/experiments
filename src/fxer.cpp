@@ -19,6 +19,10 @@ struct FXState
     b32 check1;
     b32 check2;
     
+    u32 slide1;
+    s32 slide2;
+    f32 slide3;
+    
     UIState ui;
 };
 
@@ -53,6 +57,8 @@ DRAW_IMAGE(draw_image)
     UILayout *innerLayout = ui_layout(&fxer->ui, layout, Layout_Horizontal, 5);
     if (ui_button_imm(&fxer->ui, innerLayout, "Hallo"))
     {
+        fprintf(stdout, "Slide: 1 = %u, 2 = %d, 3 = %f\n", fxer->slide1, fxer->slide2,
+                fxer->slide3);
         fill_rectangle(image, 0, 0, image->width, image->height, V4(1, 1, 1, 1));
     }
     if (ui_button_imm(&fxer->ui, innerLayout, "Doop"))
@@ -77,8 +83,17 @@ DRAW_IMAGE(draw_image)
         fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 1, 1));
     }
     
-    ui_end(&fxer->ui);
+    UILayout *sliderLayout = ui_layout(&fxer->ui, layout, Layout_Vertical, 5);
+    UISlider *slider1 = ui_slider(&fxer->ui, sliderLayout, fxer->slide1, 200U);
+    UISlider *slider2 = ui_slider(&fxer->ui, sliderLayout, fxer->slide2, 100);
+    UISlider *slider3 = ui_slider(&fxer->ui, sliderLayout, fxer->slide3, 1.0f);
     
+    ui_end(&fxer->ui);
+
+    fxer->slide1 = slider1->value.u;
+    fxer->slide2 = slider2->value.i;
+    fxer->slide3 = slider3->value.f;
+
     fxer->prevMouseDown = mouse.mouseDowns;
     fxer->seconds += dt;
     ++fxer->ticks;

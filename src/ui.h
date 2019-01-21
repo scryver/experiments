@@ -28,6 +28,107 @@ enum VariableKind
 };
     };
 
+internal inline Variable
+var_bool(b32 value)
+{
+    Variable result = {Var_Boolean};
+    result.b = value;
+    return result;
+}
+
+internal inline Variable
+var_signed(s32 value)
+{
+    Variable result = {Var_Integer};
+    result.i = value;
+    return result;
+}
+
+internal inline Variable
+var_unsigned(u32 value)
+{
+    Variable result = {Var_Unsigned};
+    result.u = value;
+    return result;
+}
+
+internal inline Variable
+var_float(f32 value)
+{
+    Variable result = {Var_Float};
+    result.f = value;
+    return result;
+}
+
+internal inline Variable
+var_string(String value)
+{
+    Variable result = {Var_String};
+    result.s = value;
+    return result;
+}
+
+internal inline Variable
+var_cstring(char *value)
+{
+    Variable result = {Var_CString};
+    result.c = value;
+    return result;
+}
+
+internal inline f32
+map01(Variable val, Variable max)
+{
+    f32 result = 0.0f;
+    i_expect(val.kind == max.kind);
+    switch (val.kind)
+    {
+        case Var_Integer:
+        {
+            result = (((f32)val.i / (f32)max.i) + 1.0f) / 2.0f;
+        } break;
+        
+        case Var_Unsigned:
+        {
+            result = (f32)val.u / (f32)max.u;
+        } break;
+        
+        case Var_Float:
+        {
+            result = val.f / max.f;
+        } break;
+        
+        INVALID_DEFAULT_CASE;
+    }
+    return clamp01(result);
+}
+
+internal inline Variable
+unmap01(f32 val01, Variable max)
+{
+    Variable result = {max.kind};
+    switch (max.kind)
+    {
+        case Var_Integer:
+        {
+            result.i = (s64)((f64)(val01 * 2.0f - 1.0f) * (f64)max.i);
+        } break;
+        
+        case Var_Unsigned:
+        {
+            result.u = (u64)((f64)val01 * (f64)max.u);
+        } break;
+        
+        case Var_Float:
+        {
+            result.f = (f64)val01 * max.f;
+        } break;
+        
+        INVALID_DEFAULT_CASE;
+    }
+    return result;
+}
+
 struct UIButton
 {
     UIID   id;
@@ -201,7 +302,7 @@ ui_layout_button(UIState *state, UIButton *button, Rectangle2u rect,
     
     v2u dim = get_dim(rect);
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
-    outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
+    //outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
     draw_text(&state->font, state->screen, rect.min.x + 8, rect.min.y + 3, 
               button->label, textColour);
 }
@@ -232,7 +333,7 @@ ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2u rect,
     
     v2u dim = get_dim(rect);
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
-    outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
+    //outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
         if (checkbox->checked)
         {
         fill_rectangle(state->screen, rect.min.x + 5, rect.min.y + 5, 
@@ -241,109 +342,70 @@ ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2u rect,
 }
 
 internal void
-ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind dir)
+ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind dir,
+                 v4 colour = {1, 1, 1, 1})
 {
-    /*
-    s32 id;
-    v2 pos;
-    v2 dim;
-    s32 maxValue;
-    s32 *value;
-    v4 colour;
+    ui_match_id(state, slider->id, rect);
     
-    if (0)
+    b32 hot = false;
+    if (state->hotItem == slider->id)
     {
-        b32 changed = false;
-        
-        b32 horizontal = dir == Layout_Horizontal;
-        f32 handleSize = (f32)(horizontal ? h : w) * 0.5f;
-        f32 trackLength = (f32)(horizontal ? w : h) - (f32)(horizontal ? h : w);
-        
-        f32 one_over_max = 1.0f / (f32)maxValue;
-        f32 value01 = clamp01((f32)(*value) * one_over_max);
-        f32 dimMod = (value01 - 0.5f) * trackLength;
-        v4 backColour = clamp01(colour - V4(0.3f, 0.3f, 0.3f, 0.0f));
-        
-        mouse_selection(state, id, rect_center_dim(pos, dim));
-        keyboard_selection(state, id, pos, dim);
-        sync_keyboard_and_mouse_selection(state, id);
-        
-        draw_shadow(state, pos, dim);
-        
-        v4 drawColour = ui_state_colour(state, id, colour);
-        push_rect(state->renderer, state->transform, V3(pos, -12.0f), dim, backColour);
+        hot = true;
+        colour.r *= 1.2f;
+        colour.g *= 1.2f;
+        colour.b *= 1.2f;
+    }
+    
+    b32 active = false;
+    if (state->activeItem == slider->id)
+    {
+        active = true;
+        colour.r *= 1.3f;
+        colour.g *= 1.3f;
+        colour.b *= 1.1f;
+    }
+    
+    v2u dim = get_dim(rect);
+    
+    b32 horizontal = dir == Layout_Horizontal;
+    f32 handleSize = (f32)(horizontal ? dim.y : dim.x) * 0.5f;
+    v2u handle = V2U((u32)handleSize, (u32)handleSize);
+    
+    f32 trackLength = (f32)(horizontal ? dim.x : dim.y) - (f32)(horizontal ? dim.y : dim.x);
+    
+    f32 value01 = map01(slider->value, slider->maxValue);
+    u32 dimModVal = (u32)(value01 * trackLength);
+    v2u dimMod = (horizontal ? V2U(rect.min.x + dimModVal, rect.min.y)
+                  : V2U(rect.min.x, rect.min.y + dimModVal));
+    dimMod += handle.x / 2;
+    
+    v4 backColour = clamp01(colour - V4(0.3f, 0.3f, 0.3f, 0.0f));
+    v4 trackColour = clamp01(colour - V4(0.5f, 0.5f, 0.5f, 0.0f));
+    
+    fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, backColour);
+    fill_rectangle(state->screen, rect.min.x + handle.x / 2, rect.min.y + handle.y / 2,
+                   dim.x - handle.x, dim.y - handle.y, trackColour);
+        fill_rectangle(state->screen, dimMod.x, dimMod.y, (u32)handleSize, (u32)handleSize, colour);
+
+    if (active)
+    {
         if (horizontal)
         {
-            push_rect(state->renderer, state->transform, V3(pos.x + dimMod, pos.y, -10.0f), V2(handleSize, handleSize), drawColour);
+            value01 = (state->mouse.x - rect.min.x - handle.x / 2) / (f32)(dim.x - handle.x);
         }
         else
         {
-            push_rect(state->renderer, state->transform, V3(pos.x, pos.y + dimMod, -10.0f), V2(handleSize, handleSize), drawColour);
+            value01 = 1.0f - ((state->mouse.y - rect.min.y - handle.y / 2) / (f32)(dim.y - handle.y));
         }
-        
-        if (state->kbItem == id)
-        {
-            if (select_next(state))
-            {
-                // NOTE(michiel): Do nothing
-            }
-            else if (is_down(state, KB_Up, false))
-            {
-                if (*value < maxValue)
-                {
-                    ++(*value);
-                    changed = true;
-                }
-            }
-            else if (is_down(state, KB_Down, false))
-            {
-                if (*value > 0)
-                {
-                    --(*value);
-                    changed = true;
-                }
-            }
-        }
-        
-        if (!changed)
-        {
-            state->lastWidget = id;
-            
-            f32 mouseSetter = (f32)(*value) * one_over_max;
-            if (state->activeItem == id)
-            {
-                if (horizontal)
-                {
-                    mouseSetter = clamp01_map_to_range(0.0f, (state->mousePos.x - pos.x) + 0.5f * trackLength, trackLength);
-                }
-                else
-                {
-                    mouseSetter = clamp01_map_to_range(0.0f, (state->mousePos.y - pos.y) + 0.5f * trackLength, trackLength);
-                }
-            }
-            else if ((state->hotItem == id) && (state->inFocus))
-            {
-                mouseSetter += (f32)state->mouseScroll * one_over_max;
-            }
-            if (mouseSetter < 0.0f)
-            {
-                mouseSetter = 0.0f;
-            }
-            if (mouseSetter > 1.0f)
-            {
-                mouseSetter = 1.0f;
-            }
-            s32 v = (s32)(mouseSetter * (f32)maxValue);
-            if (v != *value)
-            {
-                *value = v;
-                changed = true;
-            }
-        }
-        
-        return changed;
     }
-    */
+    else if (hot)
+    {
+        // TODO(michiel): Mouse scrolling
+        //value01 += (f32)state->mouseScroll * 0.01f;
+    }
+    value01 = clamp01(value01);
+    
+    slider->value = unmap01(value01, slider->maxValue);
 }
 
 internal void
@@ -401,7 +463,8 @@ ui_layout_layout(UIState *state, UILayout *layout)
                 {
                     ui_layout_slider(state, &item->slider, rect,
                                      layout->kind == Layout_Horizontal ?
-                                     Layout_Vertical : Layout_Horizontal);
+                                     Layout_Vertical : Layout_Horizontal,
+                                     V4(0.5f, 0.5f, 0.1f, 1));
                 } break;
                 
                 INVALID_DEFAULT_CASE;
@@ -541,6 +604,24 @@ ui_slider(UIState *state, UILayout *layout, Variable value, Variable max)
     return &uiItem->slider;
 }
 
+internal UISlider *
+ui_slider(UIState *state, UILayout *layout, u32 value, u32 maxValue)
+{
+    return ui_slider(state, layout, var_unsigned(value), var_unsigned(maxValue));
+}
+
+internal UISlider *
+ui_slider(UIState *state, UILayout *layout, s32 value, s32 maxValue)
+{
+    return ui_slider(state, layout, var_signed(value), var_signed(maxValue));
+}
+
+internal UISlider *
+ui_slider(UIState *state, UILayout *layout, f32 value, f32 maxValue)
+{
+    return ui_slider(state, layout, var_float(value), var_float(maxValue));
+}
+
 //
 internal inline b32
 ui_id_is_clicked(UIState *state, UIID id)
@@ -558,6 +639,12 @@ internal inline b32
 ui_checkbox_is_clicked(UIState *state, UICheckbox *checkbox)
 {
     return ui_id_is_clicked(state, checkbox->id);
+}
+
+internal inline b32
+ui_slider_is_set(UIState *state, UISlider *slider)
+{
+    return ui_id_is_clicked(state, slider->id);
 }
 
 internal inline b32
