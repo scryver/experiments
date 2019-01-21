@@ -13,65 +13,123 @@ enum VariableKind
     Var_Float,
     Var_String,
     Var_CString,
+    
+    Var_Constant = 0x100,
 };
   struct Variable
 {
-    VariableKind kind;
+    enum32(VariableKind) kind;
     union
     {
+    void *var;
         b32 b;
-        s64 i;
-        u64 u;
-        f64 f;
+        u32 u;
+        s32 i;
+        f32 f;
         String s;
         char *c;
-};
     };
+    };
+
+internal inline Variable
+var(VariableKind kind, void *value)
+{
+    Variable result = {kind, value};
+    return result;
+}
+
+internal inline Variable
+var_bool(b32 *value)
+{
+    Variable result = var(Var_Boolean, value);
+    return result;
+}
 
 internal inline Variable
 var_bool(b32 value)
 {
-    Variable result = {Var_Boolean};
+    Variable result = {0};
+    result.kind = Var_Boolean | Var_Constant;
     result.b = value;
     return result;
 }
 
 internal inline Variable
-var_signed(s32 value)
+var_unsigned(u32 *value)
 {
-    Variable result = {Var_Integer};
-    result.i = value;
+    Variable result = var(Var_Unsigned, value);
     return result;
 }
 
 internal inline Variable
 var_unsigned(u32 value)
 {
-    Variable result = {Var_Unsigned};
+    Variable result = {0};
+    result.kind = Var_Unsigned | Var_Constant;
     result.u = value;
+    return result;
+}
+
+internal inline Variable
+var_signed(s32 *value)
+{
+    Variable result = var(Var_Integer, value);
+    return result;
+}
+
+internal inline Variable
+var_signed(s32 value)
+{
+    Variable result = {0};
+    result.kind = Var_Integer | Var_Constant;
+    result.i = value;
+    return result;
+}
+
+internal inline Variable
+var_float(f32 *value)
+{
+    Variable result = var(Var_Float, value);
     return result;
 }
 
 internal inline Variable
 var_float(f32 value)
 {
-    Variable result = {Var_Float};
+    Variable result = {0};
+    result.kind = Var_Float | Var_Constant;
     result.f = value;
+    return result;
+}
+
+internal inline Variable
+var_string(String *value)
+{
+    Variable result = var(Var_String, value);
     return result;
 }
 
 internal inline Variable
 var_string(String value)
 {
-    Variable result = {Var_String};
+    Variable result = {0};
+    result.kind = Var_String | Var_Constant;
     result.s = value;
+    return result;
+}
+
+internal inline Variable
+var_cstring(char **value)
+{
+    Variable result = var(Var_CString, value);
     return result;
 }
 
 internal inline Variable
 var_cstring(char *value)
 {
-    Variable result = {Var_CString};
+    Variable result = {0};
+    result.kind = Var_CString | Var_Constant;
     result.c = value;
     return result;
 }
@@ -80,22 +138,27 @@ internal inline f32
 map01(Variable val, Variable max)
 {
     f32 result = 0.0f;
-    i_expect(val.kind == max.kind);
+    i_expect(max.kind & Var_Constant);
+    i_expect(val.kind != max.kind);
+    i_expect((Var_Constant | val.kind) == max.kind);
     switch (val.kind)
     {
         case Var_Integer:
         {
-            result = (((f32)val.i / (f32)max.i) + 1.0f) / 2.0f;
+            s32 value = *(s32 *)val.var;
+            result = (((f32)value / (f32)max.i) + 1.0f) / 2.0f;
         } break;
         
         case Var_Unsigned:
         {
-            result = (f32)val.u / (f32)max.u;
+            u32 value = *(u32 *)val.var;
+            result = (f32)value / (f32)max.u;
         } break;
         
         case Var_Float:
         {
-            result = val.f / max.f;
+            f32 value = *(f32 *)val.var;
+            result = value / max.f;
         } break;
         
         INVALID_DEFAULT_CASE;
@@ -103,30 +166,31 @@ map01(Variable val, Variable max)
     return clamp01(result);
 }
 
-internal inline Variable
-unmap01(f32 val01, Variable max)
+internal inline void
+unmap01(f32 val01, Variable *val, Variable max)
 {
-    Variable result = {max.kind};
-    switch (max.kind)
+    i_expect(max.kind & Var_Constant);
+    i_expect(val->kind != max.kind);
+    i_expect((Var_Constant | val->kind) == max.kind);
+    switch (val->kind)
     {
         case Var_Integer:
         {
-            result.i = (s64)((f64)(val01 * 2.0f - 1.0f) * (f64)max.i);
+            *(s32 *)val->var = (s32)((val01 * 2.0f - 1.0f) * (f32)max.i);
         } break;
         
         case Var_Unsigned:
         {
-            result.u = (u64)((f64)val01 * (f64)max.u);
+            *(u32 *)val->var = (u32)(val01 * (f32)max.u);
         } break;
         
         case Var_Float:
         {
-            result.f = (f64)val01 * max.f;
+            *(f32 *)val->var = val01 * max.f;
         } break;
         
         INVALID_DEFAULT_CASE;
     }
-    return result;
 }
 
 struct UIButton
@@ -405,7 +469,7 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind 
     }
     value01 = clamp01(value01);
     
-    slider->value = unmap01(value01, slider->maxValue);
+    unmap01(value01, &slider->value, slider->maxValue);
 }
 
 internal void
@@ -605,19 +669,19 @@ ui_slider(UIState *state, UILayout *layout, Variable value, Variable max)
 }
 
 internal UISlider *
-ui_slider(UIState *state, UILayout *layout, u32 value, u32 maxValue)
+ui_slider(UIState *state, UILayout *layout, u32 *value, u32 maxValue)
 {
     return ui_slider(state, layout, var_unsigned(value), var_unsigned(maxValue));
 }
 
 internal UISlider *
-ui_slider(UIState *state, UILayout *layout, s32 value, s32 maxValue)
+ui_slider(UIState *state, UILayout *layout, s32 *value, s32 maxValue)
 {
     return ui_slider(state, layout, var_signed(value), var_signed(maxValue));
 }
 
 internal UISlider *
-ui_slider(UIState *state, UILayout *layout, f32 value, f32 maxValue)
+ui_slider(UIState *state, UILayout *layout, f32 *value, f32 maxValue)
 {
     return ui_slider(state, layout, var_float(value), var_float(maxValue));
 }
@@ -657,6 +721,24 @@ internal inline b32
 ui_checkbox_imm(UIState *state, UILayout *layout, b32 checked)
 {
     return ui_checkbox_is_clicked(state, ui_checkbox(state, layout, checked));
+}
+
+internal inline b32
+ui_slider_imm(UIState *state, UILayout *layout, u32 *value, u32 maxValue)
+{
+    return ui_slider_is_set(state, ui_slider(state, layout, value, maxValue));
+}
+
+internal inline b32
+ui_slider_imm(UIState *state, UILayout *layout, s32 *value, s32 maxValue)
+{
+    return ui_slider_is_set(state, ui_slider(state, layout, value, maxValue));
+}
+
+internal inline b32
+ui_slider_imm(UIState *state, UILayout *layout, f32 *value, f32 maxValue)
+{
+    return ui_slider_is_set(state, ui_slider(state, layout, value, maxValue));
 }
 
 #if 0

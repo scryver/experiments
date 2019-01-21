@@ -66,15 +66,27 @@ DRAW_IMAGE(draw_image)
         fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 1, 0, 1));
     }
     
+    UILayout *sliderLayout = ui_layout(&fxer->ui, layout, Layout_Vertical, 5);
+    if (ui_slider_imm(&fxer->ui, sliderLayout, &fxer->slide1, 200U))
+    {
+        fprintf(stdout, "Unsigned: %u\n", fxer->slide1);
+    }
+    if (ui_slider_imm(&fxer->ui, sliderLayout, &fxer->slide2, 100))
+    {
+        fprintf(stdout, "Integer : %d\n", fxer->slide2);
+    }
+    if (ui_slider_imm(&fxer->ui, sliderLayout, &fxer->slide3, 1.0f))
+    {
+        fprintf(stdout, "Floating: %f\n", fxer->slide3);
+    }
+    
     UILayout *bottomLayout = ui_layout(&fxer->ui, layout, Layout_Horizontal, 5);
     if (ui_checkbox_imm(&fxer->ui, bottomLayout, fxer->check1))
     {
-        fill_rectangle(image, 0, 50, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
         fxer->check1 = !fxer->check1;
     }
     if (ui_checkbox_imm(&fxer->ui, bottomLayout, fxer->check2))
     {
-        fill_rectangle(image, 100, 50, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
         fxer->check2 = !fxer->check2;
     }
     
@@ -83,17 +95,17 @@ DRAW_IMAGE(draw_image)
         fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 1, 1));
     }
     
-    UILayout *sliderLayout = ui_layout(&fxer->ui, layout, Layout_Vertical, 5);
-    UISlider *slider1 = ui_slider(&fxer->ui, sliderLayout, fxer->slide1, 200U);
-    UISlider *slider2 = ui_slider(&fxer->ui, sliderLayout, fxer->slide2, 100);
-    UISlider *slider3 = ui_slider(&fxer->ui, sliderLayout, fxer->slide3, 1.0f);
-    
     ui_end(&fxer->ui);
 
-    fxer->slide1 = slider1->value.u;
-    fxer->slide2 = slider2->value.i;
-    fxer->slide3 = slider3->value.f;
-
+    if (fxer->check1)
+    {
+        fill_rectangle(image, 0, 50, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
+    }
+    if (fxer->check2)
+    {
+        fill_rectangle(image, 0, 150, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
+    }
+    
     fxer->prevMouseDown = mouse.mouseDowns;
     fxer->seconds += dt;
     ++fxer->ticks;
