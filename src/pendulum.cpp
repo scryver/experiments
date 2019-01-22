@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct PendulumState
@@ -33,7 +34,7 @@ DRAW_IMAGE(draw_image)
         pendulum->bob = V2((f32)image->width * 0.5f, len);
         pendulum->len = len;
         
-        pendulum->angle = TAU32 * 0.125f;
+        pendulum->angle = F32_TAU * 0.125f;
         
         state->initialized = true;
     }
@@ -47,9 +48,9 @@ DRAW_IMAGE(draw_image)
     fill_circle(image, round(pendulum->bob.x), round(pendulum->bob.y), 16, V4(1, 1, 1, 1));
 
 pendulum->angle += pendulum->aVel;
-    if (pendulum->angle > TAU32)
+    if (pendulum->angle > F32_TAU)
     {
-        pendulum->angle -= TAU32;
+        pendulum->angle -= F32_TAU;
     }
     
     pendulum->aVel += pendulum->aAcc;

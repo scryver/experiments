@@ -30,10 +30,10 @@ parse_training(char *dataPath)
 {
      TrainingSet result = {};
     
-    ReadFile training = read_entire_file(dataPath);
-    i_expect(training.size > 0);
+     ApiFile training = read_entire_file(dataPath);
+    i_expect(training.content.size > 0);
     
-    u32 *counts = (u32 *)training.data;
+    u32 *counts = (u32 *)training.content.data;
     result.count = *counts++;
     u32 inpCount = *counts++;
     u32 outCount = *counts++;

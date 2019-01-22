@@ -1,5 +1,7 @@
 struct Neurote
 {
+    Arena arena;
+    
     u32 layerCount;
     u32 *layers;
     u32 *weightOffsets;

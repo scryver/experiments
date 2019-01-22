@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "forces.h"
 #include "vehicle.h"
 #include "drawing.cpp"
@@ -441,7 +442,7 @@ DRAW_IMAGE(draw_image)
         
         v4 healthy = V4(1, 1, 0, 1);
         v4 dead = V4(0.2f, 0, 0, 1);
-        v4 colour = lerp(vehicle->health, dead, healthy);
+        v4 colour = lerp(dead, vehicle->health, healthy);
         fill_triangle(image, front, backUp, backDo, colour);
         
     }
@@ -468,8 +469,8 @@ DRAW_IMAGE(draw_image)
         fill_rectangle(image, boxAt.x + 2, boxAt.y + 2, boxSize.x - 4, boxSize.y - 4,
                        V4(0, 0, 0, 1));
     }
-    if ((boxAt.x <= mouse.pixelPosition.x) && (mouse.pixelPosition.x < (boxAt.x + boxSize.x)) &&
-        (boxAt.y <= mouse.pixelPosition.y) && (mouse.pixelPosition.y < (boxAt.y + boxSize.y)))
+    if ((boxAt.x <= (f32)mouse.pixelPosition.x) && ((f32)mouse.pixelPosition.x < (boxAt.x + boxSize.x)) &&
+        (boxAt.y <= (f32)mouse.pixelPosition.y) && ((f32)mouse.pixelPosition.y < (boxAt.y + boxSize.y)))
     {
         fill_rectangle(image, boxAt.x + 1, boxAt.y + 1, boxSize.x - 2, boxSize.y - 2,
                        V4(0, 0, 1, 0.5f));

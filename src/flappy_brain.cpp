@@ -1,9 +1,12 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
+#include "../libberdip/std_file.c"
+
 #include "aitraining.h"
 #include "neurons.h"
 #include "drawing.cpp"
@@ -42,6 +45,8 @@ struct Pipe
 
 struct FlappyState
 {
+    Arena arena;
+    
     RandomSeriesPCG randomizer;
     f32 seconds;
     u32 ticks;
@@ -51,7 +56,7 @@ struct FlappyState
     v2 gravity;
     
     u32 populationCount;
-    Bird birds[1024];
+    Bird birds[4096];
     u32 pipeCount;
     Pipe pipes[16];
     
@@ -263,14 +268,14 @@ NEURON_MUTATE(mutation)
 }
 
 internal void
-next_generation(RandomSeriesPCG *random, u32 birdCount, Bird *parentBirds, v2 screenSize,
-                f32 mutationRate, f32 mutationFactor)
+next_generation(Arena *arena, RandomSeriesPCG *random, u32 birdCount, Bird *parentBirds,
+                v2 screenSize, f32 mutationRate, f32 mutationFactor)
 {
-    TempMemory temp = temporary_memory();
+    TempMemory temp = temporary_memory(arena);
     
     calculate_fitness(birdCount, parentBirds);
     
-    Bird *nextGen = allocate_array(Bird, birdCount);
+    Bird *nextGen = arena_allocate_array(arena, Bird, birdCount);
     Bird *best = 0;
     
     for (u32 birdIndex = 0; birdIndex < birdCount; ++birdIndex)
@@ -469,8 +474,8 @@ DRAW_IMAGE(draw_image)
             fprintf(stdout, "Generation %5u: Best: %u\n", flappy->generation, flappy->distance);
         flappy->distance = 0;
             
-            next_generation(&flappy->randomizer, array_count(flappy->birds), flappy->birds,
-                            size, 0.1f, 0.1f);
+            next_generation(&flappy->arena, &flappy->randomizer, 
+                            array_count(flappy->birds), flappy->birds, size, 0.1f, 0.1f);
         for (u32 pipeIndex = 0; pipeIndex < array_count(flappy->pipes); ++pipeIndex)
         {
             Pipe *pipe = flappy->pipes + pipeIndex;
@@ -492,12 +497,15 @@ DRAW_IMAGE(draw_image)
         }
     }
     
-    for (u32 birdIndex = 0; birdIndex < array_count(flappy->birds); ++birdIndex)
+    for (u32 birdIndex = 0, drawn = 0;
+         (birdIndex < array_count(flappy->birds)) && (drawn < 100); 
+         ++birdIndex)
     {
         Bird *bird = flappy->birds + birdIndex;
         if (bird->alive)
         {
         draw_bird(image, bird);
+            ++drawn;
         }
     }
     
@@ -510,10 +518,10 @@ DRAW_IMAGE(draw_image)
     f32 sliderRadius = (f32)sliderSize.y * 0.5f + 2.0f;
     
     // TODO(michiel): Check on distance (for roundness (: )
-    if ((mouse.pixelPosition.x >= (sliderHandle.x - sliderRadius)) &&
-        (mouse.pixelPosition.x <= (sliderHandle.x + sliderRadius)) &&
-        (mouse.pixelPosition.y >= (sliderHandle.y - sliderRadius)) &&
-        (mouse.pixelPosition.y <= (sliderHandle.y + sliderRadius)))
+    if (((f32)mouse.pixelPosition.x >= (sliderHandle.x - sliderRadius)) &&
+        ((f32)mouse.pixelPosition.x <= (sliderHandle.x + sliderRadius)) &&
+        ((f32)mouse.pixelPosition.y >= (sliderHandle.y - sliderRadius)) &&
+        ((f32)mouse.pixelPosition.y <= (sliderHandle.y + sliderRadius)))
     {
         // NOTE(michiel): Mouse is inside handle
         if ((mouse.mouseDowns & Mouse_Left) &&
@@ -525,7 +533,7 @@ DRAW_IMAGE(draw_image)
     
     if (flappy->sliding)
     {
-        f32 mouseAt = mouse.pixelPosition.x;
+        f32 mouseAt = (f32)mouse.pixelPosition.x;
         mouseAt -= sliderAt.x;
         if (mouseAt < 0.0f)
         {

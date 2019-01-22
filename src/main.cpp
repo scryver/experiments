@@ -23,90 +23,10 @@
 
 #define KEYCODE_ESCAPE 9
 
-struct MemBlock
-{
-    u32 maxSize;
-    u32 size;
-    u8 *memory;
-    
-    // TODO(michiel): More memory
-    //struct MemBlock *next;
-};
-
-global MemBlock memory;
-
-struct TempMemory
-{
-    u32 origSize;
-};
-
-internal inline TempMemory
-temporary_memory(void)
-{
-    TempMemory result = {};
-    result.origSize = memory.size;
-    return result;
-}
-
-internal inline void
-destroy_temporary(TempMemory temp)
-{
-    memory.size = temp.origSize;
-}
-
-#define allocate_struct(type) (type *)allocate_size(sizeof(type))
-#define allocate_array(type, count) (type *)allocate_size(sizeof(type) * (count))
-internal u8 *
-allocate_size(umm size)
-{
-    if (memory.maxSize == 0)
-    {
-        memory.maxSize = megabytes(512);
-        memory.memory = (u8 *)mmap(0, memory.maxSize, PROT_READ|PROT_WRITE,
-                                   MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
-    }
-    
-    i_expect(memory.size + size <= memory.maxSize);
-    u8 *data = memory.memory + memory.size;
-    memory.size += size;
-    memset(data, 0, size);
-    return data;
-}
-
 internal void
 print_error(char *message)
 {
     fprintf(stderr, "ERROR: %s\n", message);
-}
-
-struct ReadFile
-{
-    u32 size;
-    u8 *data;
-};
-
-internal ReadFile
-read_entire_file(char *filename)
-{
-    ReadFile result = {};
-    
-    FILE *f = fopen(filename, "rb");
-    if (f)
-    {
-        fseek(f, 0, SEEK_END);
-        u64 size = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        i_expect(size < U32_MAX);
-        
-        result.data = (u8 *)allocate_size(size);
-        i_expect(result.data);
-        result.size = size;
-        
-        fread(result.data, size, 1, f);
-        fclose(f);
-    }
-    
-    return result;
 }
 
 //
@@ -357,7 +277,7 @@ init_work_queue(PlatformWorkQueue *queue, u32 threadCount)
         name[10] = '0' + threadIndex;
         name[11] = '\0';
         
-         u8 *threadStack = allocate_size(THREAD_STACK_SIZE);
+        u8 *threadStack = (u8 *)allocate_size(THREAD_STACK_SIZE);
         int threadId = clone(thread_process, threadStack + THREAD_STACK_SIZE,
                              CLONE_THREAD|CLONE_SIGHAND|CLONE_FS|CLONE_VM|CLONE_FILES|CLONE_PTRACE,
                              queue);
@@ -464,7 +384,7 @@ int main(int argc, char **argv)
                        KeyPressMask | KeyReleaseMask);
     
     window = XCreateWindow(display, rootWindow,
-                           20, 20, windowWidth, windowHeight,
+                           0, 0, windowWidth, windowHeight,
                            0, pvi->depth, InputOutput, pvi->visual,
                            CWBorderPixel | CWColormap | CWEventMask, &attr);
     if (!window)
@@ -527,8 +447,8 @@ int main(int argc, char **argv)
     {
         winX = maximum(0, winX);
         winY = maximum(0, winY);
-            mouse.pixelPosition.x = (f32)winX;
-            mouse.pixelPosition.y = (f32)winY;
+            mouse.pixelPosition.x = winX;
+            mouse.pixelPosition.y = winY;
     }
     }
     
@@ -655,6 +575,8 @@ int main(int argc, char **argv)
                 {
                     windowWidth = event.xconfigure.width;
                     windowHeight = event.xconfigure.height;
+                    mouse.relativePosition.x = (f32)mouse.pixelPosition.x / (f32)windowWidth;
+                    mouse.relativePosition.y = (f32)mouse.pixelPosition.y / (f32)windowHeight;
                 } break;
                 
                 case DestroyNotify:
@@ -673,8 +595,10 @@ int main(int argc, char **argv)
                 case MotionNotify:
                 {
                     // NOTE(michiel): Mouse update event.xmotion.x/y
-                    mouse.pixelPosition.x = (f32)event.xmotion.x;
-                    mouse.pixelPosition.y = (f32)event.xmotion.y;
+                    mouse.pixelPosition.x = event.xmotion.x;
+    mouse.pixelPosition.y = event.xmotion.y;
+    mouse.relativePosition.x = (f32)mouse.pixelPosition.x / (f32)windowWidth;
+    mouse.relativePosition.y = (f32)mouse.pixelPosition.y / (f32)windowHeight;
                 } break;
                 
                 case ButtonPress:

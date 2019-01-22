@@ -1,3 +1,4 @@
+#include "../libberdip/platform.h"
 #include "interface.h"
 
 #include <unistd.h>

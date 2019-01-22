@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "forces.h"
 #include "vehicle.h"
 #include "drawing.cpp"
@@ -43,8 +44,8 @@ DRAW_IMAGE(draw_image)
     for (u32 vehicleIndex = 0; vehicleIndex < vehicleState->vehicleCount; ++vehicleIndex)
     {
         Vehicle *vehicle = vehicleState->vehicles + vehicleIndex;
-    seek(vehicle, mouse.pixelPosition);
-        //arrive(vehicle, mouse.pixelPosition);
+        seek(vehicle, V2(mouse.pixelPosition));
+        //arrive(vehicle, V2(mouse.pixelPosition));
     update(&vehicle->mover);
     }
     
@@ -71,7 +72,8 @@ DRAW_IMAGE(draw_image)
     fill_triangle(image, front + vehicle->mover.position, backUp + vehicle->mover.position,
                   backDo + vehicle->mover.position, V4(1, 1, 0, 1));
     }
-    fill_circle(image, mouse.pixelPosition.x, mouse.pixelPosition.y, 20, V4(1, 1, 1, 0.7f));
+    fill_circle(image, (f32)mouse.pixelPosition.x, (f32)mouse.pixelPosition.y, 
+                20, V4(1, 1, 1, 0.7f));
     
     ++vehicleState->ticks;
 }

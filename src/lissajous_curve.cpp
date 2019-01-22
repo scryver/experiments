@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct Curve
@@ -122,8 +123,8 @@ DRAW_IMAGE(draw_image)
         u32 cy = lissaJous->tileW / 2;
         outline_circle(image, cx, cy, r, 2.0f, V4(1, 1, 1, 1));
         
-        s32 x = round(r * cos((f32)(col + 1) * lissaJous->angle - TAU32 * 0.25f));
-        s32 y = round(r * sin((f32)(col + 1) * lissaJous->angle - TAU32 * 0.25f));
+        s32 x = round(r * cos((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f));
+        s32 y = round(r * sin((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f));
         
         fill_circle(image, cx + x, cy + y, 4, V4(0, 1, 0, 1));
         
@@ -138,8 +139,8 @@ DRAW_IMAGE(draw_image)
         u32 cy = row * lissaJous->tileW + lissaJous->tileW + lissaJous->tileW / 2;
         outline_circle(image, cx, cy, r, 2.0f, V4(1, 1, 1, 1));
         
-        s32 x = round(r * cos((f32)(row + 1) * lissaJous->angle - TAU32 * 0.25f));
-        s32 y = round(r * sin((f32)(row + 1) * lissaJous->angle - TAU32 * 0.25f));
+        s32 x = round(r * cos((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f));
+        s32 y = round(r * sin((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f));
         
         fill_circle(image, cx + x, cy + y, 4, V4(0, 0, 1, 1));
         
@@ -168,9 +169,9 @@ DRAW_IMAGE(draw_image)
     
 #if 1
     lissaJous->angle += 0.01f;
-    if (lissaJous->angle > TAU32)
+    if (lissaJous->angle > F32_TAU)
     {
-        lissaJous->angle -= TAU32;
+        lissaJous->angle -= F32_TAU;
     }
 #endif
 

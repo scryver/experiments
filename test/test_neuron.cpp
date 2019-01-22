@@ -1,29 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../src/interface.h"
+#include "../libberdip/platform.h"
 #include "../src/matrix.h"
-
-#define allocate_struct(type) (type *)allocate_size(sizeof(type))
-#define allocate_array(type, count) (type *)allocate_size(sizeof(type) * (count))
-internal u8 *
-allocate_size(umm size)
-{
-    //return (u8 *)mmap(0, size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
-    return (u8 *)calloc(size, 1);
-}
-
-#define deallocate_struct(addr) deallocate(sizeof(*addr), addr)
-#define deallocate_array(count, addr) deallocate(sizeof(*addr) * count, addr)
-internal void
-deallocate(umm size, void *data)
-{
-    if (data)
-    {
-        //munmap(data, size);
-        free(data);
-    }
-}
 
 MATRIX_MAP(sigmoid)
 {
@@ -112,8 +91,10 @@ add_weights_old(u32 multCount, u32 transpCount, f32 *multiplier, f32 *transposer
     matrix_multiply_matrix(multCount, 1, colTrans, multiplier, tempArray, tempWeights);
     matrix_add_matrix(multCount, colTrans, tempWeights, weights);
     
-    deallocate_array(multCount * colTrans, tempWeights);
-    deallocate_array(transpCount, tempArray);
+    deallocate(tempWeights);
+    deallocate(tempArray);
+    //deallocate_array(multCount * colTrans, tempWeights);
+    //deallocate_array(transpCount, tempArray);
 }
 
 internal void
@@ -144,7 +125,8 @@ transpose_multiply_old(u32 outputCount, u32 inputCount, f32 *transposedM, f32 *c
     matrix_transpose(rowTrans, colTrans, transposedM, tempWeights);
             matrix_multiply_matrix(colTrans, rowTrans, 1, tempWeights, current, next);
     
-    deallocate_array(rowTrans * colTrans, tempWeights);
+    deallocate(tempWeights);
+    //deallocate_array(rowTrans * colTrans, tempWeights);
 }
 
 internal void

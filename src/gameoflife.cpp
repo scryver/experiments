@@ -1,3 +1,5 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -5,7 +7,6 @@ DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct Cell
@@ -147,7 +148,7 @@ DRAW_IMAGE(draw_image)
     
     Grid *grid = &gameState->grid;
     
-    v2 mouseP = mouse.pixelPosition;
+    v2 mouseP = V2(mouse.pixelPosition);
     mouseP.x /= (f32)width;
     mouseP.y /= (f32)width;
     

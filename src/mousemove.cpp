@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct MouseState
@@ -95,28 +96,28 @@ DRAW_IMAGE(draw_image)
     if ((mouse.mouseDowns & Mouse_Left) &&
         !(mouseState->prevMouseDown & Mouse_Left))
     {
-        mouseState->mouseSelectStart = mouse.pixelPosition;
+        mouseState->mouseSelectStart = V2(mouse.pixelPosition);
     }
     
     if (mouse.mouseDowns & Mouse_Left)
     {
         v2 min = mouseState->mouseSelectStart;
         v2 max = mouseState->mouseSelectStart;
-        if (min.x > mouse.pixelPosition.x)
+        if (min.x > (f32)mouse.pixelPosition.x)
         {
-            min.x = mouse.pixelPosition.x;
+            min.x = (f32)mouse.pixelPosition.x;
         }
-        if (max.x < mouse.pixelPosition.x)
+        if (max.x < (f32)mouse.pixelPosition.x)
         {
-            max.x = mouse.pixelPosition.x;
+            max.x = (f32)mouse.pixelPosition.x;
         }
-        if (min.y > mouse.pixelPosition.y)
+        if (min.y > (f32)mouse.pixelPosition.y)
         {
-            min.y = mouse.pixelPosition.y;
+            min.y = (f32)mouse.pixelPosition.y;
         }
-        if (max.y < mouse.pixelPosition.y)
+        if (max.y < (f32)mouse.pixelPosition.y)
         {
-            max.y = mouse.pixelPosition.y;
+            max.y = (f32)mouse.pixelPosition.y;
         }
         
         fill_rectangle(image, min.x, min.y, max.x - min.x, max.y - min.y,
@@ -128,21 +129,21 @@ DRAW_IMAGE(draw_image)
     {
         v2 mouseMin = mouseState->mouseSelectStart;
         v2 mouseMax = mouseState->mouseSelectStart;
-        if (mouseMin.x > mouse.pixelPosition.x)
+        if (mouseMin.x > (f32)mouse.pixelPosition.x)
         {
-            mouseMin.x = mouse.pixelPosition.x;
+            mouseMin.x = (f32)mouse.pixelPosition.x;
         }
-        if (mouseMax.x < mouse.pixelPosition.x)
+        if (mouseMax.x < (f32)mouse.pixelPosition.x)
         {
-            mouseMax.x = mouse.pixelPosition.x;
+            mouseMax.x = (f32)mouse.pixelPosition.x;
         }
-        if (mouseMin.y > mouse.pixelPosition.y)
+        if (mouseMin.y > (f32)mouse.pixelPosition.y)
         {
-            mouseMin.y = mouse.pixelPosition.y;
+            mouseMin.y = (f32)mouse.pixelPosition.y;
         }
-        if (mouseMax.y < mouse.pixelPosition.y)
+        if (mouseMax.y < (f32)mouse.pixelPosition.y)
         {
-            mouseMax.y = mouse.pixelPosition.y;
+            mouseMax.y = (f32)mouse.pixelPosition.y;
         }
         
         // NOTE(michiel): 32 bit floats
@@ -157,7 +158,7 @@ DRAW_IMAGE(draw_image)
     if ((mouse.mouseDowns & Mouse_Right) &&
         !(mouseState->prevMouseDown & Mouse_Right))
     {
-        mouseState->mouseDragStart = mouse.pixelPosition;
+        mouseState->mouseDragStart = V2(mouse.pixelPosition);
     }
     
     if (mouse.mouseDowns & Mouse_Right)
@@ -165,12 +166,12 @@ DRAW_IMAGE(draw_image)
         v2 mouseS = map(mouseState->mouseDragStart, 
                         V2(0, 0), size, 
                         mouseState->virtualCoordsMin, mouseState->virtualCoordsMax);
-        v2 mouseP = map(mouse.pixelPosition,
+        v2 mouseP = map(V2(mouse.pixelPosition),
                         V2(0, 0), size, 
                         mouseState->virtualCoordsMin, mouseState->virtualCoordsMax);
         v2 diff = mouseS - mouseP;
         
-        mouseState->mouseDragStart = mouse.pixelPosition;
+        mouseState->mouseDragStart = V2(mouse.pixelPosition);
         
         mouseState->virtualCoordsMin += diff;
         mouseState->virtualCoordsMax += diff;

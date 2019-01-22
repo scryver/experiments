@@ -26,6 +26,8 @@ struct Array
 
 struct Neural
 {
+    Arena arena;
+    
     u32 inputCount;
     u32 outputCount;
     
@@ -72,7 +74,7 @@ init_neural_network(Neural *network, u32 inputCount,
     network->layerCount.kind = Array_UInt;
     network->layerCount.size = layerCount;
     i_expect(network->layerCount.u == 0);
-    network->layerCount.u = allocate_array(u32, layerCount);
+    network->layerCount.u = arena_allocate_array(&network->arena, u32, layerCount);
     for (u32 layerIndex = 0; layerIndex < network->layerCount.size; ++layerIndex)
     {
         if (layerIndex == 0)
@@ -91,7 +93,7 @@ init_neural_network(Neural *network, u32 inputCount,
 #endif
     
     network->layerCount = hiddenDepth + 1;
-    network->layerSizes = allocate_array(u32, network->layerCount);
+    network->layerSizes = arena_allocate_array(&network->arena, u32, network->layerCount);
     network->totalNeurons = 0;
     for (u32 hIndex = 0; hIndex < hiddenDepth; ++hIndex)
     {
@@ -102,8 +104,8 @@ init_neural_network(Neural *network, u32 inputCount,
     network->layerSizes[hiddenDepth] = outputCount;
     network->totalNeurons += outputCount;
     
-    network->hidden = allocate_array(f32, network->totalNeurons);
-    network->biases = allocate_array(f32, network->totalNeurons);
+    network->hidden = arena_allocate_array(&network->arena, f32, network->totalNeurons);
+    network->biases = arena_allocate_array(&network->arena, f32, network->totalNeurons);
     
     u32 maxErrorLen = 0; // network->layerSizes[0];
     network->totalWeights = 0;
@@ -119,13 +121,13 @@ init_neural_network(Neural *network, u32 inputCount,
             maxErrorLen = count;
         }
     }
-    network->weights = allocate_array(f32, network->totalWeights);
+    network->weights = arena_allocate_array(&network->arena, f32, network->totalWeights);
     
     network->outputs = network->hidden + network->totalNeurons - outputCount;
     
-    network->trainErrorsA = allocate_array(f32, maxErrorLen);
-    network->trainErrorsB = allocate_array(f32, maxErrorLen);
-    network->trainGradient = allocate_array(f32, maxErrorLen);
+    network->trainErrorsA = arena_allocate_array(&network->arena, f32, maxErrorLen);
+    network->trainErrorsB = arena_allocate_array(&network->arena, f32, maxErrorLen);
+    network->trainGradient = arena_allocate_array(&network->arena, f32, maxErrorLen);
 }
 
 internal void
@@ -566,7 +568,8 @@ cost_function(f32 a)
 #endif
 
 internal void
-back_propagate(u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *biases,
+back_propagate(Arena *memoryArena,
+               u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *biases,
                u32 totalNeurons, u32 totalWeights, 
                Training *training, f32 *deltaWeights, f32 *deltaBiases, b32 softmax = false,
                NeuronActivate *activate = activation_function, void *user = 0)
@@ -575,7 +578,7 @@ back_propagate(u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *
             layerCount, layerSizes, hidden, weights, biases, 
             softmax, activate, user);
     
-    TempMemory tempMem = temporary_memory();
+    TempMemory tempMem = temporary_memory(memoryArena);
     
     // NOTE(michiel): Backward pass
     
@@ -586,8 +589,8 @@ back_propagate(u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *
     
     f32 *dnb = deltaBiases + totalNeurons;
     f32 *dnw = deltaWeights + totalWeights;
-    f32 *temp = allocate_array(f32, totalNeurons);
-    f32 *temp2 = allocate_array(f32, totalNeurons);
+    f32 *temp = arena_allocate_array(memoryArena, f32, totalNeurons);
+    f32 *temp2 = arena_allocate_array(memoryArena, f32, totalNeurons);
     
     for (s32 layerIdx = layerCount - 1; layerIdx >= 0; --layerIdx)
     {
@@ -664,7 +667,7 @@ back_propagate(Neural *network, Training *training, f32 *deltaWeights, f32 *delt
     i_expect(training->inputCount == network->inputCount);
     i_expect(training->outputCount == network->outputCount);
     
-    back_propagate(network->layerCount, network->layerSizes, 
+    back_propagate(&network->arena, network->layerCount, network->layerSizes, 
                    network->hidden, network->weights, network->biases,
                    network->totalNeurons, network->totalWeights, 
                    training, deltaWeights, deltaBiases, softmax,
@@ -672,21 +675,21 @@ back_propagate(Neural *network, Training *training, f32 *deltaWeights, f32 *delt
 }
 
 internal void
-update_mini_batch(u32 batchSize, Training *training, f32 learningRate, 
+update_mini_batch(Arena *memoryArena, u32 batchSize, Training *training, f32 learningRate, 
                   f32 lambda, u32 totalTrainingCount,
                   u32 layerCount, u32 *layerSizes, f32 *hidden, f32 *weights, f32 *biases,
                   u32 totalNeurons, u32 totalWeights, b32 softmax = false,
                   NeuronActivate *activation = activation_function, void *user = 0)
 {
-    TempMemory temp = temporary_memory();
+    TempMemory temp = temporary_memory(memoryArena);
     
-    f32 *nw = allocate_array(f32, totalWeights);
-    f32 *nb = allocate_array(f32, totalNeurons);
+    f32 *nw = arena_allocate_array(memoryArena, f32, totalWeights);
+    f32 *nb = arena_allocate_array(memoryArena, f32, totalNeurons);
     
     for (u32 item = 0; item < batchSize; ++item)
     {
         Training *sample = training + item;
-        back_propagate(layerCount, layerSizes, hidden, weights, biases, 
+        back_propagate(memoryArena, layerCount, layerSizes, hidden, weights, biases, 
                        totalNeurons, totalWeights, sample, nw, nb, softmax,
                        activation, user);
     }
@@ -710,7 +713,8 @@ update_mini_batch(Neural *network, u32 batchSize, Training *training, f32 learni
                   f32 lambda, u32 totalTrainingCount, b32 softmax = false,
                   NeuronActivate *activation = activation_function, void *user = 0)
 {
-    update_mini_batch(batchSize, training, learningRate, lambda, totalTrainingCount,
+    update_mini_batch(&network->arena, batchSize, training, learningRate, 
+                      lambda, totalTrainingCount,
                       network->layerCount, network->layerSizes, network->hidden,
                       network->weights, network->biases, network->totalNeurons,
                       network->totalWeights, softmax, activation, user);
@@ -721,7 +725,8 @@ update_mini_batch(Neural *network, TrainingSet training, f32 learningRate,
                   f32 lambda, u32 totalTrainingCount, b32 softmax = false,
                   NeuronActivate *activation = activation_function, void *user = 0)
 {
-    update_mini_batch(training.count, training.set, learningRate, lambda, totalTrainingCount,
+    update_mini_batch(&network->arena, training.count, training.set, learningRate, 
+                      lambda, totalTrainingCount,
                       network->layerCount, network->layerSizes, network->hidden,
                       network->weights, network->biases, network->totalNeurons,
                       network->totalWeights, softmax, activation, user);

@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct Acoustic2
@@ -74,7 +75,7 @@ DRAW_IMAGE(draw_image)
         
         for (u32 n = 0; n < 2 * halfDist + 1; ++n)
         {
-            acoust->prevRopePoints[halfPoint - halfDist + n].y = -0.5f + 0.5f * cos(TAU32 * (f32)n / (2.0f * halfDist + 1.0f));
+            acoust->prevRopePoints[halfPoint - halfDist + n].y = -0.5f + 0.5f * cos(F32_TAU * (f32)n / (2.0f * halfDist + 1.0f));
         }
         #endif
 
@@ -101,7 +102,7 @@ DRAW_IMAGE(draw_image)
         
         for (u32 n = 0; n < 2 * halfDist + 1; ++n)
         {
-            acoust->prevRopePoints[halfPoint - halfDist + n].y = -0.5f + 0.5f * cos(TAU32 * (f32)n / (2.0f * halfDist + 1.0f));
+            acoust->prevRopePoints[halfPoint - halfDist + n].y = -0.5f + 0.5f * cos(F32_TAU * (f32)n / (2.0f * halfDist + 1.0f));
         }
         
         // NOTE(michiel): Initial propagation

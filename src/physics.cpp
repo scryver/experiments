@@ -1,9 +1,10 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "random.h"
 #include "drawing.cpp"
 
 struct Mover
@@ -92,7 +93,7 @@ DRAW_IMAGE(draw_image)
     }
     Mover *mover = physics->movers + physics->currentMover;
     
-    v2 diff = mouse.pixelPosition - mover->position;
+    v2 diff = V2(mouse.pixelPosition) - mover->position;
     f32 lengthDiff = 1.0f / length(diff);
     diff *= 0.1f * lengthDiff;
     

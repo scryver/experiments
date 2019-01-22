@@ -7,9 +7,11 @@ codeDir="$curDir/src"
 testDir="$curDir/test"
 buildDir="$curDir/gebouw"
 
-flags="-O0 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
+flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
 
-exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces"
+exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces -Wno-gnu-zero-variadic-macro-arguments"
+
+echo "Start build..."
 
 mkdir -p "$buildDir"
 
@@ -55,6 +57,10 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/acoustics2.cpp" -o acoustics2 -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/mechanics1.cpp" -o mechanics1 -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/x11mouse.cpp" -o x11mouse -lX11 &
+    clang++ $flags $exceptions "$codeDir/x11bitmap.cpp" -o x11bitmap -lX11 &
+    clang++ $flags $exceptions "$codeDir/logo.cpp" -o logo -lX11 -lGL &
+#    clang++ $flags $exceptions "$codeDir/yatzee.cpp" -o yatzee -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/fxer.cpp" -o fxer -lX11 -lGL &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net
