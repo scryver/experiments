@@ -50,9 +50,7 @@ internal inline Cell *
 get_cell(Grid *grid, u32 x, u32 y)
 {
     Cell *result = 0;
-    if ((x >= 0) &&
-        (x < grid->columns) &&
-        (y >= 0) &&
+    if ((x < grid->columns) &&
         (y < grid->rows))
     {
         result = grid->cells + (y * grid->columns) + x;

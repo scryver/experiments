@@ -16,6 +16,9 @@ echo "Start build..."
 mkdir -p "$buildDir"
 
 pushd "$buildDir" > /dev/null
+#    clang++ $flags $exceptions "$codeDir/precompile.cpp" -o precompile
+#    ./precompile "$codeDir/flowfield.cpp"
+
     clang++ $flags $exceptions "$codeDir/randomness.cpp" -o randomness -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/mazer.cpp" -o mazer -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/salesman.cpp" -o salesman -lX11 -lGL &
