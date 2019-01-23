@@ -265,6 +265,7 @@ struct UIState
     Image *screen;
     BitmapFont font;
     v2 mouse;
+    s32 mouseScroll;
     b32 clicked;
     
     UIID activeItem;
@@ -297,11 +298,11 @@ operator !=(UIID a, UIID b)
 }
 
 internal inline b32
-ui_match_id(UIState *state, UIID id, Rectangle2u rect)
+ui_match_id(UIState *state, UIID id, Rectangle2s rect)
 {
     b32 result = false;
-    if ((rect.min.x <= state->mouse.x) && (state->mouse.x < rect.max.x) &&
-        (rect.min.y <= state->mouse.y) && (state->mouse.y < rect.max.y))
+    if (((f32)rect.min.x <= state->mouse.x) && (state->mouse.x < (f32)rect.max.x) &&
+        ((f32)rect.min.y <= state->mouse.y) && (state->mouse.y < (f32)rect.max.y))
     {
         result = true;
         state->hotItem = id;
@@ -334,7 +335,7 @@ init_ui(UIState *state, Image *screen, u32 maxItems, char *fontFilename)
 }
 
 internal void
-ui_layout_button(UIState *state, UIButton *button, Rectangle2u rect,
+ui_layout_button(UIState *state, UIButton *button, Rectangle2s rect,
                  v4 background = {1, 1, 1, 1}, v4 textColour = {0, 0, 0, 1})
 {
        ui_match_id(state, button->id, rect);
@@ -357,7 +358,7 @@ ui_layout_button(UIState *state, UIButton *button, Rectangle2u rect,
         background.b *= 1.1f;
     }
     
-    v2u dim = get_dim(rect);
+    v2s dim = get_dim(rect);
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
     //outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
     draw_text(&state->font, state->screen, rect.min.x + 8, rect.min.y + 3, 
@@ -365,7 +366,7 @@ ui_layout_button(UIState *state, UIButton *button, Rectangle2u rect,
 }
 
 internal void
-ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2u rect,
+ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2s rect,
                  v4 background = {1, 1, 1, 1}, v4 checkColour = {0, 0, 0, 1})
 {
        ui_match_id(state, checkbox->id, rect);
@@ -388,7 +389,7 @@ ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2u rect,
         background.b *= 1.1f;
     }
     
-    v2u dim = get_dim(rect);
+    v2s dim = get_dim(rect);
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
     //outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
         if (checkbox->checked)
@@ -399,7 +400,7 @@ ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2u rect,
 }
 
 internal void
-ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind dir,
+ui_layout_slider(UIState *state, UISlider *slider, Rectangle2s rect, LayoutKind dir,
                  v4 colour = {1, 1, 1, 1})
 {
     ui_match_id(state, slider->id, rect);
@@ -422,7 +423,7 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind 
         colour.b *= 1.1f;
     }
     
-    v2u dim = get_dim(rect);
+    v2s dim = get_dim(rect);
     
     b32 horizontal = dir == Layout_Horizontal;
     f32 handleSize = (f32)(horizontal ? dim.y : dim.x) * 0.5f;
@@ -457,8 +458,7 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind 
     }
     else if (hot)
     {
-        // TODO(michiel): Mouse scrolling
-        //value01 += (f32)state->mouseScroll * 0.01f;
+        value01 += (f32)state->mouseScroll * 0.01f;
     }
     value01 = clamp01(value01);
     
@@ -471,8 +471,8 @@ ui_layout_layout(UIState *state, UILayout *layout)
     u32 itemCount = layout->itemCount;
     if (itemCount)
     {
-        u32 itemXSize = layout->maxSize.x - 2 * layout->padding;
-        u32 itemYSize = layout->maxSize.y - 2 * layout->padding;
+        s32 itemXSize = layout->maxSize.x - 2 * layout->padding;
+        s32 itemYSize = layout->maxSize.y - 2 * layout->padding;
         if (layout->kind == Layout_Horizontal) {
             itemXSize -= (itemCount - 1) * layout->padding;
             itemXSize /= itemCount;
@@ -481,12 +481,12 @@ ui_layout_layout(UIState *state, UILayout *layout)
             itemYSize -= (itemCount - 1) * layout->padding;
             itemYSize /= itemCount;
         }
-        u32 xOffset = layout->origin.x + layout->padding;
-        u32 yOffset = layout->origin.y + layout->padding;
+        s32 xOffset = layout->origin.x + layout->padding;
+        s32 yOffset = layout->origin.y + layout->padding;
         
         // TODO(michiel): Make everything more rect based (get_dim is redundant for now)
-        Rectangle2u rect = rect_from_dim(xOffset, yOffset, itemXSize, itemYSize);
-        v2u rectDim = get_dim(rect);
+        Rectangle2s rect = rect_from_dim(xOffset, yOffset, itemXSize, itemYSize);
+        v2s rectDim = get_dim(rect);
         
         for (UIItem *item = layout->firstItem; item; item = item->next)
         {

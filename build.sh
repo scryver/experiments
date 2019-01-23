@@ -7,9 +7,9 @@ codeDir="$curDir/src"
 testDir="$curDir/test"
 buildDir="$curDir/gebouw"
 
-flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
+flags="-O0 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
 
-exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces -Wno-gnu-zero-variadic-macro-arguments"
+exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces -Wno-gnu-zero-variadic-macro-arguments -Wno-c99-extensions"
 
 echo "Start build..."
 

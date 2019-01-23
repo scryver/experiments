@@ -515,10 +515,18 @@ draw_text(BitmapFont *font, Image *image, u32 xStart, u32 yStart, char *text,
     f32 y = yStart + get_starting_baseline_y(&font->info);
     
     u32 prevPoint = 0;
-    char *source = text;
+    u8 *source = (u8 *)text;
     while (*source)
     {
-        u32 codePoint = (u32)(*source);
+        u32 codePoint = 0;
+        u32 skip = get_code_point_from_utf8(source, &codePoint);
+        if (!skip)
+        {
+            fprintf(stderr, "Malformed code point: 0x%X\n", codePoint);
+            ++source;
+            continue;
+        }
+        
         f32 advance = 0.0f;
         
         if (codePoint == (u32)'\n')
@@ -544,7 +552,7 @@ draw_text(BitmapFont *font, Image *image, u32 xStart, u32 yStart, char *text,
         }
         
         prevPoint = codePoint;
-        ++source;
+        source += skip;
     }
 }
 

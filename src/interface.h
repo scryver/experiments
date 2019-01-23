@@ -10,7 +10,7 @@ struct State
     PlatformWorkQueue *workQueue;
 };
 
-#define DRAW_IMAGE(name) void name(State *state, Image *image, Mouse mouse, f32 dt)
+#define DRAW_IMAGE(name) void name(State *state, Image *image, Mouse mouse, Keyboard *keyboard, f32 dt)
 typedef DRAW_IMAGE(DrawImage);
 
 internal inline f32

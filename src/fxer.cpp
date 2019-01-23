@@ -15,6 +15,7 @@ struct FXState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
+    s32 prevMouseScroll;
     
     b32 check1;
     b32 check2;
@@ -48,6 +49,7 @@ DRAW_IMAGE(draw_image)
     }
     
     fxer->ui.mouse = hadamard(mouse.relativePosition, size);
+    fxer->ui.mouseScroll = mouse.scroll - fxer->prevMouseScroll;
     // NOTE(michiel): UI buttons only return true if the mouse click is released
     //fxer->ui.clicked = (!mouse.mouseDowns && fxer->prevMouseDown);
     // NOTE(michiel): UI buttons return true if the mouse is down
@@ -97,13 +99,15 @@ DRAW_IMAGE(draw_image)
         fxer->check2 = !fxer->check2;
     }
     
-    if (ui_button_imm(&fxer->ui, bottomLayout, "Dap"))
+    if (ui_button_imm(&fxer->ui, bottomLayout, "Dap \xCE\xA3\n"))
     {
         fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 1, 1));
     }
     
     ui_end(&fxer->ui);
 
+    if (keyboard->keys[Key_A].isDown)
+    {
     if (fxer->check1)
     {
         fill_rectangle(image, 0, 50, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
@@ -111,6 +115,16 @@ DRAW_IMAGE(draw_image)
     if (fxer->check2)
     {
         fill_rectangle(image, 0, 150, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
+    }
+    }
+    
+    if (keyboard->keys[Key_S].isPressed)
+    {
+        fill_rectangle(image, 0, 250, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
+    } 
+    else if (keyboard->keys[Key_S].isReleased)
+    {
+        fill_rectangle(image, 0, 350, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
     }
     
     if (fxer->check1)
@@ -135,6 +149,11 @@ DRAW_IMAGE(draw_image)
     }
     
     fxer->prevMouseDown = mouse.mouseDowns;
+    fxer->prevMouseScroll = mouse.scroll;
+    if (keyboard->lastInput.size)
+    {
+        fprintf(stdout, "Last in: %.*s\n", STR_FMT(keyboard->lastInput));
+    }
     fxer->seconds += dt;
     ++fxer->ticks;
     if (fxer->seconds > 1.0f)

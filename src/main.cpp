@@ -285,6 +285,288 @@ init_work_queue(PlatformWorkQueue *queue, u32 threadCount)
     }
 }
 
+internal void
+reset_keyboard_state(Keyboard *keyboard)
+{
+keyboard->lastInput.size = 0;
+keyboard->lastInput.data = 0;
+    for (u32 i = 0; i < array_count(keyboard->keys); ++i) {
+        Key *key = keyboard->keys + i;
+        key->isPressed = false;
+        key->isReleased = false;
+        key->edgeCount = 0;
+    }
+}
+
+internal inline void
+process_key(Keyboard *keyboard, Keys key, b32 isPressed)
+{
+    Key *k = keyboard->keys + (u32)key;
+    if (isPressed && (!k->isDown))
+    {
+        k->isDown = true;
+        k->isPressed = true;
+        ++k->edgeCount;
+    }
+    else if (!isPressed && (k->isDown))
+    {
+        k->isDown = false;
+        k->isReleased = true;
+        ++k->edgeCount;
+    }
+}
+global Keys gX11toKeys[] = {
+    [XK_BackSpace] = Key_Backspace,
+    [XK_Tab] = Key_Tab,
+    [XK_Return] = Key_Enter,
+    [XK_Scroll_Lock] = Key_ScrollLock,
+    [XK_Escape] = Key_Escape,
+    [XK_Delete] = Key_Delete,
+    [XK_Home] = Key_Home,
+    [XK_Left] = Key_Left,
+    [XK_Up] = Key_Up,
+    [XK_Right] = Key_Right,
+    [XK_Down] = Key_Down,
+    [XK_Page_Up] = Key_PageUp,
+    [XK_Page_Down] = Key_PageDown,
+    [XK_End] = Key_End,
+    [XK_Insert] = Key_Insert,
+    [XK_Num_Lock] = Key_NumLock,
+    [XK_KP_Enter] = Key_NumEnter,
+    [XK_KP_Home] = Key_Num7,
+    [XK_KP_Left] = Key_Num4,
+    [XK_KP_Up] = Key_Num8,
+    [XK_KP_Right] = Key_Num6,
+    [XK_KP_Down] = Key_Num2,
+    [XK_KP_Page_Up] = Key_Num9,
+    [XK_KP_Page_Down] = Key_Num3,
+    [XK_KP_End] = Key_Num1,
+    [XK_KP_Insert] = Key_Num0,
+    [XK_KP_Delete] = Key_NumDot,
+    [XK_KP_Equal] = Key_NumAdd,
+    [XK_KP_Multiply] = Key_NumMultiply,
+    [XK_KP_Add] = Key_NumAdd,
+    [XK_KP_Subtract] = Key_NumSubtract,
+    [XK_KP_Decimal] = Key_NumDot,
+    [XK_KP_Divide] = Key_NumDivide,
+    [XK_KP_0] = Key_Num0,
+    [XK_KP_1] = Key_Num1,
+    [XK_KP_2] = Key_Num2,
+    [XK_KP_3] = Key_Num3,
+    [XK_KP_4] = Key_Num4,
+    [XK_KP_5] = Key_Num5,
+    [XK_KP_6] = Key_Num6,
+    [XK_KP_7] = Key_Num7,
+    [XK_KP_8] = Key_Num8,
+    [XK_KP_9] = Key_Num9,
+    [XK_F1] = Key_F1,
+    [XK_F2] = Key_F2,
+    [XK_F3] = Key_F3,
+    [XK_F4] = Key_F4,
+    [XK_F5] = Key_F5,
+    [XK_F6] = Key_F6,
+    [XK_F7] = Key_F7,
+    [XK_F8] = Key_F8,
+    [XK_F9] = Key_F9,
+    [XK_F10] = Key_F10,
+    [XK_F11] = Key_F11,
+    [XK_F12] = Key_F12,
+    [XK_Caps_Lock] = Key_CapsLock,
+    [XK_space] = Key_Space,
+    [XK_exclam] = Key_Bang,
+    [XK_quotedbl] = Key_DoubleQuote,
+    [XK_numbersign] = Key_Hash,
+    [XK_dollar] = Key_Dollar,
+    [XK_percent] = Key_Percent,
+    [XK_ampersand] = Key_Ampersand,
+    [XK_apostrophe] = Key_Quote,
+    [XK_parenleft] = Key_LeftParen,
+    [XK_parenright] = Key_RightParen,
+    [XK_asterisk] = Key_Asterisk,
+    [XK_plus] = Key_Plus,
+    [XK_comma] = Key_Comma,
+    [XK_minus] = Key_Minus,
+    [XK_period] = Key_Dot,
+    [XK_slash] = Key_Slash,
+    [XK_0] = Key_0,
+    [XK_1] = Key_1,
+    [XK_2] = Key_2,
+    [XK_3] = Key_3,
+    [XK_4] = Key_4,
+    [XK_5] = Key_5,
+    [XK_6] = Key_6,
+    [XK_7] = Key_7,
+    [XK_8] = Key_8,
+    [XK_9] = Key_9,
+    [XK_colon] = Key_Colon,
+    [XK_semicolon] = Key_SemiColon,
+    [XK_less] = Key_Less,
+    [XK_equal] = Key_Equal,
+    [XK_greater] = Key_Greater,
+    [XK_question] = Key_Question,
+    [XK_at] = Key_At,
+    [XK_A] = Key_A,
+    [XK_B] = Key_B,
+    [XK_C] = Key_C,
+    [XK_D] = Key_D,
+    [XK_E] = Key_E,
+    [XK_F] = Key_F,
+    [XK_G] = Key_G,
+    [XK_H] = Key_H,
+    [XK_I] = Key_I,
+    [XK_J] = Key_J,
+    [XK_K] = Key_K,
+    [XK_L] = Key_L,
+    [XK_M] = Key_M,
+    [XK_N] = Key_N,
+    [XK_O] = Key_O,
+    [XK_P] = Key_P,
+    [XK_Q] = Key_Q,
+    [XK_R] = Key_R,
+    [XK_S] = Key_S,
+    [XK_T] = Key_T,
+    [XK_U] = Key_U,
+    [XK_V] = Key_V,
+    [XK_W] = Key_W,
+    [XK_X] = Key_X,
+    [XK_Y] = Key_Y,
+    [XK_Z] = Key_Z,
+    [XK_bracketleft] = Key_LeftBracket,
+    [XK_backslash] = Key_BackSlash,
+    [XK_bracketright] = Key_RightBracket,
+    [XK_asciicircum] = Key_RoofIcon,
+    [XK_underscore] = Key_Underscore,
+    [XK_grave] = Key_Grave,
+    [XK_a] = Key_A,
+    [XK_b] = Key_B,
+    [XK_c] = Key_C,
+    [XK_d] = Key_D,
+    [XK_e] = Key_E,
+    [XK_f] = Key_F,
+    [XK_g] = Key_G,
+    [XK_h] = Key_H,
+    [XK_i] = Key_I,
+    [XK_j] = Key_J,
+    [XK_k] = Key_K,
+    [XK_l] = Key_L,
+    [XK_m] = Key_M,
+    [XK_n] = Key_N,
+    [XK_o] = Key_O,
+    [XK_p] = Key_P,
+    [XK_q] = Key_Q,
+    [XK_r] = Key_R,
+    [XK_s] = Key_S,
+    [XK_t] = Key_T,
+    [XK_u] = Key_U,
+    [XK_v] = Key_V,
+    [XK_w] = Key_W,
+    [XK_x] = Key_X,
+    [XK_y] = Key_Y,
+    [XK_z] = Key_Z,
+    [XK_braceleft] = Key_LeftBrace,
+    [XK_bar] = Key_Pipe,
+    [XK_braceright] = Key_RightBrace,
+    [XK_asciitilde] = Key_Tilde,
+};
+
+internal void
+process_keyboard(Keyboard *keyboard, XEvent *event)
+{
+    persist char keyBuffer[1024];
+    keyBuffer[0] = 0;
+    
+    KeySym sym;
+    
+        if (event && keyboard)
+    {
+        
+        s32 count = XLookupString((XKeyEvent *)event, keyBuffer, array_count(keyBuffer),
+                                  &sym, NULL);
+        keyBuffer[count] = 0;
+        if (count == 0)
+        {
+            char *tmp = XKeysymToString(sym);
+            if (tmp)
+            {
+                copy(string_length(tmp), tmp, keyBuffer);
+            }
+        }
+        
+        keyboard->lastInput = str_intern_fmt(&keyboard->interns, "%.*s%s", 
+                                             STR_FMT(keyboard->lastInput), keyBuffer);
+        
+        b32 isPressed = event->type == KeyPress;
+        switch (event->xkey.keycode)
+        {
+            // NOTE(michiel): Raw scancodes
+            case 25: { process_key(keyboard, Key_GameUp, isPressed); } break;
+            case 39: { process_key(keyboard, Key_GameDown, isPressed); } break;
+            case 38: { process_key(keyboard, Key_GameLeft, isPressed); } break;
+            case 40: { process_key(keyboard, Key_GameRight, isPressed); } break;
+            case 24: { process_key(keyboard, Key_GameLeftUp, isPressed); } break;
+            case 26: { process_key(keyboard, Key_GameRightUp, isPressed); } break;
+        }
+        
+        switch (sym)
+        {
+            // NOTE(michiel): Interpreted by X11, don't know if I like doing it like this...
+            case XK_Shift_L: {
+                if (isPressed) {
+                    keyboard->modifiers |= KeyMod_LeftShift;
+                } else {
+                    keyboard->modifiers &= ~KeyMod_LeftShift;
+                }
+            } break;
+            case XK_Shift_R: {
+                if (isPressed) {
+                    keyboard->modifiers |= KeyMod_RightShift;
+                } else {
+                    keyboard->modifiers &= ~KeyMod_RightShift;
+                }
+            } break;
+            
+            case XK_Control_L: {
+                if (isPressed) {
+                    keyboard->modifiers |= KeyMod_LeftCtrl;
+                } else {
+                    keyboard->modifiers &= ~KeyMod_LeftCtrl;
+                }
+            } break;
+            case XK_Control_R: {
+                if (isPressed) {
+                    keyboard->modifiers |= KeyMod_RightCtrl;
+                } else {
+                    keyboard->modifiers &= ~KeyMod_RightCtrl;
+                }
+            } break;
+            
+            case XK_Alt_L: {
+                if (isPressed) {
+                    keyboard->modifiers |= KeyMod_LeftAlt;
+                } else {
+                    keyboard->modifiers &= ~KeyMod_LeftAlt;
+                }
+            } break;
+            case XK_Alt_R: {
+                if (isPressed) {
+                    keyboard->modifiers |= KeyMod_RightAlt;
+                } else {
+                    keyboard->modifiers &= ~KeyMod_RightAlt;
+                }
+            } break;
+            
+            default: {
+                Keys key = gX11toKeys[sym];
+                if (key != Key_None) {
+                process_key(keyboard, key, isPressed);
+                } else {
+                    fprintf(stdout, "Unhandled key: %u\n", event->xkey.keycode);
+                }
+            } break;
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     int windowWidth = 800;
@@ -437,6 +719,7 @@ int main(int argc, char **argv)
     init_work_queue(state->workQueue, 1);
     
     Mouse mouse = {};
+    Keyboard keyboard = {};
     {
     Window retRoot;
     Window retChild;
@@ -561,10 +844,26 @@ int main(int argc, char **argv)
     bool isRunning = true;
     while (isRunning)
     {
+        reset_keyboard_state(&keyboard);
+        
         while (XPending(display))
         {
             XEvent event;
             XNextEvent(display, &event);
+            
+            // NOTE(michiel): Skip the auto repeat key
+            if ((event.type == ButtonRelease) &&
+                (XEventsQueued(display, QueuedAfterReading)))
+                {
+                    XEvent nevent;
+                    XPeekEvent(display, &nevent);
+                    if ((nevent.type == ButtonPress) &&
+                        (nevent.xbutton.time == event.xbutton.time) &&
+                        (nevent.xbutton.button == event.xbutton.button))
+                    {
+                        continue;
+                    }
+                }
             
             switch (event.type)
             {
@@ -615,6 +914,14 @@ int main(int argc, char **argv)
                         {
                             mouse.mouseDowns |= Mouse_Right;
                         }
+                        else if (event.xbutton.button == 4)
+                        {
+                            ++mouse.scroll;
+                        }
+                        else if (event.xbutton.button == 5)
+                        {
+                            --mouse.scroll;
+                        }
                         else if (event.xbutton.button == 8)
                         {
                             mouse.mouseDowns |= Mouse_Extended1;
@@ -654,11 +961,7 @@ int main(int argc, char **argv)
                 case KeyRelease:
                 {
                     // NOTE(michiel): Key press/release event.xkey.keycode
-                    if ((event.type == KeyPress) &&
-                        (event.xkey.keycode == KEYCODE_ESCAPE))
-                    {
-                        isRunning = false;
-                    }
+                    process_keyboard(&keyboard, &event);
                 } break;
                 
                 default: break;
@@ -669,7 +972,7 @@ int main(int argc, char **argv)
         f32 secondsElapsed = get_seconds_elapsed(lastTime, now);
         lastTime = now;
         
-        draw_image(state, image, mouse, secondsElapsed);
+        draw_image(state, image, mouse, &keyboard, secondsElapsed);
         
         glViewport(0, 0, windowWidth, windowHeight);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
