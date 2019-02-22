@@ -7,7 +7,7 @@ DRAW_IMAGE(draw_image);
 
 #include "forces.h"
 #include "vehicle.h"
-#include "drawing.cpp"
+#include "../libberdip/drawing.cpp"
 
 struct Food
 {

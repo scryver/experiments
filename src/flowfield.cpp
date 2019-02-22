@@ -9,7 +9,7 @@ DRAW_IMAGE(draw_image);
 #include "forces.h"
 #include "vehicle.h"
 #include "flowfield.h"
-#include "drawing.cpp"
+#include "../libberdip/drawing.cpp"
 
 internal void
 init_flow_field(FlowField *field, u32 width, u32 height, u32 tileSize)
@@ -60,9 +60,9 @@ struct FlowState
     
     FlowField field;
     
-    Array vehicles;
-    //u32 vehicleCount;
-    //Vehicle *vehicles;
+    //Array vehicles;
+    u32 vehicleCount;
+    Vehicle *vehicles;
 };
 
 DRAW_IMAGE(draw_image)

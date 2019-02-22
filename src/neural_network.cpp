@@ -6,7 +6,7 @@ DRAW_IMAGE(draw_image);
 #include "main.cpp"
 
 #include "matrix.h"
-#include "drawing.cpp"
+#include "../libberdip/drawing.cpp"
 
 #include "neural_net.h"
 

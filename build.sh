@@ -7,7 +7,7 @@ codeDir="$curDir/src"
 testDir="$curDir/test"
 buildDir="$curDir/gebouw"
 
-flags="-O0 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
+flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
 
 exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces -Wno-gnu-zero-variadic-macro-arguments -Wno-c99-extensions"
 
@@ -61,6 +61,7 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/logo.cpp" -o logo -lX11 -lGL &
 #    clang++ $flags $exceptions "$codeDir/yatzee.cpp" -o yatzee -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/fxer.cpp" -o fxer -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/fluids.cpp" -o fluids -lX11 -lGL &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net

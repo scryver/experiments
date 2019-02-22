@@ -5,7 +5,7 @@ DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "drawing.cpp"
+#include "../libberdip/drawing.cpp"
 
 // NOTE(michiel): For drawing mostly
 enum CellFlags

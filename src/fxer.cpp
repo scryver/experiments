@@ -6,7 +6,7 @@ DRAW_IMAGE(draw_image);
 #include "../libberdip/std_file.c"
 #include "main.cpp"
 
-#include "drawing.cpp"
+#include "../libberdip/drawing.cpp"
 #include "ui.h"
 
 struct FXState

@@ -9,7 +9,8 @@ DRAW_IMAGE(draw_image);
 
 #include "aitraining.h"
 #include "neurons.h"
-#include "drawing.cpp"
+
+#include "../libberdip/drawing.cpp"
 
 struct Bird
 {

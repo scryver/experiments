@@ -29,6 +29,9 @@ print_error(char *message)
     fprintf(stderr, "ERROR: %s\n", message);
 }
 
+// TODO(michiel): Swap out different libs and reload, so one executable for all the programs
+// maybe with text file to say which one, or F5/F7 for forward/backward through the libs
+
 //
 // NOTE(michiel): WINDOW RENDERING MAIN STUFF
 //

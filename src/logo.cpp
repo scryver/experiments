@@ -5,7 +5,7 @@ DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "drawing.cpp"
+#include "../libberdip/drawing.cpp"
 
 // repeat 36 [lt 10 pu fd 1 pd repeat 120 [fd 2 rt 3]]
 struct Turtle
