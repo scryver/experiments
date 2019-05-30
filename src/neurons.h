@@ -169,7 +169,7 @@ randomize_weights(RandomSeriesPCG *random, Neural *network, b32 compensateWeight
         f32 oneOverSqrtX = 1.0f;
         if (compensateWeights)
         {
-            oneOverSqrtX /= sqrt(prevCount);
+            oneOverSqrtX /= square_root(prevCount);
         }
         for (u32 i = 0; i < count * prevCount; ++i)
         {

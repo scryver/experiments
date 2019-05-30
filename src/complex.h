@@ -4,7 +4,7 @@ struct Complex32
     f32 imag;
 };
 
-internal inline Complex32
+internal Complex32
 complex(f32 real, f32 imag)
 {
     Complex32 result;
@@ -13,7 +13,7 @@ complex(f32 real, f32 imag)
     return result;
 }
 
-inline Complex32 &
+internal Complex32 &
 operator +=(Complex32 &a, Complex32 b)
 {
     a.real += b.real;
@@ -21,7 +21,7 @@ operator +=(Complex32 &a, Complex32 b)
     return a;
 }
 
-inline Complex32
+internal Complex32
 operator +(Complex32 a, Complex32 b)
 {
     Complex32 result = a;
@@ -29,7 +29,7 @@ operator +(Complex32 a, Complex32 b)
     return result;
 }
 
-inline Complex32 &
+internal Complex32 &
 operator -=(Complex32 &a, Complex32 b)
 {
     a.real -= b.real;
@@ -37,7 +37,7 @@ operator -=(Complex32 &a, Complex32 b)
     return a;
 }
 
-inline Complex32
+internal Complex32
 operator -(Complex32 a, Complex32 b)
 {
     Complex32 result = a;
@@ -45,7 +45,7 @@ operator -(Complex32 a, Complex32 b)
     return result;
 }
 
-inline Complex32
+internal Complex32
 operator *(Complex32 a, Complex32 b)
 {
     Complex32 result;
@@ -54,14 +54,14 @@ operator *(Complex32 a, Complex32 b)
     return result;
 }
 
-inline Complex32 &
+internal Complex32 &
 operator *=(Complex32 &a, Complex32 b)
 {
     a = a * b;
     return a;
 }
 
-inline Complex32 &
+internal Complex32 &
 operator *=(Complex32 &a, f32 scalar)
 {
     a.real *= scalar;
@@ -69,7 +69,7 @@ operator *=(Complex32 &a, f32 scalar)
     return a;
 }
 
-inline Complex32
+internal Complex32
 operator *(Complex32 a, f32 scalar)
 {
     Complex32 result = a;
@@ -77,13 +77,13 @@ operator *(Complex32 a, f32 scalar)
     return result;
 }
 
-inline Complex32
+internal Complex32
 operator *(f32 scalar, Complex32 a)
 {
     return a * scalar;
 }
 
-inline Complex32
+internal Complex32
 operator /(Complex32 a, Complex32 b)
 {
     Complex32 result;
@@ -93,14 +93,14 @@ operator /(Complex32 a, Complex32 b)
     return result;
 }
 
-inline Complex32 &
+internal Complex32 &
 operator /=(Complex32 &a, Complex32 b)
 {
     a = a / b;
     return a;
 }
 
-inline Complex32
+internal Complex32
 conjugate(Complex32 a)
 {
     Complex32 result;
@@ -109,7 +109,7 @@ conjugate(Complex32 a)
     return result;
 }
 
-inline Complex32
+internal Complex32
 euler_power(f32 imagPower)
 {
     Complex32 result;
@@ -118,10 +118,16 @@ euler_power(f32 imagPower)
     return result;
 }
 
-inline f32
+internal f32
 abs(Complex32 c)
 {
-    return sqrt(square(c.real) + square(c.imag));
+    return square_root(square(c.real) + square(c.imag));
+}
+
+internal Complex32
+square(Complex32 c)
+{
+    return c * c;
 }
 
 struct Complex64
@@ -130,7 +136,7 @@ struct Complex64
     f64 imag;
 };
 
-internal inline Complex64
+internal Complex64
 complex(f64 real, f64 imag)
 {
     Complex64 result;
@@ -139,7 +145,7 @@ complex(f64 real, f64 imag)
     return result;
 }
 
-inline Complex64 &
+internal Complex64 &
 operator +=(Complex64 &a, Complex64 b)
 {
     a.real += b.real;
@@ -147,7 +153,7 @@ operator +=(Complex64 &a, Complex64 b)
     return a;
 }
 
-inline Complex64
+internal Complex64
 operator +(Complex64 a, Complex64 b)
 {
     Complex64 result = a;
@@ -155,7 +161,7 @@ operator +(Complex64 a, Complex64 b)
     return result;
 }
 
-inline Complex64 &
+internal Complex64 &
 operator -=(Complex64 &a, Complex64 b)
 {
     a.real -= b.real;
@@ -163,7 +169,7 @@ operator -=(Complex64 &a, Complex64 b)
     return a;
 }
 
-inline Complex64
+internal Complex64
 operator -(Complex64 a, Complex64 b)
 {
     Complex64 result = a;
@@ -171,7 +177,7 @@ operator -(Complex64 a, Complex64 b)
     return result;
 }
 
-inline Complex64
+internal Complex64
 operator *(Complex64 a, Complex64 b)
 {
     Complex64 result;
@@ -180,14 +186,14 @@ operator *(Complex64 a, Complex64 b)
     return result;
 }
 
-inline Complex64 &
+internal Complex64 &
 operator *=(Complex64 &a, Complex64 b)
 {
     a = a * b;
     return a;
 }
 
-inline Complex64 &
+internal Complex64 &
 operator *=(Complex64 &a, f64 scalar)
 {
     a.real *= scalar;
@@ -195,7 +201,7 @@ operator *=(Complex64 &a, f64 scalar)
     return a;
 }
 
-inline Complex64
+internal Complex64
 operator *(Complex64 a, f64 scalar)
 {
     Complex64 result = a;
@@ -203,13 +209,13 @@ operator *(Complex64 a, f64 scalar)
     return result;
 }
 
-inline Complex64
+internal Complex64
 operator *(f64 scalar, Complex64 a)
 {
     return a * scalar;
 }
 
-inline Complex64
+internal Complex64
 operator /(Complex64 a, Complex64 b)
 {
     Complex64 result;
@@ -219,14 +225,14 @@ operator /(Complex64 a, Complex64 b)
     return result;
 }
 
-inline Complex64 &
+internal Complex64 &
 operator /=(Complex64 &a, Complex64 b)
 {
     a = a / b;
     return a;
 }
 
-inline Complex64
+internal Complex64
 conjugate(Complex64 a)
 {
     Complex64 result;
@@ -235,7 +241,7 @@ conjugate(Complex64 a)
     return result;
 }
 
-inline Complex64
+internal Complex64
 euler_power(f64 imagPower)
 {
     Complex64 result;
@@ -244,8 +250,14 @@ euler_power(f64 imagPower)
     return result;
 }
 
-inline f64
+internal f64
 abs(Complex64 c)
 {
-    return sqrt(square(c.real) + square(c.imag));
+    return square_root(square(c.real) + square(c.imag));
+}
+
+internal Complex64
+square(Complex64 c)
+{
+    return c * c;
 }

@@ -6,7 +6,7 @@ DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "drawing.cpp"
+#include "../libberdip/drawing.cpp"
 
 struct BasicState
 {
@@ -36,11 +36,11 @@ DRAW_IMAGE(draw_image)
     basics->prevMouseDown = mouse.mouseDowns;
     basics->seconds += dt;
     ++basics->ticks;
-if (basics->seconds > 1.0f)
+    if (basics->seconds > 1.0f)
     {
         basics->seconds -= 1.0f;
         fprintf(stdout, "Ticks: %4u | Time: %fms\n", basics->ticks,
                 1000.0f / (f32)basics->ticks);
         basics->ticks = 0;
     }
-    }
+}

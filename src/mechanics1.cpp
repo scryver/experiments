@@ -63,38 +63,38 @@ update_bar(Bar *bar, v2 newStart, f32 dt)
 {
     v2 curEnd = get_bar_connection(bar);
     v2 newEnd = curEnd + (newStart - bar->startPos);
-
+    
     if (bar->flags & Bar_LockX)
     {
         if (newEnd.x != curEnd.x)
         {
-        newEnd.x = curEnd.x;
-        if (curEnd.y < newStart.y)
-        {
-            newEnd.y = newStart.y - sqrt(square(bar->length) - square(curEnd.x - newStart.x));
+            newEnd.x = curEnd.x;
+            if (curEnd.y < newStart.y)
+            {
+                newEnd.y = newStart.y - square_root(square(bar->length) - square(curEnd.x - newStart.x));
+            }
+            else
+            {
+                newEnd.y = newStart.y + square_root(square(bar->length) - square(curEnd.x - newStart.x));
+            }
         }
-        else
-        {
-        newEnd.y = newStart.y + sqrt(square(bar->length) - square(curEnd.x - newStart.x));
     }
-        }
-        }
     else if (bar->flags & Bar_LockY)
     {
         if (curEnd.y != newEnd.y)
         {
-        if (curEnd.x < bar->startPos.x)
-        {
-        newEnd.x = newStart.x - sqrt(square(bar->length) - square(curEnd.y - newStart.y));
-        }
-        else
-        {
-            newEnd.x = newStart.x + sqrt(square(bar->length) - square(curEnd.y - newStart.y));
-        }
-        newEnd.y = curEnd.y;
+            if (curEnd.x < bar->startPos.x)
+            {
+                newEnd.x = newStart.x - square_root(square(bar->length) - square(curEnd.y - newStart.y));
+            }
+            else
+            {
+                newEnd.x = newStart.x + square_root(square(bar->length) - square(curEnd.y - newStart.y));
+            }
+            newEnd.y = curEnd.y;
         }
     }
-
+    
     bar->startPos = newStart;
     bar->dir = normalize(newEnd - newStart);
 }
@@ -120,12 +120,12 @@ struct BasicState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-
+    
     Wheel wheel;
     Bar rotToUp;
     Bar upDown;
     Bar leftRight;
-
+    
     u32 plotCount;
     v2 *wheelXPlot;
     v2 *wheelYPlot;
@@ -136,39 +136,39 @@ struct BasicState
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(BasicState) <= state->memorySize);
-
+    
     //v2 size = V2((f32)image->width, (f32)image->height);
-
+    
     BasicState *basics = (BasicState *)state->memory;
     if (!state->initialized)
     {
         // basics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         basics->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-
+        
         basics->wheel.pos = V2(100.0f, 300.0f);
         basics->wheel.radius = 50.0f;
         basics->wheel.dir = V2(0, -1);
         basics->wheel.angularVel = 1.0f * F32_TAU;
-
+        
         basics->rotToUp.startPos = get_wheel_connection(&basics->wheel);
         basics->rotToUp.length = 110.0f;
         basics->rotToUp.dir = V2(0, -1);
         basics->rotToUp.flags = Bar_LockX;
-
+        
         basics->upDown.startPos = get_bar_connection(&basics->rotToUp);
         basics->upDown.length = 50.0f;
         basics->upDown.dir = V2(0, -1);
         basics->upDown.flags = Bar_LockX;
-
+        
         basics->leftRight.startPos = get_bar_connection(&basics->upDown);
         basics->leftRight.length = 150.0f;
         basics->leftRight.dir = normalize(V2(1, -0.1f));
         basics->leftRight.flags = Bar_LockY;
-
+        
         basics->plotCount = 120;
         basics->wheelXPlot = allocate_array(v2, basics->plotCount);
         basics->wheelYPlot = allocate_array(v2, basics->plotCount);
-basics->upDownPlot = allocate_array(v2, basics->plotCount);
+        basics->upDownPlot = allocate_array(v2, basics->plotCount);
         basics->leftRightPlot = allocate_array(v2, basics->plotCount);
         
         for (u32 x = 0; x < basics->plotCount; ++x)
@@ -179,7 +179,7 @@ basics->upDownPlot = allocate_array(v2, basics->plotCount);
             v2 *lrPoint = basics->leftRightPlot + x;
             
             f32 xFactor = (f32)x / (f32)basics->plotCount;
-
+            
             wxPoint->x = get_wheel_connection(&basics->wheel).x;
             wxPoint->y = 370.0f + xFactor * 200.0f;
             
@@ -188,19 +188,19 @@ basics->upDownPlot = allocate_array(v2, basics->plotCount);
             
             udPoint->x = 300.0f + xFactor * 300.0f;
             udPoint->y = get_bar_connection(&basics->upDown).y;
-
+            
             lrPoint->x = get_bar_connection(&basics->leftRight).x;
             lrPoint->y = 160.0f + xFactor * 300.0f;
         }
-
+        
         state->initialized = true;
     }
-
+    
     update_wheel(&basics->wheel, dt);
     update_bar(&basics->rotToUp, get_wheel_connection(&basics->wheel, -5.0f), dt);
     update_bar(&basics->upDown, get_bar_connection(&basics->rotToUp), dt);
     update_bar(&basics->leftRight, get_bar_connection(&basics->upDown), dt);
-
+    
     for (s32 x = basics->plotCount - 1; x > 0; --x)
     {
         basics->wheelXPlot[x].x = basics->wheelXPlot[x - 1].x;
@@ -212,9 +212,9 @@ basics->upDownPlot = allocate_array(v2, basics->plotCount);
     basics->wheelYPlot[0].y = get_wheel_connection(&basics->wheel).y;
     basics->upDownPlot[0].y = get_bar_connection(&basics->upDown).y;
     basics->leftRightPlot[0].x = get_bar_connection(&basics->leftRight).x;
-
+    
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-
+    
     draw_wheel(image, &basics->wheel,   V4(1, 1, 0, 1));
     draw_bar(image, &basics->rotToUp,   V4(0, 0, 1, 1));
     draw_bar(image, &basics->upDown,    V4(1, 0, 0, 1));
@@ -224,7 +224,7 @@ basics->upDownPlot = allocate_array(v2, basics->plotCount);
     draw_lines(image, basics->plotCount, basics->wheelYPlot, V4(1, 1, 0, 1));
     draw_lines(image, basics->plotCount, basics->upDownPlot, V4(1, 0, 0, 1));
     draw_lines(image, basics->plotCount, basics->leftRightPlot, V4(1, 1, 1, 1));
-
+    
     basics->prevMouseDown = mouse.mouseDowns;
     basics->seconds += dt;
     ++basics->ticks;

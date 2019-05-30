@@ -16,9 +16,9 @@ struct RandomSwap
 {
     u32 *current;
     
-u32 *bestEver;
+    u32 *bestEver;
     f32 bestDistanceSqr;
-    };
+};
 
 struct BruteForce
 {
@@ -55,7 +55,7 @@ struct SalesmanState
     RandomSwap randomSwap;
     BruteForce bruter;
     Evolve evolver;
-    };
+};
 
 internal void
 swap(u32 cityCount, City *cities, u32 aIndex, u32 bIndex)
@@ -151,8 +151,8 @@ calc_fitness(SalesmanState *state)
             bestDistSqr = distSqr;
             state->evolver.currentBest = population;
         }
-        state->evolver.fitness[populationIndex] = 1.0f / (sqrt(distSqr) + 1.0f);
-        }
+        state->evolver.fitness[populationIndex] = 1.0f / (square_root(distSqr) + 1.0f);
+    }
     
     if (state->evolver.bestDistanceSqr > bestDistSqr)
     {
@@ -205,7 +205,7 @@ cross_over(RandomSeriesPCG *random, u32 cityCount, u32 *parentA, u32 *parentB,
             {
                 found = true;
                 break;
-                }
+            }
         }
         
         if (!found)
@@ -221,10 +221,10 @@ mutate(RandomSeriesPCG *random, u32 cityCount, u32 *indices,
 {
     for (u32 i = 0; i < cityCount; ++i)
     {
-    if (random_unilateral(random) < mutationRate)
-    {
-    u32 indexA = random_choice(random, cityCount);
-    //u32 indexB = random_choice(random, cityCount);
+        if (random_unilateral(random) < mutationRate)
+        {
+            u32 indexA = random_choice(random, cityCount);
+            //u32 indexB = random_choice(random, cityCount);
             u32 indexB = indexA + 1;
             if (indexB >= cityCount)
             {
@@ -269,7 +269,7 @@ next_generation(SalesmanState *state)
                        state->evolver.population[nextGenIndexA],
                        state->evolver.population[nextGenIndexB],
                        state->evolver.nextGeneration[popIndex]);
-
+            
             mutate(&state->randomizer, state->cityCount,
                    state->evolver.nextGeneration[popIndex], 0.01f, 0.001f);
         }
@@ -370,9 +370,9 @@ DRAW_IMAGE(draw_image)
         // NOTE(michiel): Random changes
         //
         {
-        u32 randomA = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
-        u32 randomB = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
-        swap(salesmanState->cityCount, salesmanState->randomSwap.current, randomA, randomB);
+            u32 randomA = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
+            u32 randomB = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
+            swap(salesmanState->cityCount, salesmanState->randomSwap.current, randomA, randomB);
             
             f32 distSqr = calc_distance_sqr(salesmanState->cityCount, salesmanState->cities,
                                             salesmanState->randomSwap.current);
@@ -451,9 +451,9 @@ DRAW_IMAGE(draw_image)
         //
         // NOTE(michiel): Evolve changes
         //
-    calc_fitness(salesmanState);
-    normalize_fitness(salesmanState);
-    next_generation(salesmanState);
+        calc_fitness(salesmanState);
+        normalize_fitness(salesmanState);
+        next_generation(salesmanState);
     }
     
     //
@@ -480,28 +480,28 @@ DRAW_IMAGE(draw_image)
         {0.5f, 0.5f, 0.5f, 1},
         {1, 1, 1, 1},
     };
-
+    
     for (u32 populationIndex = 0; populationIndex < salesmanState->populationCount; ++populationIndex)
     {
         City *prevCity = 0;
-    for (u32 pathIndex = 0; pathIndex < salesmanState->cityCount; ++pathIndex)
-    {
-        u32 cityIndex = salesmanState->population[populationIndex][pathIndex];
-        City *city = salesmanState->cities + cityIndex;
-        
+        for (u32 pathIndex = 0; pathIndex < salesmanState->cityCount; ++pathIndex)
+        {
+            u32 cityIndex = salesmanState->population[populationIndex][pathIndex];
+            City *city = salesmanState->cities + cityIndex;
+            
             v4 baseColour = colours[populationIndex % array_count(colours)];
             
-        fill_circle(image, city->position.x, city->position.y, 4, baseColour);
-        if (prevCity)
-        {
-            draw_line(image, prevCity->position.x, prevCity->position.y, 
-                      city->position.x, city->position.y,
-                      baseColour * 0.7f);
+            fill_circle(image, city->position.x, city->position.y, 4, baseColour);
+            if (prevCity)
+            {
+                draw_line(image, prevCity->position.x, prevCity->position.y, 
+                          city->position.x, city->position.y,
+                          baseColour * 0.7f);
+            }
+            prevCity = city;
         }
-        prevCity = city;
     }
-    }
-    #endif
+#endif
     
     u32 halfWidth = image->width / 2;
     u32 halfHeight = image->height / 2;
@@ -601,19 +601,19 @@ DRAW_IMAGE(draw_image)
         
         if (bestEver)
         {
-    City *prevBestCity = 0;
-    for (u32 bestIndex = 0; bestIndex < salesmanState->cityCount; ++bestIndex)
-    {
-            u32 cityIndex = salesmanState->evolver.bestEver[bestIndex];
-        City *bestCity = salesmanState->cities + cityIndex;
-        
-        if (prevBestCity)
-        {
-            draw_line(image, prevBestCity->position.x, prevBestCity->position.y, 
-                      bestCity->position.x, bestCity->position.y, colour);
-        }
-        prevBestCity = bestCity;
-    }
+            City *prevBestCity = 0;
+            for (u32 bestIndex = 0; bestIndex < salesmanState->cityCount; ++bestIndex)
+            {
+                u32 cityIndex = salesmanState->evolver.bestEver[bestIndex];
+                City *bestCity = salesmanState->cities + cityIndex;
+                
+                if (prevBestCity)
+                {
+                    draw_line(image, prevBestCity->position.x, prevBestCity->position.y, 
+                              bestCity->position.x, bestCity->position.y, colour);
+                }
+                prevBestCity = bestCity;
+            }
         }
     }
     

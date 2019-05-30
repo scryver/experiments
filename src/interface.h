@@ -7,6 +7,8 @@ struct State
     u32 memorySize;
     u8 *memory;
     
+    b32 closeProgram;
+    
     PlatformWorkQueue *workQueue;
 };
 

@@ -51,27 +51,27 @@ struct FluidBase
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-     v2s prevMousePos;
+    v2s prevMousePos;
     
     f32 t;
     PerlinNoise noise;
     
     FluidPlane plane;
-FluidCube  cube;
-    };
+    FluidCube  cube;
+};
 
 internal void
 set_bound_plane(s32 bound, f32 *x, s32 N)
 {
-        for (s32 i = 1; i < N - 1; ++i) {
-            x[IXP(i,     0)] = (bound == 2) ? -x[IXP(i,     1)] : x[IXP(i,     1)];
-            x[IXP(i, N - 1)] = (bound == 2) ? -x[IXP(i, N - 2)] : x[IXP(i, N - 2)];
-        }
+    for (s32 i = 1; i < N - 1; ++i) {
+        x[IXP(i,     0)] = (bound == 2) ? -x[IXP(i,     1)] : x[IXP(i,     1)];
+        x[IXP(i, N - 1)] = (bound == 2) ? -x[IXP(i, N - 2)] : x[IXP(i, N - 2)];
+    }
     
-        for (s32 j = 1; j < N - 1; ++j) {
-            x[IXP(    0, j)] = (bound == 1) ? -x[IXP(    1, j)] : x[IXP(    1, j)];
-            x[IXP(N - 1, j)] = (bound == 1) ? -x[IXP(N - 2, j)] : x[IXP(N - 2, j)];
-        }
+    for (s32 j = 1; j < N - 1; ++j) {
+        x[IXP(    0, j)] = (bound == 1) ? -x[IXP(    1, j)] : x[IXP(    1, j)];
+        x[IXP(N - 1, j)] = (bound == 1) ? -x[IXP(N - 2, j)] : x[IXP(N - 2, j)];
+    }
     
     // NOTE(michiel): Handle corners
     x[IXP(  0,   0)] = 0.33f * (x[IXP(  1,   0)] + x[IXP(  0,   1)]);
@@ -85,14 +85,14 @@ linear_solve_plane(s32 bound, f32 *x, f32 *x0, f32 mult, f32 div, s32 iter, s32 
 {
     f32 c = 1.0f / div;
     for (s32 k = 0; k < iter; ++k) {
-            for (s32 j = 1; j < N - 1; ++j) {
-                for (s32 i = 1; i < N - 1; ++i) {
-                    x[IXP(i, j)] = (x0[IXP(i, j)] + mult * (x[IXP(i+1, j  )] +
-                        x[IXP(i-1, j  )] +
-                        x[IXP(i  , j+1)] +
-                        x[IXP(i  , j-1)])) * c;
-                }
+        for (s32 j = 1; j < N - 1; ++j) {
+            for (s32 i = 1; i < N - 1; ++i) {
+                x[IXP(i, j)] = (x0[IXP(i, j)] + mult * (x[IXP(i+1, j  )] +
+                                                        x[IXP(i-1, j  )] +
+                                                        x[IXP(i  , j+1)] +
+                                                        x[IXP(i  , j-1)])) * c;
             }
+        }
         set_bound_plane(bound, x, N);
     }
 }
@@ -108,28 +108,28 @@ internal void
 project_plane(f32 *velX, f32 *velY, f32 *p, f32 *div, s32 iter, s32 N)
 {
     f32 oneOverN = 1.0f / (f32)N;
-        for (s32 j = 1; j < N - 1; ++j) {
-            for (s32 i = 1; i < N - 1; ++i) {
-                div[IXP(i, j)] = -0.5f * (velX[IXP(i+1, j  )] -
-                                               velX[IXP(i-1, j  )] +
-                                               velY[IXP(i  , j+1)] -
-                                               velY[IXP(i  , j-1)]) * oneOverN;
-                p[IXP(i, j)] = 0.0f;
-            }
+    for (s32 j = 1; j < N - 1; ++j) {
+        for (s32 i = 1; i < N - 1; ++i) {
+            div[IXP(i, j)] = -0.5f * (velX[IXP(i+1, j  )] -
+                                      velX[IXP(i-1, j  )] +
+                                      velY[IXP(i  , j+1)] -
+                                      velY[IXP(i  , j-1)]) * oneOverN;
+            p[IXP(i, j)] = 0.0f;
         }
+    }
     
     set_bound_plane(0, div, N);
     set_bound_plane(0, p, N);
     linear_solve_plane(0, p, div, 1, 6, iter, N);
     
-        for (s32 j = 1; j < N - 1; ++j) {
-            for (s32 i = 1; i < N - 1; ++i) {
-                velX[IXP(i, j)] -= 0.5f * (p[IXP(i+1, j  )] -
-                                             p[IXP(i-1, j  )]) * N;
-                velY[IXP(i, j)] -= 0.5f * (p[IXP(i  , j+1)] -
-                                             p[IXP(i  , j-1)]) * N;
-            }
+    for (s32 j = 1; j < N - 1; ++j) {
+        for (s32 i = 1; i < N - 1; ++i) {
+            velX[IXP(i, j)] -= 0.5f * (p[IXP(i+1, j  )] -
+                                       p[IXP(i-1, j  )]) * N;
+            velY[IXP(i, j)] -= 0.5f * (p[IXP(i  , j+1)] -
+                                       p[IXP(i  , j-1)]) * N;
         }
+    }
     set_bound_plane(1, velX, N);
     set_bound_plane(2, velY, N);
 }
@@ -144,46 +144,46 @@ advect_plane(s32 bound, f32 *d, f32 *d0, f32 *velX, f32 *velY, f32 dt, s32 N)
     f32 iFloat, jFloat;
     s32 i, j;
     
-        for (j = 1, jFloat = 1.0f; j < N - 1; ++j, ++jFloat) {
-            for (i = 1, iFloat = 1.0f; i < N - 1; ++i, ++iFloat) {
-                s32 index = IXP(i, j);
-                f32 x = iFloat - dtx * velX[index];
-                f32 y = jFloat - dty * velY[index];
-                
-                if (x < 0.5f) {
-                    x = 0.5f;
-                }
-                if (x > NFloat + 0.5f) {
-                    x = NFloat + 0.5f;
-                }
-                if (y < 0.5f) {
-                    y = 0.5f;
-                }
-                if (y > NFloat + 0.5f) {
-                    y = NFloat + 0.5f;
-                }
-                
-                f32 i0 = floor(x);
-                f32 i1 = i0 + 1.0f;
-                f32 j0 = floor(y);
-                f32 j1 = j0 + 1.0f;
-                
-                f32 s1 = x - i0;
-                f32 s0 = 1.0f - s1;
-                f32 t1 = y - j0;
-                f32 t0 = 1.0f - t1;
-                
+    for (j = 1, jFloat = 1.0f; j < N - 1; ++j, ++jFloat) {
+        for (i = 1, iFloat = 1.0f; i < N - 1; ++i, ++iFloat) {
+            s32 index = IXP(i, j);
+            f32 x = iFloat - dtx * velX[index];
+            f32 y = jFloat - dty * velY[index];
+            
+            if (x < 0.5f) {
+                x = 0.5f;
+            }
+            if (x > NFloat + 0.5f) {
+                x = NFloat + 0.5f;
+            }
+            if (y < 0.5f) {
+                y = 0.5f;
+            }
+            if (y > NFloat + 0.5f) {
+                y = NFloat + 0.5f;
+            }
+            
+            f32 i0 = floor(x);
+            f32 i1 = i0 + 1.0f;
+            f32 j0 = floor(y);
+            f32 j1 = j0 + 1.0f;
+            
+            f32 s1 = x - i0;
+            f32 s0 = 1.0f - s1;
+            f32 t1 = y - j0;
+            f32 t0 = 1.0f - t1;
+            
             s32 i0i = clamp(0, trunc(i0), N);
             s32 i1i = clamp(0, trunc(i1), N);
             s32 j0i = clamp(0, trunc(j0), N);
             s32 j1i = clamp(0, trunc(j1), N);
-                
-                d[IXP(i, j)] = (s0 * (t0 * d0[IXP(i0i, j0i)] +
-                                             t1 * d0[IXP(i0i, j1i)]) +
-                                  s1 * (t0 * d0[IXP(i1i, j0i)] +
+            
+            d[IXP(i, j)] = (s0 * (t0 * d0[IXP(i0i, j0i)] +
+                                  t1 * d0[IXP(i0i, j1i)]) +
+                            s1 * (t0 * d0[IXP(i1i, j0i)] +
                                   t1 * d0[IXP(i1i, j1i)]));
-            }
         }
+    }
     set_bound_plane(bound, d, N);
 }
 
@@ -539,12 +539,12 @@ DRAW_IMAGE(draw_image)
     if ((10 <= mouse.pixelPosition.x) && (mouse.pixelPosition.x < 10 + fluid->size * scale) &&
         (10 <= mouse.pixelPosition.y) && (mouse.pixelPosition.y < 10 + fluid->size * scale))
     {
-    if (mouse.mouseDowns & Mouse_Left)
-    {
+        if (mouse.mouseDowns & Mouse_Left)
+        {
             fluid_add_density(fluid, (mouse.pixelPosition - V2S(10, 10)) / scale, 300.0f);
         }
         
-                              }
+    }
     
     v2s center = V2S(fluid->size / 2, fluid->size / 2);
     fluid_add_density(fluid, center,

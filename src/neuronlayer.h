@@ -4,7 +4,7 @@ struct FullyConnected
     
     f32 *weights;
     f32 *biases;
-    };
+};
 
 struct FeatureMap
 {
@@ -193,7 +193,7 @@ add_max_pooling_feature_map_layer(NeuralCake *network, u32 maps,
     layer->featureMap.poolIndices = 0;
     layer->featureMap.weights = 0;
     layer->featureMap.biases = 0;
-    }
+}
 
 internal void
 finish_network(NeuralCake *network)
@@ -326,7 +326,7 @@ finish_network(NeuralCake *network)
     }
     
     //fprintf(stderr, "n-N: %lu | w-W: %lu | b-B: %lu | nC %u | wC %u | bC %u\n",
-            //        (n - neurons), (w - weights), (b - biases), neuronCount, weightCount, biasCount);
+    //        (n - neurons), (w - weights), (b - biases), neuronCount, weightCount, biasCount);
     i_expect((n - neurons) == neuronCount);
     i_expect((w - weights) == weightCount);
     i_expect((b - biases) == biasCount);
@@ -342,7 +342,7 @@ randomize_weights(RandomSeriesPCG *random, NeuralCake *network, b32 compensateWe
     for (u32 l = 0; l < network->layerCount; ++l)
     {
         NeuralLayer *layer = network->layers + l;
-         switch (layer->kind)
+        switch (layer->kind)
         {
             case Neural_FullyConnected:
             {
@@ -352,7 +352,7 @@ randomize_weights(RandomSeriesPCG *random, NeuralCake *network, b32 compensateWe
                 f32 oneOverSqrtX = 1.0f;
                 if (compensateWeights)
                 {
-                    oneOverSqrtX /= sqrt(inputCount);
+                    oneOverSqrtX /= square_root(inputCount);
                 }
                 for (u32 w = 0; w < inputCount * outputCount; ++w)
                 {
@@ -369,13 +369,13 @@ randomize_weights(RandomSeriesPCG *random, NeuralCake *network, b32 compensateWe
                 u32 size = layer->featureMap.featureWidth * layer->featureMap.featureHeight * layer->featureMap.mapCount;
                 for (u32 w = 0; w < size; ++w)
                 {
-                        layer->featureMap.weights[w] = random_bilateral(random);
+                    layer->featureMap.weights[w] = random_bilateral(random);
                 }
                 for (u32 b = 0; b < layer->featureMap.mapCount; ++b)
                 {
                     layer->featureMap.biases[b] = 0.0f; // random_bilateral(random);
                 }
-                } break;
+            } break;
             
             INVALID_DEFAULT_CASE;
         }
@@ -428,7 +428,7 @@ predict_layer(NeuralLayer *layer)
                 // NOTE(michiel): Bias
                 result += layer->fullyConnected.biases[row];
                 
-                    // NOTE(michiel): Sigmoid and store
+                // NOTE(michiel): Sigmoid and store
                 if (layer->fullyConnected.softMax)
                 {
                     result = exp(result);
@@ -476,25 +476,25 @@ predict_layer(NeuralLayer *layer)
             
             for (u32 m = 0; m < layer->featureMap.mapCount; ++m)
             {
-            for (u32 y = 0; y < outH; ++y)
-            {
-                f32 *inRow = layer->inputs + y * inW;
-                f32 *outRow = out + y * outW;
-                for (u32 x = 0; x < outW; ++x)
+                for (u32 y = 0; y < outH; ++y)
                 {
-                    f32 val = 0.0f;
-                    for (u32 fy = 0; fy < fH; ++fy)
+                    f32 *inRow = layer->inputs + y * inW;
+                    f32 *outRow = out + y * outW;
+                    for (u32 x = 0; x < outW; ++x)
                     {
-                        f32 *inFRow = inRow + x + fy * inW;
-                            f32 *wRow = weights + fy * fW;
-                        for (u32 fx = 0; fx < fW; ++fx)
+                        f32 val = 0.0f;
+                        for (u32 fy = 0; fy < fH; ++fy)
                         {
+                            f32 *inFRow = inRow + x + fy * inW;
+                            f32 *wRow = weights + fy * fW;
+                            for (u32 fx = 0; fx < fW; ++fx)
+                            {
                                 val += wRow[fx] * inFRow[fx];
+                            }
                         }
-                    }
                         outRow[x] = activate_neuron(val + biases[0]);
+                    }
                 }
-            }
                 out += outW * outH;
                 weights += fW * fH;
                 ++biases;
@@ -509,7 +509,7 @@ predict_layer(NeuralLayer *layer)
                 u32 outPH = outH / pH;
                 i_expect((outPW * outPH * layer->featureMap.mapCount) == layer->outputCount);
                 
-                 in = layer->featureMap.prePool;
+                in = layer->featureMap.prePool;
                 
                 for (u32 m = 0; m < layer->featureMap.mapCount; ++m)
                 {
@@ -534,8 +534,8 @@ predict_layer(NeuralLayer *layer)
                                 }
                             }
                             indxs[x] = maxIdx;
-                        outRow[x] = max;
-                            }
+                            outRow[x] = max;
+                        }
                     }
                     
                     in += outW * outH;
@@ -581,7 +581,7 @@ internal void
 add_weights(u32 multCount, u32 transpCount, f32 *multiplier, f32 *transposer, f32 *weights)
 {
     // weights += multiplier * transpose(transposer) (matrix multiply of 2 vectors)
-for (u32 row = 0; row < multCount; ++row)
+    for (u32 row = 0; row < multCount; ++row)
     {
         f32 rowM = multiplier[row];
         f32 *rowW = weights + row * transpCount;
@@ -651,7 +651,7 @@ back_propagate_fully_connected(NeuralLayer *layer, Training *training, b32 final
 
 internal void
 back_propagate_feature_map(NeuralLayer *layer, Training *training, b32 finalLayer,
-                               f32 **dnw, f32 **dnb, f32 *prevError, f32 *error)
+                           f32 **dnw, f32 **dnb, f32 *prevError, f32 *error)
 {
     i_expect(!finalLayer); // NOTE(michiel): Can't be the last layer
     
@@ -804,17 +804,17 @@ back_propagate(NeuralCake *network, Training *training, f32 *deltaWeights, f32 *
         }
         
         if (layer->kind == Neural_FeatureMap)
+        {
+            if (layer->featureMap.poolWidth && layer->featureMap.poolHeight)
             {
-                if (layer->featureMap.poolWidth && layer->featureMap.poolHeight)
+                u32 interSize = layer->outputCount * layer->featureMap.poolWidth * layer->featureMap.poolHeight;
+                if (maxNeurons < interSize)
                 {
-                    u32 interSize = layer->outputCount * layer->featureMap.poolWidth * layer->featureMap.poolHeight;
-                    if (maxNeurons < interSize)
-                    {
-                        maxNeurons = interSize;
-                    }
+                    maxNeurons = interSize;
                 }
             }
         }
+    }
     
     f32 *error = arena_allocate_array(&network->arena, f32, maxNeurons);
     f32 *prevError = arena_allocate_array(&network->arena, f32, maxNeurons);
@@ -869,7 +869,7 @@ update_mini_batch(NeuralCake *network, TrainingSet training, f32 learningRate,
     if (lambda > 0.0f)
     {
         i_expect(totalTrainingCount);
-    modReg = 1.0f - learningRate * (lambda / (f32)totalTrainingCount);
+        modReg = 1.0f - learningRate * (lambda / (f32)totalTrainingCount);
     }
     
     for (u32 l = 0; l < network->layerCount; ++l)
@@ -985,7 +985,7 @@ evaluate(NeuralCake *network, TrainingSet tests)
 internal void
 stochastic_gradient_descent(RandomSeriesPCG *random, NeuralCake *network, 
                             u32 epochs, u32 miniBatchSize, f32 learningRate,
-                              TrainingSet training, f32 lambda = 0.0f)
+                            TrainingSet training, f32 lambda = 0.0f)
 {
     for (u32 epoch = 0; epoch < epochs; ++epoch)
     {

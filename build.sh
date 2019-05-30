@@ -62,6 +62,9 @@ pushd "$buildDir" > /dev/null
 #    clang++ $flags $exceptions "$codeDir/yatzee.cpp" -o yatzee -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/fxer.cpp" -o fxer -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/fluids.cpp" -o fluids -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/strandbeest.cpp" -o strandbeest -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/raycast.cpp" -o raycast -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/raytrace.cpp" -o raytrace -lX11 -lGL &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net

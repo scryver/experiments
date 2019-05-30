@@ -24,7 +24,7 @@ struct SalesmanState
     City *cities;
     u32 *currentPath;
     
-     u32 *bestEver;
+    u32 *bestEver;
     u32 bestDistanceSqr;
 };
 
@@ -43,7 +43,7 @@ swap(u32 indexCount, u32 *indices, u32 aIndex, u32 bIndex)
 {
     i_expect(aIndex < indexCount);
     i_expect(bIndex < indexCount);
-     u32 temp = indices[aIndex];
+    u32 temp = indices[aIndex];
     indices[aIndex] = indices[bIndex];
     indices[bIndex] = temp;
 }
@@ -64,9 +64,9 @@ calc_distance_sqr(u32 cityCount, City *cities)
             
             s32 distSqr = dx * dx + dy * dy;
             result += distSqr;
-    }
-        prevCity = city;
         }
+        prevCity = city;
+    }
     return result;
 }
 
@@ -119,7 +119,7 @@ DRAW_IMAGE(draw_image)
                                                            salesmanState->cities,
                                                            salesmanState->currentPath);
         state->initialized = true;
-}
+    }
     
     //
     // NOTE(michiel): Update
@@ -127,74 +127,74 @@ DRAW_IMAGE(draw_image)
     
     if (1) //(salesmanState->ticks % 32) == 0)
     {
-    #if 0
+#if 0
         // NOTE(michiel): Random swapping cities to try
-    u32 randomA = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
-    u32 randomB = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
-    swap(salesmanState->cityCount, salesmanState->currentPath, randomA, randomB);
+        u32 randomA = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
+        u32 randomB = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
+        swap(salesmanState->cityCount, salesmanState->currentPath, randomA, randomB);
 #else
-    // NOTE(michiel): Do in order
-    if (!salesmanState->doneSearching)
-    {
-    u32 largestX = 0;
-    u32 largestXIndex = 0xFFFFFFFF;
-    for (u32 i = 0; i < salesmanState->cityCount - 1; ++i)
-    {
-        if (salesmanState->currentPath[i] < salesmanState->currentPath[i + 1])
+        // NOTE(michiel): Do in order
+        if (!salesmanState->doneSearching)
         {
-            largestX = salesmanState->currentPath[i];
-            largestXIndex = i;
+            u32 largestX = 0;
+            u32 largestXIndex = 0xFFFFFFFF;
+            for (u32 i = 0; i < salesmanState->cityCount - 1; ++i)
+            {
+                if (salesmanState->currentPath[i] < salesmanState->currentPath[i + 1])
+                {
+                    largestX = salesmanState->currentPath[i];
+                    largestXIndex = i;
+                }
+            }
+            
+            if (largestXIndex == 0xFFFFFFFF)
+            {
+                salesmanState->doneSearching = true;
+            }
+            else
+            {
+                u32 largestY = 0;
+                u32 largestYIndex = 0xFFFFFFFF;
+                for (u32 i = largestXIndex; i < salesmanState->cityCount; ++i)
+                {
+                    if (largestX < salesmanState->currentPath[i])
+                    {
+                        largestY = salesmanState->currentPath[i];
+                        largestYIndex = i;
+                    }
+                }
+                i_expect(largestYIndex != 0xFFFFFFFF);
+                salesmanState->currentPath[largestXIndex] = largestY;
+                salesmanState->currentPath[largestYIndex] = largestX;
+                
+                u32 minRev = largestXIndex + 1;
+                u32 maxRev = minRev + (salesmanState->cityCount - minRev) / 2;
+                
+                for (u32 rev = minRev; rev < maxRev; ++rev)
+                {
+                    u32 offset = salesmanState->cityCount - 1;
+                    offset -= (rev - minRev);
+                    u32 temp = salesmanState->currentPath[rev];
+                    salesmanState->currentPath[rev] = salesmanState->currentPath[offset];
+                    salesmanState->currentPath[offset] = temp;
+                }
+            }
         }
-    }
-    
-    if (largestXIndex == 0xFFFFFFFF)
-    {
-            salesmanState->doneSearching = true;
-    }
-        else
-        {
-    u32 largestY = 0;
-    u32 largestYIndex = 0xFFFFFFFF;
-    for (u32 i = largestXIndex; i < salesmanState->cityCount; ++i)
-    {
-        if (largestX < salesmanState->currentPath[i])
-        {
-            largestY = salesmanState->currentPath[i];
-            largestYIndex = i;
-        }
-    }
-    i_expect(largestYIndex != 0xFFFFFFFF);
-    salesmanState->currentPath[largestXIndex] = largestY;
-    salesmanState->currentPath[largestYIndex] = largestX;
-    
-    u32 minRev = largestXIndex + 1;
-    u32 maxRev = minRev + (salesmanState->cityCount - minRev) / 2;
-    
-    for (u32 rev = minRev; rev < maxRev; ++rev)
-    {
-        u32 offset = salesmanState->cityCount - 1;
-        offset -= (rev - minRev);
-        u32 temp = salesmanState->currentPath[rev];
-        salesmanState->currentPath[rev] = salesmanState->currentPath[offset];
-        salesmanState->currentPath[offset] = temp;
-    }
-        }
-    }
-    #endif
-    
-    u32 distSqr = calc_distance_sqr(salesmanState->cityCount, salesmanState->cities,
-                                    salesmanState->currentPath);
-    if (salesmanState->bestDistanceSqr > distSqr)
-    {
-        salesmanState->bestDistanceSqr = distSqr;
+#endif
         
-        for (u32 cityIndex = 0; cityIndex < salesmanState->cityCount; ++cityIndex)
+        u32 distSqr = calc_distance_sqr(salesmanState->cityCount, salesmanState->cities,
+                                        salesmanState->currentPath);
+        if (salesmanState->bestDistanceSqr > distSqr)
         {
-            salesmanState->bestEver[cityIndex] = salesmanState->currentPath[cityIndex];
+            salesmanState->bestDistanceSqr = distSqr;
+            
+            for (u32 cityIndex = 0; cityIndex < salesmanState->cityCount; ++cityIndex)
+            {
+                salesmanState->bestEver[cityIndex] = salesmanState->currentPath[cityIndex];
+            }
+            
+            fprintf(stdout, "Best: %f\n", square_root((f32)salesmanState->bestDistanceSqr));
         }
-        
-        fprintf(stdout, "Best: %f\n", sqrt((f32)salesmanState->bestDistanceSqr));
-    }
     }
     
     //
@@ -210,13 +210,13 @@ DRAW_IMAGE(draw_image)
         City *city = salesmanState->cities + cityIndex;
         
         fill_circle(image, city->x, city->y, 4, V4(1, 1, 1, 1));
-    if (prevCity)
+        if (prevCity)
         {
             draw_line(image, prevCity->x, prevCity->y, city->x, city->y,
                       V4(0.7f, 0.7f, 0.7f, 1));
         }
         prevCity = city;
-        }
+    }
     
     City *prevBestCity = 0;
     for (u32 bestIndex = 0; bestIndex < salesmanState->cityCount; ++bestIndex)

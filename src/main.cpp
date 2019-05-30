@@ -195,11 +195,11 @@ platform_add_entry(PlatformWorkQueue *queue, PlatformWorkQueueCallback *callback
     
     queue->nextEntryToWrite = newNextEntryToWrite;
     sem_post(&queue->semaphoreHandle);
-//__sync_fetch_and_add(&queue->semaphore, 1);
+    //__sync_fetch_and_add(&queue->semaphore, 1);
     // TODO(michiel): Complete random max processes!
-       //futex(&queue->semaphore, FUTEX_WAKE, 8, 0, 0, 0);
+    //futex(&queue->semaphore, FUTEX_WAKE, 8, 0, 0, 0);
     //i_expect(result == 1);
-    }
+}
 
 internal b32
 do_next_work_queue_entry(PlatformWorkQueue *queue)
@@ -252,7 +252,7 @@ thread_process(void *parameter)
             //s32 origSamValue = queue->semaphore;
             //while (futex(&queue->semaphore, FUTEX_WAIT, origSamValue, NULL, 0, 0))
             //{
-                //
+            //
             //}
             while (sem_wait(&queue->semaphoreHandle) == EINTR)
             {
@@ -291,8 +291,8 @@ init_work_queue(PlatformWorkQueue *queue, u32 threadCount)
 internal void
 reset_keyboard_state(Keyboard *keyboard)
 {
-keyboard->lastInput.size = 0;
-keyboard->lastInput.data = 0;
+    keyboard->lastInput.size = 0;
+    keyboard->lastInput.data = 0;
     for (u32 i = 0; i < array_count(keyboard->keys); ++i) {
         Key *key = keyboard->keys + i;
         key->isPressed = false;
@@ -480,7 +480,7 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
     
     KeySym sym;
     
-        if (event && keyboard)
+    if (event && keyboard)
     {
         
         s32 count = XLookupString((XKeyEvent *)event, keyBuffer, array_count(keyBuffer),
@@ -561,7 +561,7 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
             default: {
                 Keys key = gX11toKeys[sym];
                 if (key != Key_None) {
-                process_key(keyboard, key, isPressed);
+                    process_key(keyboard, key, isPressed);
                 } else {
                     fprintf(stdout, "Unhandled key: %u\n", event->xkey.keycode);
                 }
@@ -714,6 +714,7 @@ int main(int argc, char **argv)
     
     State *state = allocate_struct(State);
     state->initialized = false;
+    state->closeProgram = false;
     state->memorySize = 64 * 1024 * 1024;
     state->memory = (u8 *)mmap(0, state->memorySize, PROT_READ|PROT_WRITE,
                                MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
@@ -724,18 +725,18 @@ int main(int argc, char **argv)
     Mouse mouse = {};
     Keyboard keyboard = {};
     {
-    Window retRoot;
-    Window retChild;
-    s32 rootX, rootY, winX, winY;
-    u32 mask;
-    if(XQueryPointer(display, window, &retRoot, &retChild, &rootX, &rootY,
-					 &winX, &winY, &mask))
-    {
-        winX = maximum(0, winX);
-        winY = maximum(0, winY);
+        Window retRoot;
+        Window retChild;
+        s32 rootX, rootY, winX, winY;
+        u32 mask;
+        if(XQueryPointer(display, window, &retRoot, &retChild, &rootX, &rootY,
+                         &winX, &winY, &mask))
+        {
+            winX = maximum(0, winX);
+            winY = maximum(0, winY);
             mouse.pixelPosition.x = winX;
             mouse.pixelPosition.y = winY;
-    }
+        }
     }
     
     Vertex vertices[4] = 
@@ -844,7 +845,7 @@ int main(int argc, char **argv)
     
     if (glXSwapIntervalEXT)
     {
-    glXSwapIntervalEXT(display, window, 1);
+        glXSwapIntervalEXT(display, window, 1);
     }
     
     bool isRunning = true;
@@ -860,16 +861,16 @@ int main(int argc, char **argv)
             // NOTE(michiel): Skip the auto repeat key
             if ((event.type == ButtonRelease) &&
                 (XEventsQueued(display, QueuedAfterReading)))
+            {
+                XEvent nevent;
+                XPeekEvent(display, &nevent);
+                if ((nevent.type == ButtonPress) &&
+                    (nevent.xbutton.time == event.xbutton.time) &&
+                    (nevent.xbutton.button == event.xbutton.button))
                 {
-                    XEvent nevent;
-                    XPeekEvent(display, &nevent);
-                    if ((nevent.type == ButtonPress) &&
-                        (nevent.xbutton.time == event.xbutton.time) &&
-                        (nevent.xbutton.button == event.xbutton.button))
-                    {
-                        continue;
-                    }
+                    continue;
                 }
+            }
             
             switch (event.type)
             {
@@ -898,9 +899,9 @@ int main(int argc, char **argv)
                 {
                     // NOTE(michiel): Mouse update event.xmotion.x/y
                     mouse.pixelPosition.x = event.xmotion.x;
-    mouse.pixelPosition.y = event.xmotion.y;
-    mouse.relativePosition.x = (f32)mouse.pixelPosition.x / (f32)windowWidth;
-    mouse.relativePosition.y = (f32)mouse.pixelPosition.y / (f32)windowHeight;
+                    mouse.pixelPosition.y = event.xmotion.y;
+                    mouse.relativePosition.x = (f32)mouse.pixelPosition.x / (f32)windowWidth;
+                    mouse.relativePosition.y = (f32)mouse.pixelPosition.y / (f32)windowHeight;
                 } break;
                 
                 case ButtonPress:
@@ -979,6 +980,7 @@ int main(int argc, char **argv)
         lastTime = now;
         
         draw_image(state, image, mouse, &keyboard, secondsElapsed);
+        isRunning = !state->closeProgram;
         
         glViewport(0, 0, windowWidth, windowHeight);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);

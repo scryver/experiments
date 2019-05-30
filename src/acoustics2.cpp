@@ -58,10 +58,10 @@ DRAW_IMAGE(draw_image)
         
         acoust->tension = 2000.0f; // NOTE(michiel): in N
         acoust->linearDensity = 1.0f; // NOTE(michiel): in kg/m
-        acoust->propagationSpeed = sqrt(acoust->tension / acoust->linearDensity); // NOTE(michiel): Speed in m/s
+        acoust->propagationSpeed = square_root(acoust->tension / acoust->linearDensity); // NOTE(michiel): Speed in m/s
         // NOTE(michiel): sqrt((kg*m/s^2) / (kg/m)) => sqrt(m^2/s^2) => m / s
         acoust->CnoDt = acoust->propagationSpeed / (acoust->ropePoints[1].x - acoust->ropePoints[0].x);
-     
+        
         // NOTE(michiel): Initial condition
         u32 halfPoint = acoust->ropePointCount / 2;
 #if 0        
@@ -77,8 +77,8 @@ DRAW_IMAGE(draw_image)
         {
             acoust->prevRopePoints[halfPoint - halfDist + n].y = -0.5f + 0.5f * cos(F32_TAU * (f32)n / (2.0f * halfDist + 1.0f));
         }
-        #endif
-
+#endif
+        
         // NOTE(michiel): Initial propagation
         f32 Csqr = square(acoust->CnoDt * dt);
         for (u32 rp = 1; rp < acoust->ropePointCount - 1; ++rp)
@@ -92,12 +92,12 @@ DRAW_IMAGE(draw_image)
         
         state->initialized = true;
     }
-
+    
     if ((mouse.mouseDowns & Mouse_Left) &&
         !(acoust->prevMouseDown & Mouse_Left))
     {
         // NOTE(michiel): Initial condition
-            u32 halfPoint = acoust->ropePointCount / 2;
+        u32 halfPoint = acoust->ropePointCount / 2;
         u32 halfDist = 10;
         
         for (u32 n = 0; n < 2 * halfDist + 1; ++n)
@@ -133,13 +133,13 @@ DRAW_IMAGE(draw_image)
         f32 prevX = 0.0f;
         if (rp > 0)
         {
-         prevX = acoust->ropePoints[rp - 1].y;
+            prevX = acoust->ropePoints[rp - 1].y;
         }
         f32 curXT = acoust->ropePoints[rp].y;
         f32 nextX = prevX;
         if (rp < acoust->ropePointCount - 1)
         {
-             nextX = acoust->ropePoints[rp + 1].y;
+            nextX = acoust->ropePoints[rp + 1].y;
         }
         if (rp == 0)
         {
@@ -155,7 +155,7 @@ DRAW_IMAGE(draw_image)
     acoust->prevRopePoints = acoust->ropePoints;
     acoust->ropePoints = temp;
 #endif
-
+    
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
     draw_lines(image, acoust->ropePointCount, acoust->ropePoints, V2(0, 0.5f * size.y), V2(1, 30), V4(1, 1, 1, 1));

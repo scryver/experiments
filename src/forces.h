@@ -104,7 +104,7 @@ arriving_force(Mover *mover, v2 targetPosition, f32 catchDistance = 100.0f,
     
     if (d2 < (catchDistance * catchDistance))
     {
-        float t = sqrt(d2) / catchDistance; // TODO(michiel): Optimize
+        float t = square_root(d2) / catchDistance; // TODO(michiel): Optimize
         desired = set_length(desired, maxSpeed * t);
     }
     else

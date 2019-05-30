@@ -128,8 +128,8 @@ struct Orientation
 
 internal inline Orientation
 init_orientation(f32 f0, f32 f1, f32 f2, f32 f3,
-            f32 b0, f32 b1, f32 b2, f32 b3, 
-            f32 angle)
+                 f32 b0, f32 b1, f32 b2, f32 b3, 
+                 f32 angle)
 {
     Orientation result = {};
     result.forward[0] = f0;
@@ -144,17 +144,17 @@ init_orientation(f32 f0, f32 f1, f32 f2, f32 f3,
     return result;
 }
 
-global Orientation pointyLayout = init_orientation(sqrt(3.0f), sqrt(3.0f) / 2.0f, 
+global Orientation pointyLayout = init_orientation(square_root(3.0f), square_root(3.0f) / 2.0f, 
                                                    0.0f, 3.0f / 2.0f,
-                                              sqrt(3.0f) / 3.0f, -1.0f / 3.0f, 
+                                                   square_root(3.0f) / 3.0f, -1.0f / 3.0f, 
                                                    0.0f, 2.0f / 3.0f,
-                                              0.5f);
+                                                   0.5f);
 
 global Orientation flatLayout = init_orientation(3.0f / 2.0f, 0.0f, 
-                                                 sqrt(3.0f) / 2.0f, sqrt(3.0f),
-                                            2.0f / 3.0f, 0.0f,
-                                                 -1.0f / 3.0f, sqrt(3.0f) / 3.0f,
-                                              0.0f);
+                                                 square_root(3.0f) / 2.0f, square_root(3.0f),
+                                                 2.0f / 3.0f, 0.0f,
+                                                 -1.0f / 3.0f, square_root(3.0f) / 3.0f,
+                                                 0.0f);
 
 struct Layout
 {
@@ -195,7 +195,7 @@ pixel_to_hex(Layout *layout, v2 p)
     pt.x /= layout->size.x;
     pt.y /= layout->size.y;
     
-      result.q = m->backward[0] * pt.x + m->backward[1] * pt.y;
+    result.q = m->backward[0] * pt.x + m->backward[1] * pt.y;
     result.r = m->backward[2] * pt.x + m->backward[3] * pt.y;
     result.s = -result.q - result.r;
     
@@ -329,13 +329,13 @@ create_trianglegrid(u32 maxCount, HexCell *cells, s32 size, b32 upsideDown = fal
     s32 halfSize = (size + 1) / 2;
     
     u32 count = 0;
-        for (s32 r = 0; r <= size; ++r)
-        {
+    for (s32 r = 0; r <= size; ++r)
+    {
         if (upsideDown)
         {
             for (s32 q = 0; q < size - r; ++q)
             {
-                    i_expect(count < maxCount);
+                i_expect(count < maxCount);
                 cells[count++] = hex_cell(q - halfSize / 2, r - halfSize / 2);
             }
         }
@@ -363,12 +363,12 @@ create_rectangulargrid(u32 maxCount, HexCell *cells, s32 width, s32 height)
     for (s32 r = 0; r < height; ++r)
     {
         s32 rOffset = trunc(r / 2);
-            for (s32 q = -rOffset; q < width - rOffset; ++q)
-            {
-                i_expect(count < maxCount);
-                cells[count++] = hex_cell(q, r, -q-r);
-            }
+        for (s32 q = -rOffset; q < width - rOffset; ++q)
+        {
+            i_expect(count < maxCount);
+            cells[count++] = hex_cell(q, r, -q-r);
         }
+    }
     
     return count;
 }
@@ -386,7 +386,7 @@ struct HexState
     u32 hexCellCount;
     HexCell *cells;
     
-     HexCell startCell;
+    HexCell startCell;
     HexCell *line;
     
     RandomList randList;
@@ -469,7 +469,7 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
     
     if ((mouse.mouseDowns & Mouse_Left) &&
         !(hexer->prevMouseDown & Mouse_Left))
-        {
+    {
         for (u32 cellIdx = 0; cellIdx < hexer->hexCellCount; ++cellIdx)
         {
             if (mouseHover == hexer->cells[cellIdx])
@@ -478,7 +478,7 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
                 break;
             }
         }
-        }
+    }
     
     if ((mouse.mouseDowns & Mouse_Extended2) &&
         !(hexer->prevMouseDown & Mouse_Extended2))
@@ -486,8 +486,8 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
         RandomListEntry choice = random_entry(&hexer->randList);
         if (choice.data)
         {
-        HexCell *cell = (HexCell *)choice.data;
-        hexer->startCell = *cell;
+            HexCell *cell = (HexCell *)choice.data;
+            hexer->startCell = *cell;
         }
     }
     
@@ -507,15 +507,15 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
         if (mouse.mouseDowns & Mouse_Extended1)
         {
             get_polygon_corners(&hexer->layout, *cell, corners);
-for (u32 i = 0; i < 6; ++i)
-        {
-            u32 n = (i + 1) % 6;
-            
-            v2 a = corners[i];
-            v2 b = corners[n];
-            draw_line(image, round(a.x), round(a.y), round(b.x), round(b.y),
-                      colour);
-        }
+            for (u32 i = 0; i < 6; ++i)
+            {
+                u32 n = (i + 1) % 6;
+                
+                v2 a = corners[i];
+                v2 b = corners[n];
+                draw_line(image, round(a.x), round(a.y), round(b.x), round(b.y),
+                          colour);
+            }
         }
         else
         {
@@ -526,24 +526,24 @@ for (u32 i = 0; i < 6; ++i)
                 corners[i] = center + offset * 0.9f;
             }
             
-        fill_triangle(image, 
-                      V2S(round(corners[0].x), round(corners[0].y)),
-                      V2S(round(corners[1].x), round(corners[1].y)),
-                      V2S(round(corners[2].x), round(corners[2].y)),
-                      colour);
-fill_triangle(image, 
-                      V2S(round(corners[0].x), round(corners[0].y)),
-                      V2S(round(corners[2].x), round(corners[2].y)),
+            fill_triangle(image, 
+                          V2S(round(corners[0].x), round(corners[0].y)),
+                          V2S(round(corners[1].x), round(corners[1].y)),
+                          V2S(round(corners[2].x), round(corners[2].y)),
+                          colour);
+            fill_triangle(image, 
+                          V2S(round(corners[0].x), round(corners[0].y)),
+                          V2S(round(corners[2].x), round(corners[2].y)),
                           V2S(round(corners[3].x), round(corners[3].y)),
                           colour);
-        fill_triangle(image, 
-                      V2S(round(corners[0].x), round(corners[0].y)),
-                      V2S(round(corners[3].x), round(corners[3].y)),
+            fill_triangle(image, 
+                          V2S(round(corners[0].x), round(corners[0].y)),
+                          V2S(round(corners[3].x), round(corners[3].y)),
                           V2S(round(corners[5].x), round(corners[5].y)),
                           colour);
-        fill_triangle(image, 
-                      V2S(round(corners[3].x), round(corners[3].y)),
-                      V2S(round(corners[4].x), round(corners[4].y)),
+            fill_triangle(image, 
+                          V2S(round(corners[3].x), round(corners[3].y)),
+                          V2S(round(corners[4].x), round(corners[4].y)),
                           V2S(round(corners[5].x), round(corners[5].y)),
                           colour);
         }
