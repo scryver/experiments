@@ -69,6 +69,8 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net
     clang++ $flags $exceptions "$testDir/test_neural_layer.cpp" -o test-neural-layer
+
+    clang++ $flags $exceptions "$codeDir/selector.cpp" -o selector -lX11 -lGL &
 popd > /dev/null
 
 #flagsC="-O0 -g -ggdb -Wall -Werror -pedantic -pthread"

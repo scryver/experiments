@@ -16,12 +16,12 @@ enum VariableKind
     
     Var_Constant = 0x100,
 };
-  struct Variable
+struct Variable
 {
     enum32(VariableKind) kind;
     union
     {
-    void *var;
+        void *var;
         b32 b;
         u32 u;
         s32 i;
@@ -29,7 +29,7 @@ enum VariableKind
         String s;
         char *c;
     };
-    };
+};
 
 internal inline Variable
 var(VariableKind kind, void *value)
@@ -208,8 +208,14 @@ struct UICheckbox
 struct UISlider
 {
     UIID     id;
-     Variable value;
+    Variable value;
     Variable maxValue;
+};
+
+struct UIText
+{
+    UIID   id;
+    String text;
 };
 
 struct UIItem;
@@ -218,9 +224,9 @@ enum LayoutKind
 {
     Layout_None,
     Layout_Vertical,
-Layout_Horizontal,
+    Layout_Horizontal,
     //Layout_Grid,
-    };
+};
 struct UILayout
 {
     LayoutKind kind;
@@ -242,7 +248,8 @@ enum UIItemKind
     UIItem_Button,
     UIItem_Checkbox,
     UIItem_Slider,
-    };
+    UIItem_Text,
+};
 struct UIItem
 {
     UIItemKind kind;
@@ -251,10 +258,11 @@ struct UIItem
     union
     {
         UILayout layout;
-    UIButton button;
+        UIButton button;
         UICheckbox checkbox;
         UISlider slider;
-        };
+        UIText text;
+    };
 };
 
 struct UIState
@@ -315,7 +323,7 @@ ui_match_id(UIState *state, UIID id, Rectangle2s rect)
     if ((state->activeItem == gNullUIID) && result && state->clicked)
     {
         state->activeItem = id;
-}
+    }
     
     return result;
 }
@@ -338,7 +346,7 @@ internal void
 ui_layout_button(UIState *state, UIButton *button, Rectangle2s rect,
                  v4 background = {1, 1, 1, 1}, v4 textColour = {0, 0, 0, 1})
 {
-       ui_match_id(state, button->id, rect);
+    ui_match_id(state, button->id, rect);
     
     if (state->hotItem == button->id)
     {
@@ -367,9 +375,9 @@ ui_layout_button(UIState *state, UIButton *button, Rectangle2s rect,
 
 internal void
 ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2s rect,
-                 v4 background = {1, 1, 1, 1}, v4 checkColour = {0, 0, 0, 1})
+                   v4 background = {1, 1, 1, 1}, v4 checkColour = {0, 0, 0, 1})
 {
-       ui_match_id(state, checkbox->id, rect);
+    ui_match_id(state, checkbox->id, rect);
     
     if (state->hotItem == checkbox->id)
     {
@@ -392,11 +400,11 @@ ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2s rect,
     v2s dim = get_dim(rect);
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
     //outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
-        if (checkbox->checked)
-        {
+    if (checkbox->checked)
+    {
         fill_rectangle(state->screen, rect.min.x + 5, rect.min.y + 5, 
                        dim.x - 10, dim.y - 10, checkColour);
-        }
+    }
 }
 
 internal void
@@ -443,8 +451,8 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2s rect, LayoutKind 
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, backColour);
     fill_rectangle(state->screen, rect.min.x + handle.x / 2, rect.min.y + handle.y / 2,
                    dim.x - handle.x, dim.y - handle.y, trackColour);
-        fill_rectangle(state->screen, dimMod.x, dimMod.y, (u32)handleSize, (u32)handleSize, colour);
-
+    fill_rectangle(state->screen, dimMod.x, dimMod.y, (u32)handleSize, (u32)handleSize, colour);
+    
     if (active)
     {
         if (horizontal)
@@ -463,6 +471,37 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2s rect, LayoutKind 
     value01 = clamp01(value01);
     
     unmap01(value01, &slider->value, slider->maxValue);
+}
+
+internal void
+ui_layout_text(UIState *state, UIText *text, Rectangle2s rect,
+               v4 background = {1, 1, 1, 1}, v4 textColour = {0, 0, 0, 1})
+{
+    ui_match_id(state, text->id, rect);
+    
+    if (state->hotItem == text->id)
+    {
+        background.r *= 1.2f;
+        background.g *= 1.2f;
+        background.b *= 1.2f;
+    }
+    
+    if (state->activeItem == text->id)
+    {
+        rect.min.x += 2;
+        rect.min.y += 2;
+        rect.max.x -= 1;
+        rect.max.y -= 1;
+        background.r *= 1.3f;
+        background.g *= 1.3f;
+        background.b *= 1.1f;
+    }
+    
+    v2s dim = get_dim(rect);
+    fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
+    outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 0.5f));
+    draw_text(&state->font, state->screen, rect.min.x + 8, rect.min.y + 3, 
+              text->text, textColour);
 }
 
 internal void
@@ -487,6 +526,8 @@ ui_layout_layout(UIState *state, UILayout *layout)
         // TODO(michiel): Make everything more rect based (get_dim is redundant for now)
         Rectangle2s rect = rect_from_dim(xOffset, yOffset, itemXSize, itemYSize);
         v2s rectDim = get_dim(rect);
+        
+        fill_rectangle(state->screen, layout->origin.x, layout->origin.y, layout->maxSize.x, layout->maxSize.y, V4(0.1f, 0.1f, 0.1f, 0.5f));
         
         for (UIItem *item = layout->firstItem; item; item = item->next)
         {
@@ -524,6 +565,11 @@ ui_layout_layout(UIState *state, UILayout *layout)
                                      V4(0.5f, 0.5f, 0.1f, 1));
                 } break;
                 
+                case UIItem_Text:
+                {
+                    ui_layout_text(state, &item->text, rect, V4(0.5f, 0.5f, 0.1f, 1));
+                } break;
+                
                 INVALID_DEFAULT_CASE;
             }
             
@@ -557,7 +603,7 @@ get_last_item(UIState *state)
 
 internal UILayout *
 ui_begin(UIState *state, LayoutKind kind, u32 x, u32 y, u32 width, u32 height,
-                u32 padding = 0)
+         u32 padding = 0)
 {
     state->itemCount = 0;
     state->layedOut = false;
@@ -585,18 +631,18 @@ ui_end(UIState *state)
 {
     UIItem *baseLayout = state->items;
     i_expect(baseLayout->kind == UIItem_Layout);
-
+    
     if (!state->clicked)
     {
         state->activeItem = gNullUIID;
     }
-
+    
     if (!state->layedOut) 
     {
         ui_layout_layout(state, &baseLayout->layout);
         state->layedOut = true;
     }
-    }
+}
 
 internal void
 add_item_to_layout(UIState *state, UILayout *layout, UIItem *uiItem)
@@ -605,11 +651,11 @@ add_item_to_layout(UIState *state, UILayout *layout, UIItem *uiItem)
         layout->firstItem = uiItem;
     }
     if (layout->lastItem) {
-    layout->lastItem->next = uiItem;
+        layout->lastItem->next = uiItem;
     }
-layout->lastItem = uiItem;
+    layout->lastItem = uiItem;
     ++layout->itemCount;
-        }
+}
 
 internal UILayout *
 ui_layout(UIState *state, UILayout *layout, LayoutKind kind, u32 padding = 0,
@@ -675,59 +721,93 @@ ui_slider(UIState *state, UILayout *layout, f32 *value, f32 maxValue)
     return ui_slider(state, layout, var_float(value), var_float(maxValue));
 }
 
+internal UIText *
+ui_text(UIState *state, UILayout *layout, String text)
+{
+    UIItem *uiItem = get_next_item(state, UIItem_Text);
+    uiItem->text.id = create_uiid(layout, &uiItem->text);
+    uiItem->text.text = text;
+    add_item_to_layout(state, layout, uiItem);
+    return &uiItem->text;
+}
+
+internal UIText *
+ui_text(UIState *state, UILayout *layout, char *text)
+{
+    UIText *result = ui_text(state, layout, string(text));
+    return result;
+}
+
 //
-internal inline b32
-ui_id_is_clicked(UIState *state, UIID id)
+internal b32
+ui_button_is_pressed(UIState *state, UIButton *button)
 {
-    return (!state->clicked && (state->activeItem == id) && (state->hotItem == id));
+    // NOTE(michiel): Return true if the current button is pressed
+    return (state->clicked && (state->activeItem == button->id) && (state->hotItem == button->id));
 }
 
-internal inline b32
-ui_button_is_clicked(UIState *state, UIButton *button)
-{
-    return ui_id_is_clicked(state, button->id);
-}
-
-internal inline b32
+internal b32
 ui_checkbox_is_clicked(UIState *state, UICheckbox *checkbox)
 {
-    return ui_id_is_clicked(state, checkbox->id);
+    // NOTE(michiel): Only return true on mouse release
+    return (!state->clicked && (state->activeItem == checkbox->id) && (state->hotItem == checkbox->id));
 }
 
-internal inline b32
+internal b32
 ui_slider_is_set(UIState *state, UISlider *slider)
 {
     return (!state->clicked && (state->activeItem == slider->id));
 }
 
-internal inline b32
-ui_button_imm(UIState *state, UILayout *layout, char *label)
+internal b32
+ui_text_is_clicked(UIState *state, UIText *text)
 {
-    return ui_button_is_clicked(state, ui_button(state, layout, label));
+    // NOTE(michiel): Only return true on mouse release
+    return (!state->clicked && (state->activeItem == text->id) && (state->hotItem == text->id));
 }
 
-internal inline b32
+
+internal b32
+ui_button_imm(UIState *state, UILayout *layout, char *label)
+{
+    return ui_button_is_pressed(state, ui_button(state, layout, label));
+}
+
+internal b32
 ui_checkbox_imm(UIState *state, UILayout *layout, b32 checked)
 {
     return ui_checkbox_is_clicked(state, ui_checkbox(state, layout, checked));
 }
 
-internal inline b32
+internal b32
 ui_slider_imm(UIState *state, UILayout *layout, u32 *value, u32 maxValue)
 {
     return ui_slider_is_set(state, ui_slider(state, layout, value, maxValue));
 }
 
-internal inline b32
+internal b32
 ui_slider_imm(UIState *state, UILayout *layout, s32 *value, s32 maxValue)
 {
     return ui_slider_is_set(state, ui_slider(state, layout, value, maxValue));
 }
 
-internal inline b32
+internal b32
 ui_slider_imm(UIState *state, UILayout *layout, f32 *value, f32 maxValue)
 {
     return ui_slider_is_set(state, ui_slider(state, layout, value, maxValue));
+}
+
+internal b32
+ui_text_imm(UIState *state, UILayout *layout, String text)
+{
+    return ui_text_is_clicked(state, ui_text(state, layout, text));
+}
+
+internal b32
+ui_text_imm(UIState *state, UILayout *layout, char *text)
+{
+    b32 result = ui_text_imm(state, layout, string(text));
+    return result;
 }
 
 #if 0
