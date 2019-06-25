@@ -51,7 +51,7 @@ struct FluidBase
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    v2s prevMousePos;
+    v2  prevMousePos;
     
     f32 t;
     PerlinNoise noise;
@@ -173,10 +173,10 @@ advect_plane(s32 bound, f32 *d, f32 *d0, f32 *velX, f32 *velY, f32 dt, s32 N)
             f32 t1 = y - j0;
             f32 t0 = 1.0f - t1;
             
-            s32 i0i = clamp(0, trunc(i0), N);
-            s32 i1i = clamp(0, trunc(i1), N);
-            s32 j0i = clamp(0, trunc(j0), N);
-            s32 j1i = clamp(0, trunc(j1), N);
+            s32 i0i = clamp(0, s32_from_f32_truncate(i0), N);
+            s32 i1i = clamp(0, s32_from_f32_truncate(i1), N);
+            s32 j0i = clamp(0, s32_from_f32_truncate(j0), N);
+            s32 j1i = clamp(0, s32_from_f32_truncate(j1), N);
             
             d[IXP(i, j)] = (s0 * (t0 * d0[IXP(i0i, j0i)] +
                                   t1 * d0[IXP(i0i, j1i)]) +
@@ -339,12 +339,12 @@ advect_cube(s32 bound, f32 *d, f32 *d0, f32 *velX, f32 *velY, f32 *velZ, f32 dt,
                 f32 u1 = z - k0;
                 f32 u0 = 1.0f - u1;
                 
-                s32 i0i = clamp(0, trunc(i0), N);
-                s32 i1i = clamp(0, trunc(i1), N);
-                s32 j0i = clamp(0, trunc(j0), N);
-                s32 j1i = clamp(0, trunc(j1), N);
-                s32 k0i = clamp(0, trunc(k0), N);
-                s32 k1i = clamp(0, trunc(k1), N);
+                s32 i0i = clamp(0, s32_from_f32_truncate(i0), N);
+                s32 i1i = clamp(0, s32_from_f32_truncate(i1), N);
+                s32 j0i = clamp(0, s32_from_f32_truncate(j0), N);
+                s32 j1i = clamp(0, s32_from_f32_truncate(j1), N);
+                s32 k0i = clamp(0, s32_from_f32_truncate(k0), N);
+                s32 k1i = clamp(0, s32_from_f32_truncate(k1), N);
                 
                 d[IXC(i, j, k)] = (s0 * (t0 * (u0 * d0[IXC(i0i, j0i, k0i)] +
                                                u1 * d0[IXC(i0i, j0i, k1i)]) +
@@ -541,7 +541,7 @@ DRAW_IMAGE(draw_image)
     {
         if (mouse.mouseDowns & Mouse_Left)
         {
-            fluid_add_density(fluid, (mouse.pixelPosition - V2S(10, 10)) / scale, 300.0f);
+            fluid_add_density(fluid, V2S(mouse.pixelPosition.x - 10, mouse.pixelPosition.y - 10) / scale, 300.0f);
         }
         
     }

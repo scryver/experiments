@@ -40,7 +40,7 @@ DRAW_IMAGE(draw_image)
         // selector->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         selector->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         
-        init_ui(&selector->ui, image, 64, "data/output.font");
+        init_ui(&selector->ui, image, 64, static_string("data/output.font"));
         
         state->initialized = true;
     }
@@ -74,16 +74,16 @@ DRAW_IMAGE(draw_image)
         TextItem *item = textList + idx;
         if (item->collapsed)
         {
-            if (ui_checkbox_imm(&selector->ui, listLayout, ">"))
+            //if (ui_checkbox_imm(&selector->ui, listLayout, ">"))
             {
             }
             listLayout->maxSize.y += 10.0f;
         }
         else
         {
-            if (ui_text_imm(&selector->ui, listLayout, stringList[idx]))
+            if (ui_text_imm(&selector->ui, listLayout, item->text))
             {
-                fprintf(stdout, "List: %.*s\n", STR_FMT(stringList[idx]));
+                fprintf(stdout, "List: %.*s\n", STR_FMT(item->text));
             }
             listLayout->maxSize.y += fontAdvance;
         }

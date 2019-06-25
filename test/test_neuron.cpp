@@ -7,7 +7,7 @@
 MATRIX_MAP(sigmoid)
 {
     f32 result = 0;
-    result = 1.0f / (1.0f + exp(-a));
+    result = 1.0f / (1.0f + fast_exp(-a));
     return result;
 }
 
@@ -21,7 +21,7 @@ MATRIX_MAP(dsigmoid)
 
 internal void
 predict_layer_old(u32 inCount, u32 outCount,
-             f32 *inputs, f32 *weights, f32 *bias, f32 *outputs)
+                  f32 *inputs, f32 *weights, f32 *bias, f32 *outputs)
 {
     u32 rowOut = outCount;
     u32 colOut = 1;
@@ -51,7 +51,7 @@ predict_layer(u32 inCount, u32 outCount,
         *rowO += bias[row];
         
         // NOTE(michiel): Sigmoid
-        *rowO = 1.0f / (1.0f + exp(-*rowO));
+        *rowO = 1.0f / (1.0f + fast_exp(-*rowO));
     }
 }
 
@@ -59,12 +59,12 @@ predict_layer(u32 inCount, u32 outCount,
 internal void
 calculate_gradient_old(u32 count, f32 *inputs, f32 *errors, f32 *result, f32 learningRate)
 {
-// NOTE(michiel): Calculate output gradient
+    // NOTE(michiel): Calculate output gradient
     u32 rowGrad = count;
     u32 colGrad = 1;
     
     matrix_copy(rowGrad, colGrad, inputs, result);
-matrix_map(rowGrad, colGrad, result, dsigmoid);
+    matrix_map(rowGrad, colGrad, result, dsigmoid);
     matrix_hadamard_matrix(rowGrad, colGrad, errors, result);
     matrix_multiply_scalar(rowGrad, colGrad, result, learningRate);
 }
@@ -123,7 +123,7 @@ transpose_multiply_old(u32 outputCount, u32 inputCount, f32 *transposedM, f32 *c
     //f32 *tempArray = allocate_array(f32, Count);
     f32 *tempWeights = allocate_array(f32, rowTrans * colTrans);
     matrix_transpose(rowTrans, colTrans, transposedM, tempWeights);
-            matrix_multiply_matrix(colTrans, rowTrans, 1, tempWeights, current, next);
+    matrix_multiply_matrix(colTrans, rowTrans, 1, tempWeights, current, next);
     
     deallocate(tempWeights);
     //deallocate_array(rowTrans * colTrans, tempWeights);
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
     
     fprintf(stdout, "Predict orig: %f, new: %f\n", a, b);
     
-f32 errors[2] = {0.1f, -0.2f};
+    f32 errors[2] = {0.1f, -0.2f};
     f32 gradientOld[2] = {};
     f32 gradientNew[2] = {};
     calculate_gradient_old(outputCount, outputs, errors, gradientOld, 0.1f);
@@ -204,4 +204,4 @@ f32 errors[2] = {0.1f, -0.2f};
             errorsOld[0], errorsOld[1], errorsOld[2],
             errorsNew[0], errorsNew[1], errorsNew[2]);
     
-    }
+}

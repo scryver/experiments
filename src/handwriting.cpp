@@ -49,9 +49,9 @@ DRAW_IMAGE(draw_image)
                             array_count(hiddenCounts), hiddenCounts, 10);
         randomize_weights(&handwrite->randomizer, &handwrite->brain);
         
-        handwrite->train = parse_training("data/mnist-f32train");
-        handwrite->test = parse_training("data/mnist-f32test");
-        handwrite->validation = parse_training("data/mnist-f32validation");
+        handwrite->train = parse_training(static_string("data/mnist-f32train"));
+        handwrite->test = parse_training(static_string("data/mnist-f32test"));
+        handwrite->validation = parse_training(static_string("data/mnist-f32validation"));
         
         state->initialized = true;
     }

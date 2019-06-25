@@ -495,8 +495,9 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
             }
         }
         
-        keyboard->lastInput = str_intern_fmt(&keyboard->interns, "%.*s%s", 
-                                             STR_FMT(keyboard->lastInput), keyBuffer);
+        keyboard->lastInput = string_fmt(array_count(keyboard->lastInputData),
+                                         keyboard->lastInputData, "%.*s%s",
+                                         STR_FMT(keyboard->lastInput), keyBuffer);
         
         b32 isPressed = event->type == KeyPress;
         switch (event->xkey.keycode)

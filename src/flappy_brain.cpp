@@ -209,7 +209,7 @@ bird_hit_pipe(Bird *bird, Pipe *pipe)
 internal inline void
 draw_bird(Image *image, Bird *bird)
 {
-    fill_circle(image, bird->position.x, bird->position.y, trunc(bird->radius),
+    fill_circle(image, bird->position.x, bird->position.y, u32_from_f32_truncate(bird->radius),
                 V4(1, 1, 1, 0.3f));
 }
 
@@ -235,7 +235,7 @@ calculate_fitness(u32 birdCount, Bird *birds)
     for (u32 birdIndex = 0; birdIndex < birdCount; ++birdIndex)
     {
         Bird *bird = birds + birdIndex;
-          bird->fitness = bird->score * oneOverSum;
+        bird->fitness = bird->score * oneOverSum;
     }
 }
 
@@ -305,15 +305,15 @@ next_generation(Arena *arena, RandomSeriesPCG *random, u32 birdCount, Bird *pare
             Bird *parentA = pick_one(random, birdCount, parentBirds);
             Bird *parentB = pick_one(random, birdCount, parentBirds);
             
-        neural_copy(&parentA->brain, &bird->brain);
-        if (random_unilateral(random) < 0.2f)
-        {
-            neural_mixin(random, &best->brain, &bird->brain);
-        }
+            neural_copy(&parentA->brain, &bird->brain);
+            if (random_unilateral(random) < 0.2f)
+            {
+                neural_mixin(random, &best->brain, &bird->brain);
+            }
             else if (random_unilateral(random) < 0.7f)
-        {
-        neural_mixin(random, &parentB->brain, &bird->brain);
-        }
+            {
+                neural_mixin(random, &parentB->brain, &bird->brain);
+            }
         }
         neural_mutate(random, &bird->brain, mutation, random);
     }
@@ -355,24 +355,24 @@ DRAW_IMAGE(draw_image)
         
         state->initialized = true;
     }
-
+    
     for (u32 cycle = 0; cycle < flappy->cycles; ++cycle)
     {
         f32 innerDt = 0.01f; // dt / (f32)flappy->cycles;
         u32 maxX = 0;
-    for (u32 pipe = 0; pipe < 16; ++pipe)
-    {
-        Pipe *p = flappy->pipes + pipe;
-        if (p->active)
-    {
-        update_pipe(p, innerDt);
+        for (u32 pipe = 0; pipe < 16; ++pipe)
+        {
+            Pipe *p = flappy->pipes + pipe;
+            if (p->active)
+            {
+                update_pipe(p, innerDt);
                 
                 if (maxX < round(p->gapMax.x))
                 {
                     maxX = round(p->gapMax.x);
                 }
+            }
         }
-    }
         
         if (//(random_unilateral(&flappy->randomizer) < 0.005f) &&
             (maxX < image->width - 150.0f))
@@ -440,51 +440,51 @@ DRAW_IMAGE(draw_image)
             }
         }
         
-    u32 aliveBirds = 0;
-    v2 oneOverSize = 1.0f / size;
-    for (u32 birdIndex = 0; birdIndex < array_count(flappy->birds); ++birdIndex)
-    {
-        Bird *bird = flappy->birds + birdIndex;
+        u32 aliveBirds = 0;
+        v2 oneOverSize = 1.0f / size;
+        for (u32 birdIndex = 0; birdIndex < array_count(flappy->birds); ++birdIndex)
+        {
+            Bird *bird = flappy->birds + birdIndex;
             for (u32 pipeIndex = 0; pipeIndex < array_count(flappy->pipes); ++pipeIndex)
+            {
+                Pipe *pipe = flappy->pipes + pipeIndex;
+                if (pipe->active)
                 {
-                    Pipe *pipe = flappy->pipes + pipeIndex;
-                    if (pipe->active)
+                    if (bird_hit_pipe(bird, pipe))
                     {
-                        if (bird_hit_pipe(bird, pipe))
-                        {
-                            bird->alive = false;
+                        bird->alive = false;
                         break;
-                        }
                     }
                 }
+            }
             
-        if (bird->alive)
-        {
+            if (bird->alive)
+            {
                 thinking(bird, array_count(closestPipes), closestPipes, oneOverSize);
-    update_bird(bird, flappy->gravity, innerDt);
-    check_borders(bird, V2(0, 0), size);
+                update_bird(bird, flappy->gravity, innerDt);
+                check_borders(bird, V2(0, 0), size);
+            }
+            
+            aliveBirds += bird->alive ? 1 : 0;
         }
         
-        aliveBirds += bird->alive ? 1 : 0;
-    }
-    
         ++flappy->distance;
-    if (aliveBirds == 0)
-    {
+        if (aliveBirds == 0)
+        {
             ++flappy->generation;
             fprintf(stdout, "Generation %5u: Best: %u\n", flappy->generation, flappy->distance);
-        flappy->distance = 0;
+            flappy->distance = 0;
             
             next_generation(&flappy->arena, &flappy->randomizer, 
                             array_count(flappy->birds), flappy->birds, size, 0.1f, 0.1f);
-        for (u32 pipeIndex = 0; pipeIndex < array_count(flappy->pipes); ++pipeIndex)
-        {
-            Pipe *pipe = flappy->pipes + pipeIndex;
-            pipe->active = false;
+            for (u32 pipeIndex = 0; pipeIndex < array_count(flappy->pipes); ++pipeIndex)
+            {
+                Pipe *pipe = flappy->pipes + pipeIndex;
+                pipe->active = false;
+            }
+            //flappy->pipeCount = 0;
         }
-        //flappy->pipeCount = 0;
     }
-}
     
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
@@ -494,7 +494,7 @@ DRAW_IMAGE(draw_image)
         v4 colour = V4(0.4f, 0.5f, 0.1f, 1.0f);
         if (p->active)
         {
-        draw_pipe(image, p, colour);
+            draw_pipe(image, p, colour);
         }
     }
     
@@ -505,7 +505,7 @@ DRAW_IMAGE(draw_image)
         Bird *bird = flappy->birds + birdIndex;
         if (bird->alive)
         {
-        draw_bird(image, bird);
+            draw_bird(image, bird);
             ++drawn;
         }
     }
@@ -554,10 +554,10 @@ DRAW_IMAGE(draw_image)
         }
     }
     
-     sliderBob = (f32)flappy->cycles / 200.0f;
-     sliderHandle = V2(sliderAt.x + round(sliderBob * (f32)sliderSize.x),
-                         sliderAt.y + sliderSize.y / 2 - 1);
-     sliderRadius = (f32)sliderSize.y * 0.5f + 2.0f;
+    sliderBob = (f32)flappy->cycles / 200.0f;
+    sliderHandle = V2(sliderAt.x + round(sliderBob * (f32)sliderSize.x),
+                      sliderAt.y + sliderSize.y / 2 - 1);
+    sliderRadius = (f32)sliderSize.y * 0.5f + 2.0f;
     
     fill_rectangle(image, sliderAt.x - 4, sliderAt.y - 4, sliderSize.x + 8, sliderSize.y + 8,
                    V4(0.2f, 0.2f, 0.2f, 1.0f));
@@ -566,7 +566,7 @@ DRAW_IMAGE(draw_image)
     fill_circle(image, round(sliderHandle.x), round(sliderHandle.y),round(sliderRadius),
                 V4(0.7f, 0.7f, 0.7f, 1.0f));
     
-        flappy->prevMouseDown = mouse.mouseDowns;
+    flappy->prevMouseDown = mouse.mouseDowns;
     flappy->seconds += dt;
     ++flappy->ticks;
 }

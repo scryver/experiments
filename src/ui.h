@@ -329,13 +329,13 @@ ui_match_id(UIState *state, UIID id, Rectangle2s rect)
 }
 
 internal void
-init_ui(UIState *state, Image *screen, u32 maxItems, char *fontFilename)
+init_ui(UIState *state, Image *screen, u32 maxItems, String fontFilename)
 {
     state->screen = screen;
     
-    ApiFile fontFile = read_entire_file(fontFilename);
-    i_expect(fontFile.content.size);
-    unpack_font(fontFile.content.data, &state->font);
+    Buffer fontFile = read_entire_file(fontFilename);
+    i_expect(fontFile.size);
+    unpack_font(fontFile.data, &state->font);
     
     state->maxItemCount = maxItems;
     state->itemCount = 0;

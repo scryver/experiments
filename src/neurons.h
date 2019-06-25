@@ -169,7 +169,7 @@ randomize_weights(RandomSeriesPCG *random, Neural *network, b32 compensateWeight
         f32 oneOverSqrtX = 1.0f;
         if (compensateWeights)
         {
-            oneOverSqrtX /= square_root(prevCount);
+            oneOverSqrtX /= square_root((f32)prevCount);
         }
         for (u32 i = 0; i < count * prevCount; ++i)
         {
@@ -233,7 +233,7 @@ neural_mutate(RandomSeriesPCG *random, Neural *network, NeuronMutate *mutateFunc
 internal inline
 NEURON_ACTIVATE(activation_function)
 {
-    return 1.0f / (1.0f + exp(-a));
+    return 1.0f / (1.0f + fast_exp(-a));
 }
 
 internal inline 
@@ -283,7 +283,7 @@ predict_layer(u32 inCount, u32 outCount, f32 *inputs, f32 *weights, f32 *bias, f
         
         if (softmax)
         {
-            result = exp(result);
+            result = fast_exp(result);
             sum += result;
             outputs[row] = result;
         }

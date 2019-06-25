@@ -26,14 +26,14 @@ shuffle(RandomSeriesPCG *random, u32 dataCount, Training *data)
 }
 
 internal TrainingSet
-parse_training(char *dataPath)
+parse_training(String dataPath)
 {
-     TrainingSet result = {};
+    TrainingSet result = {};
     
-     ApiFile training = read_entire_file(dataPath);
-    i_expect(training.content.size > 0);
+    Buffer training = read_entire_file(dataPath);
+    i_expect(training.size > 0);
     
-    u32 *counts = (u32 *)training.content.data;
+    u32 *counts = (u32 *)training.data;
     result.count = *counts++;
     u32 inpCount = *counts++;
     u32 outCount = *counts++;
@@ -63,7 +63,7 @@ save_training(TrainingSet training, char *savePath)
     FILE *f = fopen(savePath, "wb");
     if (f)
     {
-    fwrite(&training.count, 4, 1, f);
+        fwrite(&training.count, 4, 1, f);
         fwrite(&training.set[0].inputCount, 4, 1, f);
         fwrite(&training.set[0].outputCount, 4, 1, f);
         

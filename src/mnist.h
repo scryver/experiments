@@ -17,22 +17,22 @@ msb_to_lsb32(u32 msb)
 }
 
 internal MnistSet
-parse_mnist(char *labelPath, char *imagePath)
+parse_mnist(String labelPath, String imagePath)
 {
     MnistSet result = {};
     
-     ApiFile labels = read_entire_file(labelPath);
-    i_expect(labels.content.size > 0);
-     ApiFile images = read_entire_file(imagePath);
-    i_expect(images.content.size > 0);
+    Buffer labels = read_entire_file(labelPath);
+    i_expect(labels.size > 0);
+    Buffer images = read_entire_file(imagePath);
+    i_expect(images.size > 0);
     
-    u8 *l = labels.content.data;
+    u8 *l = labels.data;
     i_expect(*l++ == 0x00);
     i_expect(*l++ == 0x00);
     i_expect(*l++ == 0x08);
     i_expect(*l++ == 0x01);
     
-    u8 *i = images.content.data;
+    u8 *i = images.data;
     i_expect(*i++ == 0x00);
     i_expect(*i++ == 0x00);
     i_expect(*i++ == 0x08);

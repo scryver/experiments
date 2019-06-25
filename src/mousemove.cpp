@@ -85,9 +85,9 @@ DRAW_IMAGE(draw_image)
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
     v2 minRectInt = map(minRect, mouseState->virtualCoordsMin, mouseState->virtualCoordsMax,
-                    mouseState->pixelCoordsMin, mouseState->pixelCoordsMax);
+                        mouseState->pixelCoordsMin, mouseState->pixelCoordsMax);
     v2 maxRectInt = map(maxRect, mouseState->virtualCoordsMin, mouseState->virtualCoordsMax,
-                    mouseState->pixelCoordsMin, mouseState->pixelCoordsMax);
+                        mouseState->pixelCoordsMin, mouseState->pixelCoordsMax);
     f32 width = maxRectInt.x - minRectInt.x;
     f32 height = maxRectInt.y - minRectInt.y;
     
@@ -96,7 +96,7 @@ DRAW_IMAGE(draw_image)
     if ((mouse.mouseDowns & Mouse_Left) &&
         !(mouseState->prevMouseDown & Mouse_Left))
     {
-        mouseState->mouseSelectStart = V2(mouse.pixelPosition);
+        mouseState->mouseSelectStart = mouse.pixelPosition;
     }
     
     if (mouse.mouseDowns & Mouse_Left)
@@ -158,7 +158,7 @@ DRAW_IMAGE(draw_image)
     if ((mouse.mouseDowns & Mouse_Right) &&
         !(mouseState->prevMouseDown & Mouse_Right))
     {
-        mouseState->mouseDragStart = V2(mouse.pixelPosition);
+        mouseState->mouseDragStart = mouse.pixelPosition;
     }
     
     if (mouse.mouseDowns & Mouse_Right)
@@ -166,12 +166,12 @@ DRAW_IMAGE(draw_image)
         v2 mouseS = map(mouseState->mouseDragStart, 
                         V2(0, 0), size, 
                         mouseState->virtualCoordsMin, mouseState->virtualCoordsMax);
-        v2 mouseP = map(V2(mouse.pixelPosition),
+        v2 mouseP = map(mouse.pixelPosition,
                         V2(0, 0), size, 
                         mouseState->virtualCoordsMin, mouseState->virtualCoordsMax);
         v2 diff = mouseS - mouseP;
         
-        mouseState->mouseDragStart = V2(mouse.pixelPosition);
+        mouseState->mouseDragStart = mouse.pixelPosition;
         
         mouseState->virtualCoordsMin += diff;
         mouseState->virtualCoordsMax += diff;

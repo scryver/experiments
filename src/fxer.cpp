@@ -43,7 +43,7 @@ DRAW_IMAGE(draw_image)
         // fxer->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         fxer->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         
-        init_ui(&fxer->ui, image, 64, "data/output.font");
+        init_ui(&fxer->ui, image, 64, static_string("data/output.font"));
         
         state->initialized = true;
     }
@@ -58,7 +58,7 @@ DRAW_IMAGE(draw_image)
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
     UILayout *layout = ui_begin(&fxer->ui, Layout_Vertical, 
-                                      20, 20, image->width - 40, image->height - 40, 0);
+                                20, 20, image->width - 40, image->height - 40, 0);
     
     UILayout *innerLayout = ui_layout(&fxer->ui, layout, Layout_Horizontal, 5);
     if (ui_button_imm(&fxer->ui, innerLayout, "Hallo"))
@@ -105,17 +105,17 @@ DRAW_IMAGE(draw_image)
     }
     
     ui_end(&fxer->ui);
-
+    
     if (keyboard->keys[Key_A].isDown)
     {
-    if (fxer->check1)
-    {
-        fill_rectangle(image, 0, 50, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
-    }
-    if (fxer->check2)
-    {
-        fill_rectangle(image, 0, 150, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
-    }
+        if (fxer->check1)
+        {
+            fill_rectangle(image, 0, 50, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
+        }
+        if (fxer->check2)
+        {
+            fill_rectangle(image, 0, 150, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
+        }
     }
     
     if (keyboard->keys[Key_S].isPressed)
@@ -129,13 +129,13 @@ DRAW_IMAGE(draw_image)
     
     if (fxer->check1)
     {
-    v2u offset = V2U(image->width / 2 + fxer->setting2, 0);
-    u32 colour = ((        0xFF << 24) |
-                  (fxer->setting1 << 16) |
-                  (fxer->setting1 <<  8) |
-                  (fxer->setting1 <<  0));
-    v2u dim = V2U(100, (u32)(150.0f * fxer->setting3 + 50.0f));
-    fill_rectangle(image, offset.x, offset.y, dim.x, dim.y, colour);
+        v2u offset = V2U(image->width / 2 + fxer->setting2, 0);
+        u32 colour = ((        0xFF << 24) |
+                      (fxer->setting1 << 16) |
+                      (fxer->setting1 <<  8) |
+                      (fxer->setting1 <<  0));
+        v2u dim = V2U(100, (u32)(150.0f * fxer->setting3 + 50.0f));
+        fill_rectangle(image, offset.x, offset.y, dim.x, dim.y, colour);
     }
     else
     {

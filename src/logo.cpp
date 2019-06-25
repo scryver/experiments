@@ -109,18 +109,18 @@ get_next_token(Parser *parser)
     String result = {};
     if (parser->index < parser->remaining.size)
     {
-    while ((parser->index < parser->remaining.size) &&
-           is_space(parser->remaining.data[parser->index++]))
-    {
-        
-    }
-    result.data = parser->remaining.data + parser->index - 1;
-    ++result.size;
+        while ((parser->index < parser->remaining.size) &&
+               is_whitespace(parser->remaining.data[parser->index++]))
+        {
+            
+        }
+        result.data = parser->remaining.data + parser->index - 1;
+        ++result.size;
         if ((result.data[0] != '[') && (result.data[0] != ']'))
         {
             while ((parser->index < parser->remaining.size) &&
                    (parser->remaining.data[parser->index] != ']') &&
-                   !is_space(parser->remaining.data[parser->index++]))
+                   !is_whitespace(parser->remaining.data[parser->index++]))
             {
                 ++result.size;
             }
@@ -150,7 +150,7 @@ parse_commands(Parser *parser, u32 maxCommands, Command *commands)
     
     while (token.size && (commandCount < maxCommands))
     {
-    if ((token == forward) ||
+        if ((token == forward) ||
             (token == backward) ||
             (token == leftTurn) ||
             (token == rightTurn))

@@ -50,9 +50,9 @@ DRAW_IMAGE(draw_image)
         
         randomize_weights(&handwrite->randomizer, &handwrite->brain);
         
-        handwrite->train = parse_training("data/mnist-f32train");
-        handwrite->test = parse_training("data/mnist-f32test");
-        handwrite->validation = parse_training("data/mnist-f32validation");
+        handwrite->train = parse_training(static_string("data/mnist-f32train"));
+        handwrite->test = parse_training(static_string("data/mnist-f32test"));
+        handwrite->validation = parse_training(static_string("data/mnist-f32validation"));
         
         state->initialized = true;
     }
@@ -68,16 +68,16 @@ DRAW_IMAGE(draw_image)
     {
         f32 *wMap = weights + m * rows * columns;
         for (u32 y = 0; y < rows; ++y)
-    {
-            f32 *wRow = wMap + y * columns;
-        for (u32 x = 0; x < columns; ++x)
         {
-            f32 gray = activate_neuron(wRow[x]);
-            v4 colour = V4(gray, gray, gray, 1);
-            fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
-                           resolution, resolution, colour);
+            f32 *wRow = wMap + y * columns;
+            for (u32 x = 0; x < columns; ++x)
+            {
+                f32 gray = activate_neuron(wRow[x]);
+                v4 colour = V4(gray, gray, gray, 1);
+                fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
+                               resolution, resolution, colour);
+            }
         }
-    }
         
         xOffset += resolution * columns + 5;
         
@@ -90,21 +90,21 @@ DRAW_IMAGE(draw_image)
     
     if (handwrite->ticks)
     {
-    u32 preCorrect = evaluate(&handwrite->brain, handwrite->validation);
-    
-    u32 epochs = 1;
-    stochastic_gradient_descent(&handwrite->randomizer, &handwrite->brain,
-                                epochs, 10, 0.5f, handwrite->train, 5.0f);
-    handwrite->epochCount += epochs;
-    
-    u32 postCorrect = evaluate(&handwrite->brain, handwrite->validation);
-    
-    f32 preProcent = 100.0f * (f32)preCorrect / (f32)handwrite->validation.count;
-    f32 postProcent = 100.0f * (f32)postCorrect / (f32)handwrite->validation.count;
-    fprintf(stdout, "%4d: From %4u to %4u in %4d epoch%s. (%2.2f%% -> %2.2f%%, %+0.2f%%)\n",
-            handwrite->epochCount,
-            preCorrect, postCorrect, epochs, epochs == 1 ? "" : "s",
-            preProcent, postProcent, postProcent - preProcent);
+        u32 preCorrect = evaluate(&handwrite->brain, handwrite->validation);
+        
+        u32 epochs = 1;
+        stochastic_gradient_descent(&handwrite->randomizer, &handwrite->brain,
+                                    epochs, 10, 0.5f, handwrite->train, 5.0f);
+        handwrite->epochCount += epochs;
+        
+        u32 postCorrect = evaluate(&handwrite->brain, handwrite->validation);
+        
+        f32 preProcent = 100.0f * (f32)preCorrect / (f32)handwrite->validation.count;
+        f32 postProcent = 100.0f * (f32)postCorrect / (f32)handwrite->validation.count;
+        fprintf(stdout, "%4d: From %4u to %4u in %4d epoch%s. (%2.2f%% -> %2.2f%%, %+0.2f%%)\n",
+                handwrite->epochCount,
+                preCorrect, postCorrect, epochs, epochs == 1 ? "" : "s",
+                preProcent, postProcent, postProcent - preProcent);
     }
     
     ++handwrite->ticks;

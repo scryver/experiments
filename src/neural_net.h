@@ -105,7 +105,7 @@ map(Matrix *m, MatrixMap *map)
 MATRIX_MAP(sigmoid)
 {
     f32 result = 0;
-    result = 1.0f / (1.0f + exp(-a));
+    result = 1.0f / (1.0f + fast_exp(-a));
     return result;
 }
 
@@ -205,12 +205,12 @@ train(NeuralNetwork *network, u32 inputCount, f32 *inputs,
     Matrix outputErrors = create_matrix(&network->arena, answer.rows, answer.columns);
     matrix_copy(answer.rows, answer.columns, answer.m, outputErrors.m);
     outputErrors -= network->outputs;
-
+    
 #if 0    
     hadamard(outputErrors, &outputErrors);
     outputErrors *= 0.5f;
-    #endif
-
+#endif
+    
     i_expect(outputErrors.columns == 1);
     
 #if 0    
@@ -228,7 +228,7 @@ train(NeuralNetwork *network, u32 inputCount, f32 *inputs,
     
     // NOTE(michiel): Calculate hidden weight deltas
     Matrix hiddenT = create_matrix(&network->arena, network->hidden.columns, network->hidden.rows);
-        transpose(network->hidden, &hiddenT);
+    transpose(network->hidden, &hiddenT);
     Matrix weightsHDeltas = create_matrix(&network->arena, gradients.rows, hiddenT.columns);
     multiply(gradients, hiddenT, &weightsHDeltas);
     

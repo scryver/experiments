@@ -352,7 +352,7 @@ randomize_weights(RandomSeriesPCG *random, NeuralCake *network, b32 compensateWe
                 f32 oneOverSqrtX = 1.0f;
                 if (compensateWeights)
                 {
-                    oneOverSqrtX /= square_root(inputCount);
+                    oneOverSqrtX /= square_root((f32)inputCount);
                 }
                 for (u32 w = 0; w < inputCount * outputCount; ++w)
                 {
@@ -385,7 +385,7 @@ randomize_weights(RandomSeriesPCG *random, NeuralCake *network, b32 compensateWe
 internal inline f32
 activate_neuron(f32 a)
 {
-    return 1.0f / (1.0f + exp(-a));
+    return 1.0f / (1.0f + fast_exp(-a));
 }
 
 internal inline f32
@@ -431,7 +431,7 @@ predict_layer(NeuralLayer *layer)
                 // NOTE(michiel): Sigmoid and store
                 if (layer->fullyConnected.softMax)
                 {
-                    result = exp(result);
+                    result = fast_exp(result);
                     sum += result;
                     layer->outputs[row] = result;
                 }

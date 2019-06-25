@@ -362,7 +362,7 @@ create_rectangulargrid(u32 maxCount, HexCell *cells, s32 width, s32 height)
     u32 count = 0;
     for (s32 r = 0; r < height; ++r)
     {
-        s32 rOffset = trunc(r / 2);
+        s32 rOffset = s32_from_f32_truncate(r / 2);
         for (s32 q = -rOffset; q < width - rOffset; ++q)
         {
             i_expect(count < maxCount);
@@ -457,7 +457,7 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
         state->initialized = true;
     }
     
-    HexCell mouseHover = hex_round(pixel_to_hex(&hexer->layout, V2(mouse.pixelPosition)));
+    HexCell mouseHover = hex_round(pixel_to_hex(&hexer->layout, mouse.pixelPosition));
     
     if ((mouse.mouseDowns & Mouse_Right) &&
         !(hexer->prevMouseDown & Mouse_Right))

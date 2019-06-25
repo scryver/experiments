@@ -59,7 +59,7 @@ get_cell(Grid *grid, u32 x, u32 y)
 }
 
 internal u32
-   get_alive_neighbours(Grid *grid, Cell *cell)
+get_alive_neighbours(Grid *grid, Cell *cell)
 {
     u32 result = 0;
     
@@ -134,7 +134,7 @@ DRAW_IMAGE(draw_image)
                 cell->pos.x = col;
                 cell->pos.y = row;
                 cell->alive = false;
-                 cell = grid->cells[1] + cellIndex;
+                cell = grid->cells[1] + cellIndex;
                 cell->pos.x = col;
                 cell->pos.y = row;
                 cell->alive = false;
@@ -148,14 +148,14 @@ DRAW_IMAGE(draw_image)
     
     Grid *grid = &gameState->grid;
     
-    v2 mouseP = V2(mouse.pixelPosition);
+    v2 mouseP = mouse.pixelPosition;
     mouseP.x /= (f32)width;
     mouseP.y /= (f32)width;
     
     if (mouse.mouseDowns & Mouse_Left)
     {
-    Cell *cell = get_cell(grid, trunc(mouseP.x), trunc(mouseP.y));
-    cell->alive = true;
+        Cell *cell = get_cell(grid, u32_from_f32_truncate(mouseP.x), u32_from_f32_truncate(mouseP.y));
+        cell->alive = true;
     }
     
     if ((mouse.mouseDowns & Mouse_Right) &&
@@ -203,7 +203,7 @@ DRAW_IMAGE(draw_image)
                 Cell *next = grid->cells[nextActive] + row * grid->columns + col;
                 *next = *current;
                 
-            u32 aliveNeighbourCount = get_alive_neighbours(grid, current);
+                u32 aliveNeighbourCount = get_alive_neighbours(grid, current);
                 if (current->alive && (aliveNeighbourCount < 2))
                 {
                     next->alive = false;
@@ -216,9 +216,9 @@ DRAW_IMAGE(draw_image)
                 {
                     next->alive = true;
                 }
-                }
+            }
         }
-    grid->currentActive = nextActive;
+        grid->currentActive = nextActive;
     }
     
     
@@ -237,11 +237,11 @@ DRAW_IMAGE(draw_image)
         
         if (gameState->border)
         {
-        // NOTE(michiel): Border
+            // NOTE(michiel): Border
             outline_rectangle(image, min.x, min.y, max.x - min.x, max.y - min.y,
                               V4(1, 1, 1, 1));
-        min += 1;
-        max -= 1;
+            min += 1;
+            max -= 1;
         }
         
         fill_rectangle(image, min.x, min.y, max.x - min.x, max.y - min.y,

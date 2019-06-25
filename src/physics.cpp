@@ -35,17 +35,17 @@ update(Mover *mover, f32 maxVelocity = 0.0f)
     mover->velocity += mover->acceleration;
     mover->position += mover->velocity;
     if (maxVelocity != 0.0f)
-        { 
+    { 
         f32 maxVelSqr = maxVelocity * maxVelocity;
-    f32 velMagSqr = length_squared(mover->velocity);
-    if (velMagSqr > maxVelSqr)
-    {
-        f32 scale = maxVelSqr / velMagSqr;
-        mover->velocity *= scale;
+        f32 velMagSqr = length_squared(mover->velocity);
+        if (velMagSqr > maxVelSqr)
+        {
+            f32 scale = maxVelSqr / velMagSqr;
+            mover->velocity *= scale;
+        }
     }
-}
     mover->acceleration *= 0.0f;
-    }
+}
 
 internal inline void
 bound_check(Image *image, Mover *mover)
@@ -93,7 +93,7 @@ DRAW_IMAGE(draw_image)
     }
     Mover *mover = physics->movers + physics->currentMover;
     
-    v2 diff = V2(mouse.pixelPosition) - mover->position;
+    v2 diff = mouse.pixelPosition - mover->position;
     f32 lengthDiff = 1.0f / length(diff);
     diff *= 0.1f * lengthDiff;
     
@@ -111,7 +111,7 @@ DRAW_IMAGE(draw_image)
     {
         u32 moverIndex = (physics->currentMover + currentIndex) % physics->moverCount;
         Mover *mover = physics->movers + moverIndex;
-    fill_circle(image, mover->position.x, mover->position.y, 20,
+        fill_circle(image, mover->position.x, mover->position.y, 20,
                     V4(0.6f, 0.7f, 0.6f, (f32)currentIndex * divider));
     }
     

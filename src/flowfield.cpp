@@ -43,8 +43,8 @@ update_flow_field(FlowField *field, PerlinNoise *random, f32 z = 0.0f)
         for (u32 col = 0; col < field->size.x; ++col)
         {
             f32 theta = perlin_noise(random, V3(col / (f32)field->size.x, 
-                                                         row / (f32)field->size.y,
-                                                       z)) * F32_TAU;
+                                                row / (f32)field->size.y,
+                                                z)) * F32_TAU;
             field->grid[row * field->size.x + col] = polar_to_cartesian(1.0f, theta);
         }
     }
@@ -90,10 +90,10 @@ DRAW_IMAGE(draw_image)
         state->initialized = true;
     }
     
-    v2 mouseP = V2(mouse.pixelPosition);
+    v2 mouseP = mouse.pixelPosition;
     
     update_flow_field(&flow->field, &flow->perlin, flow->zMod);
-        
+    
     for (u32 vehicleIndex = 0; vehicleIndex < flow->vehicleCount; ++vehicleIndex)
     {
         Vehicle *vehicle = flow->vehicles + vehicleIndex;
