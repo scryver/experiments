@@ -71,7 +71,7 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/blackbox.cpp" -o blackbox -lX11 -lGL &
 TEST
 
-    clang++ $flags $exceptions $(pkg-config --cflags freetype2) "$codeDir/freefont.cpp" -o freefont $(pkg-config --libs freetype2) -lX11 -lGL &
+    clang++ $flags $exceptions -I/usr/include/harfbuzz $(pkg-config --cflags freetype2) "$codeDir/freefont.cpp" -o freefont $(pkg-config --libs freetype2) -lharfbuzz -lX11 -lGL &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net

@@ -9,6 +9,9 @@ DRAW_IMAGE(draw_image);
 #include FT_FREETYPE_H
 #define internal static
 
+#include <hb.h>
+#include <hb-ft.h>
+
 #include "main.cpp"
 
 #include "../libberdip/std_file.c"
@@ -21,10 +24,14 @@ struct FTState
     u32 ticks;
     u32 prevMouseDown;
     
+    u32 fontSize;
     b32 hasKerning;
     
     FT_Library  ftLibrary;
     FT_Face     ftFace;
+    
+    hb_buffer_t *hbBuffer;
+    hb_font_t   *hbFont;
 };
 
 internal void
@@ -69,11 +76,11 @@ DRAW_IMAGE(draw_image)
         }
         else
         {
-            Buffer fontFile = read_entire_file(string("/usr/share/fonts/truetype/freefont/FreeSans.ttf"));
+            //Buffer fontFile = read_entire_file(string("/usr/share/fonts/truetype/freefont/FreeSans.ttf"));
             //Buffer fontFile = read_entire_file(string("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"));
-            //Buffer fontFile = read_entire_file(string("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"));
+            Buffer fontFile = read_entire_file(string("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"));
             //Buffer fontFile = read_entire_file(string("/usr/share/fonts/truetype/malayalam/Suruma.ttf"));
-            
+            //Buffer fontFile = read_entire_file(string("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"));
             //Buffer fontFile = read_entire_file(string("/usr/share/fonts/truetype/nanum/NanumMyeongjo.ttf"));
             //Buffer fontFile = read_entire_file(string("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf"));
             //Buffer fontFile = read_entire_file(string("/usr/share/fonts/truetype/noto/NotoSans-SemiCondensedBlack.ttf"));
@@ -106,8 +113,9 @@ DRAW_IMAGE(draw_image)
             fprintf(stdout, "This font has%s got kerning support!\n",
                     ftState->hasKerning ? "" : "n't");
             
-            // NOTE(michiel): Horizontal = 0 (same as vertical), Vertical = 32 pixels
-            error = FT_Set_Pixel_Sizes(ftState->ftFace, 0, 64);
+            // NOTE(michiel): Horizontal = 0 (same as vertical), Vertical = x pixels
+            ftState->fontSize = 32;
+            error = FT_Set_Pixel_Sizes(ftState->ftFace, 0, ftState->fontSize);
             if (error)
             {
                 fprintf(stderr, "Could not set pixel size!\n");
@@ -116,6 +124,11 @@ DRAW_IMAGE(draw_image)
         
         fprintf(stdout, "Got %ld font face%s\n", ftState->ftFace->num_faces,
                 ftState->ftFace->num_faces == 1 ? "" : "s");
+        
+        ftState->hbBuffer = hb_buffer_create();
+        ftState->hbFont = hb_ft_font_create(ftState->ftFace, NULL);
+        //hb_font_set_scale(ftState->hbFont, ftState->fontSize, ftState->fontSize);
+        
         state->initialized = true;
     }
     
@@ -128,13 +141,78 @@ DRAW_IMAGE(draw_image)
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
     {
+        FT_GlyphSlot slot = ftState->ftFace->glyph;
+        
         // NOTE(michiel): Loading glyphs
         u32 startX = 20;
-        u32 x = startX;
-        u32 y = 64;
+        s32 x = startX;
+        s32 y = startX + (ftState->ftFace->size->metrics.height >> 6);
         
-        String testStr = static_string("Hello, world!\n\xEB\xB8\xA0\nAnd some more text for\nVAWA jij and fij ffi");
-        FT_GlyphSlot slot = ftState->ftFace->glyph;
+        String testStr = static_string("Hello, world!\n"
+                                       "\xEB\xB8\xA0\xEB\xB8\xA1\xEB\xB8\xA2\xEB\xB8\xA3\n"
+                                       "And some more text for\nVAWA jij and fij ffi");
+        
+        while (testStr.size)
+        {
+            u32 nextNewline = 0;
+            b32 found = false;
+            while (nextNewline < testStr.size)
+            {
+                if (testStr.data[nextNewline] == '\n') {
+                    found = true;
+                    break;
+                }
+                ++nextNewline;
+            }
+            String line = testStr;
+            if (found) {
+                line.size = nextNewline;
+                testStr.size -= nextNewline + 1;
+                testStr.data += nextNewline + 1;
+            } else {
+                testStr.size = 0;
+            }
+            
+            hb_buffer_add_utf8(ftState->hbBuffer, (char *)line.data, line.size, 0, line.size);
+            hb_buffer_guess_segment_properties(ftState->hbBuffer);
+            hb_shape(ftState->hbFont, ftState->hbBuffer, 0, 0);
+            
+            u32 glyphCount = hb_buffer_get_length(ftState->hbBuffer);
+            hb_glyph_info_t *glyph_info    = hb_buffer_get_glyph_infos(ftState->hbBuffer, 0);
+            hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(ftState->hbBuffer, 0);
+            
+            u32 prevGlyph = 0;
+            for (u32 idx = 0; idx < glyphCount; ++idx)
+            {
+                u32 glyphIndex = glyph_info[idx].codepoint;
+                s32 x_offset = (glyph_pos[idx].x_offset + 0x20) >> 6;
+                s32 y_offset = (glyph_pos[idx].y_offset + 0x20) >> 6;
+                s32 x_advance = (glyph_pos[idx].x_advance + 0x20) >> 6;
+                s32 y_advance = (glyph_pos[idx].y_advance + 0x20) >> 6;
+                
+                b32 error = FT_Load_Glyph(ftState->ftFace, glyphIndex, FT_LOAD_DEFAULT);
+                if (error) {
+                    fprintf(stderr, "Could not load glyph %u\n", glyphIndex);
+                }
+                
+                error = FT_Render_Glyph(ftState->ftFace->glyph, FT_RENDER_MODE_NORMAL);
+                if (error) {
+                    fprintf(stderr, "Could not render glyph %u\n", glyphIndex);
+                }
+                
+                draw_glyph(image, x + x_offset + slot->bitmap_left, y + y_offset - slot->bitmap_top, &slot->bitmap, V4(1, 1, 0, 1));
+                x += x_advance;
+                y += y_advance;
+                prevGlyph = glyphIndex;
+            }
+            
+            hb_buffer_reset(ftState->hbBuffer);
+            
+            x = startX;
+            y += ftState->ftFace->size->metrics.height >> 6;
+        }
+        
+#if 0        
         
         u32 prevGlyph = 0;
         for (u32 idx = 0; idx < testStr.size;)
@@ -181,6 +259,8 @@ DRAW_IMAGE(draw_image)
             
             prevGlyph = glyphIndex;
         }
+#endif
+        
     }
     
     ftState->prevMouseDown = mouse.mouseDowns;
