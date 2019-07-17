@@ -27,6 +27,8 @@ struct FTState
     u32 fontSize;
     b32 hasKerning;
     
+    b32 useHarfbuzz;
+    
     FT_Library  ftLibrary;
     FT_Face     ftFace;
     
@@ -138,6 +140,12 @@ DRAW_IMAGE(draw_image)
                 ftState->hasKerning ? "" : "n't");
     }
     
+    if (keyboard->keys[Key_H].isPressed) {
+        ftState->useHarfbuzz = !ftState->useHarfbuzz;
+        fprintf(stdout, "%sing Harfbuzz to support lygitures\n",
+                ftState->useHarfbuzz ? "U" : "Not u");
+    }
+    
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
     {
@@ -152,28 +160,10 @@ DRAW_IMAGE(draw_image)
                                        "\xEB\xB8\xA0\xEB\xB8\xA1\xEB\xB8\xA2\xEB\xB8\xA3\n"
                                        "And some more text for\nVAWA jij and fij ffi");
         
-        while (testStr.size)
+        
+        if (ftState->useHarfbuzz)
         {
-            u32 nextNewline = 0;
-            b32 found = false;
-            while (nextNewline < testStr.size)
-            {
-                if (testStr.data[nextNewline] == '\n') {
-                    found = true;
-                    break;
-                }
-                ++nextNewline;
-            }
-            String line = testStr;
-            if (found) {
-                line.size = nextNewline;
-                testStr.size -= nextNewline + 1;
-                testStr.data += nextNewline + 1;
-            } else {
-                testStr.size = 0;
-            }
-            
-            hb_buffer_add_utf8(ftState->hbBuffer, (char *)line.data, line.size, 0, line.size);
+            hb_buffer_add_utf8(ftState->hbBuffer, (char *)testStr.data, testStr.size, 0, testStr.size);
             hb_buffer_guess_segment_properties(ftState->hbBuffer);
             hb_shape(ftState->hbFont, ftState->hbBuffer, 0, 0);
             
@@ -181,86 +171,89 @@ DRAW_IMAGE(draw_image)
             hb_glyph_info_t *glyph_info    = hb_buffer_get_glyph_infos(ftState->hbBuffer, 0);
             hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(ftState->hbBuffer, 0);
             
-            u32 prevGlyph = 0;
             for (u32 idx = 0; idx < glyphCount; ++idx)
             {
                 u32 glyphIndex = glyph_info[idx].codepoint;
-                s32 x_offset = (glyph_pos[idx].x_offset + 0x20) >> 6;
-                s32 y_offset = (glyph_pos[idx].y_offset + 0x20) >> 6;
-                s32 x_advance = (glyph_pos[idx].x_advance + 0x20) >> 6;
-                s32 y_advance = (glyph_pos[idx].y_advance + 0x20) >> 6;
-                
-                b32 error = FT_Load_Glyph(ftState->ftFace, glyphIndex, FT_LOAD_DEFAULT);
-                if (error) {
-                    fprintf(stderr, "Could not load glyph %u\n", glyphIndex);
+                if (glyph_info[idx].cluster < testStr.size &&
+                    testStr.data[glyph_info[idx].cluster] == '\n')
+                {
+                    x = startX;
+                    y += ftState->ftFace->size->metrics.height >> 6;
                 }
-                
-                error = FT_Render_Glyph(ftState->ftFace->glyph, FT_RENDER_MODE_NORMAL);
-                if (error) {
-                    fprintf(stderr, "Could not render glyph %u\n", glyphIndex);
+                else
+                {
+                    s32 x_offset = (glyph_pos[idx].x_offset + 0x20) >> 6;
+                    s32 y_offset = (glyph_pos[idx].y_offset + 0x20) >> 6;
+                    s32 x_advance = (glyph_pos[idx].x_advance + 0x20) >> 6;
+                    s32 y_advance = (glyph_pos[idx].y_advance + 0x20) >> 6;
+                    
+                    b32 error = FT_Load_Glyph(ftState->ftFace, glyphIndex, FT_LOAD_DEFAULT);
+                    if (error) {
+                        fprintf(stderr, "Could not load glyph %u\n", glyphIndex);
+                    }
+                    
+                    error = FT_Render_Glyph(ftState->ftFace->glyph, FT_RENDER_MODE_NORMAL);
+                    if (error) {
+                        fprintf(stderr, "Could not render glyph %u\n", glyphIndex);
+                    }
+                    
+                    draw_glyph(image, x + x_offset + slot->bitmap_left, y + y_offset - slot->bitmap_top, &slot->bitmap, V4(1, 1, 0, 1));
+                    x += x_advance;
+                    y += y_advance;
                 }
-                
-                draw_glyph(image, x + x_offset + slot->bitmap_left, y + y_offset - slot->bitmap_top, &slot->bitmap, V4(1, 1, 0, 1));
-                x += x_advance;
-                y += y_advance;
-                prevGlyph = glyphIndex;
             }
             
             hb_buffer_reset(ftState->hbBuffer);
             
-            x = startX;
-            y += ftState->ftFace->size->metrics.height >> 6;
         }
-        
-#if 0        
-        
-        u32 prevGlyph = 0;
-        for (u32 idx = 0; idx < testStr.size;)
+        else
         {
-            u32 codepoint = 0;
-            u32 advance = get_code_point_from_utf8(testStr.data + idx, &codepoint);
-            if (!advance) {
-                fprintf(stderr, "Invalid utf character 0x%02X\n", testStr.data[idx]);
-                advance = 1;
-            }
-            idx += advance;
-            
-            u32 glyphIndex = 0;
-            if (codepoint == '\n') {
-                x = startX;
-                y += ftState->ftFace->size->metrics.height >> 6;
-            } else {
-                glyphIndex = FT_Get_Char_Index(ftState->ftFace, codepoint);
-                b32 error = FT_Load_Glyph(ftState->ftFace, glyphIndex, FT_LOAD_DEFAULT);
-                if (error) {
-                    fprintf(stderr, "Could not load glyph %u\n", glyphIndex);
+            u32 prevGlyph = 0;
+            for (u32 idx = 0; idx < testStr.size;)
+            {
+                u32 codepoint = 0;
+                u32 advance = get_code_point_from_utf8(testStr.data + idx, &codepoint);
+                if (!advance) {
+                    fprintf(stderr, "Invalid utf character 0x%02X\n", testStr.data[idx]);
+                    advance = 1;
                 }
+                idx += advance;
                 
-                error = FT_Render_Glyph(ftState->ftFace->glyph, FT_RENDER_MODE_NORMAL);
-                if (error) {
-                    fprintf(stderr, "Could not render glyph %u\n", glyphIndex);
-                }
-                
-                if (ftState->hasKerning && prevGlyph && glyphIndex)
-                {
-                    FT_Vector kerning = {};
-                    error = FT_Get_Kerning(ftState->ftFace, prevGlyph, glyphIndex, FT_KERNING_DEFAULT, &kerning);
+                u32 glyphIndex = 0;
+                if (codepoint == '\n') {
+                    x = startX;
+                    y += ftState->ftFace->size->metrics.height >> 6;
+                } else {
+                    glyphIndex = FT_Get_Char_Index(ftState->ftFace, codepoint);
+                    b32 error = FT_Load_Glyph(ftState->ftFace, glyphIndex, FT_LOAD_DEFAULT);
                     if (error) {
-                        fprintf(stderr, "Could not get the kerning info needed between %u and %u\n", prevGlyph, glyphIndex);
+                        fprintf(stderr, "Could not load glyph %u\n", glyphIndex);
                     }
                     
-                    x += kerning.x >> 6;
+                    error = FT_Render_Glyph(ftState->ftFace->glyph, FT_RENDER_MODE_NORMAL);
+                    if (error) {
+                        fprintf(stderr, "Could not render glyph %u\n", glyphIndex);
+                    }
+                    
+                    if (ftState->hasKerning && prevGlyph && glyphIndex)
+                    {
+                        FT_Vector kerning = {};
+                        error = FT_Get_Kerning(ftState->ftFace, prevGlyph, glyphIndex, FT_KERNING_DEFAULT, &kerning);
+                        if (error) {
+                            fprintf(stderr, "Could not get the kerning info needed between %u and %u\n", prevGlyph, glyphIndex);
+                        }
+                        
+                        x += kerning.x >> 6;
+                    }
+                    
+                    draw_glyph(image, x + slot->bitmap_left, y - slot->bitmap_top,
+                               &slot->bitmap, V4(1, 1, 0, 1));
+                    x += slot->advance.x >> 6;
                 }
                 
-                draw_glyph(image, x + slot->bitmap_left, y - slot->bitmap_top,
-                           &slot->bitmap, V4(1, 1, 0, 1));
-                x += slot->advance.x >> 6;
+                prevGlyph = glyphIndex;
             }
-            
-            prevGlyph = glyphIndex;
         }
-#endif
-        
     }
     
     ftState->prevMouseDown = mouse.mouseDowns;
