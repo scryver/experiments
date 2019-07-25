@@ -5,7 +5,7 @@
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
-#define SUBPIXEL_LOCATION 1
+#define SUBPIXEL_LOCATION 0
 // NOTE(michiel): Make one or none 1, others 0
 #define FONT_POS_ROUNDING 1
 #define FONT_POS_FLOOR    0
@@ -78,11 +78,9 @@ struct SingleFont
     Buffer  memory;
     stbtt_fontinfo stbFont;
     
-    f32 fontScale;
-    
-    f32 ascender;
-    f32 descender;
-    f32 lineGap;
+    s32 ascender;
+    s32 descender;
+    s32 lineGap;
 };
 
 struct DualFont
@@ -99,19 +97,18 @@ struct StbFont
     // NOTE(michiel): Using font 0 -> count to search for glyphs. Only using the next font if the glyph is undefined
     u32 fontCount;
     DualFont fonts[MAX_FALLBACK_FONTS];
-    
-    f32 pixelHeight;
 };
 
-internal f32
+internal s32
 get_line_advance(SingleFont *font)
 {
-    f32 result = font->ascender - font->descender + font->lineGap;
+    s32 result = font->ascender - font->descender + font->lineGap;
     return result;
 }
 
 struct TextImage
 {
+    f32 pixelHeight;
     String text;
     Image8 image;
 };
@@ -132,10 +129,9 @@ struct StbState
 };
 
 internal void
-init_stb_font(StbFont *font, f32 pixelHeight)
+init_stb_font(StbFont *font)
 {
     font->fontCount = 0;
-    font->pixelHeight = pixelHeight;
 }
 
 internal SingleFont
@@ -156,16 +152,11 @@ add_stb_font(StbFont *font, String filename)
                 
                 fprintf(stdout, "Found %d font%s in '%.*s'\n", numFonts, numFonts == 1 ? "" : "s", STR_FMT(filename));
                 
-                s32 ascent, descent, lineGap;
-                stbtt_GetFontVMetrics(&result.stbFont, &ascent, &descent, &lineGap);
-                
-                //f32 scale = font->pixelHeight / (f32)(ascent - descent);
-                f32 scale = stbtt_ScaleForPixelHeight(&result.stbFont, font->pixelHeight);
-                
-                result.ascender = scale * (f32)ascent;
-                result.descender = scale * (f32)descent;
-                result.lineGap = scale * (f32)lineGap;
-                result.fontScale = scale;
+                stbtt_GetFontVMetrics(&result.stbFont, &result.ascender, &result.descender, &result.lineGap);
+#if 0                
+                //result.fontScale = font->pixelHeight / (f32)(ascent - descent);
+                result.fontScale = stbtt_ScaleForPixelHeight(&result.stbFont, font->pixelHeight);
+#endif
             }
             else
             {
@@ -223,20 +214,25 @@ get_font_from_codepoint(StbFont *font, u32 codepoint, b32 useBold = false, u32 *
     return result;
 }
 
-internal TextImage
-create_text_image(StbFont *font, String text)
+internal void
+create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result)
 {
-    i_expect(font->fontCount);
+    struct timespec startTime = get_wall_clock();
     
-    TextImage result = {};
-    result.text = text;
-    result.image.height = s32_from_f32_round(get_line_advance(&font->fonts[0].regular));
+    i_expect(font->fontCount);
+    SingleFont *curFont = &font->fonts[0].regular;
+    
+    result->pixelHeight = pixelHeight;
+    result->text = text;
+    result->image = {};
     
     // TODO(michiel): Merge two groups somehow, temp memory maybe?
     u8 *scan = text.data;
     b32 useBold = false;
     u32 prevGlyph = 0;
-    f32 maxX = 0.0f;
+    s32 maxWidth = 0;
+    s32 width = 0;
+    s32 height = get_line_advance(curFont);
     for (u32 textIdx = 0; textIdx < text.size;)
     {
         if ((scan[0] != FONT_REGULAR_TOKEN) &&
@@ -250,28 +246,27 @@ create_text_image(StbFont *font, String text)
             }
             
             u32 glyphIndex = 0;
-            SingleFont *curFont = get_font_from_codepoint(font, codepoint, useBold, &glyphIndex);
-            
             if (is_end_of_line(codepoint))
             {
-                u32 maxXint = u32_from_f32_ceil(maxX);
-                if (result.image.width < maxXint) {
-                    result.image.width = maxXint;
+                if (maxWidth < width) {
+                    maxWidth = width;
                 }
-                maxX = 0.0f;
-                result.image.height += u32_from_f32_ceil(get_line_advance(curFont) * 1.2f);
+                width = 0;
+                height += get_line_advance(curFont) + 20;
             }
             else
             {
-                if (prevGlyph && glyphIndex)
+                if (glyphIndex && prevGlyph)
                 {
                     s32 kerning = stbtt_GetGlyphKernAdvance(&curFont->stbFont, prevGlyph, glyphIndex);
-                    maxX += curFont->fontScale * (f32)kerning;
+                    width += kerning;
                 }
+                
+                curFont = get_font_from_codepoint(font, codepoint, useBold, &glyphIndex);
                 
                 s32 stbAdv, stbLsb;
                 stbtt_GetGlyphHMetrics(&curFont->stbFont, glyphIndex, &stbAdv, &stbLsb);
-                maxX += curFont->fontScale * (f32)stbAdv;
+                width += stbAdv;
             }
             
             prevGlyph = glyphIndex;
@@ -287,19 +282,24 @@ create_text_image(StbFont *font, String text)
         }
     }
     
-    u32 maxXint = u32_from_f32_ceil(maxX);
-    if (result.image.width < maxXint) {
-        result.image.width = maxXint;
+    if (maxWidth < width) {
+        maxWidth = width;
     }
     
-    // TODO(michiel): Put this on the same sub alloc as stb, make sub alloc macros for struct/array
-    result.image.pixels = allocate_array(u8, result.image.width * result.image.height);
+    curFont = &font->fonts[0].regular;
+    f32 fontScale = stbtt_ScaleForPixelHeight(&curFont->stbFont, pixelHeight);
+    result->image.width = s32_from_f32_ceil((f32)maxWidth * fontScale);
+    result->image.height = s32_from_f32_ceil((f32)height * fontScale);
+    
+    umm pixelSize = result->image.width * result->image.height;
+    result->image.pixels = sub_alloc_array(font->allocator, u8, pixelSize);
+    copy_single(pixelSize, 0, result->image.pixels);
     
     scan = text.data;
     useBold = false;
     prevGlyph = 0;
     f32 x = 0;
-    f32 y = font->fonts[0].regular.ascender;
+    f32 y = (f32)curFont->ascender * fontScale;
     for (u32 textIdx = 0; textIdx < text.size;)
     {
         if ((scan[0] != FONT_REGULAR_TOKEN) &&
@@ -313,36 +313,39 @@ create_text_image(StbFont *font, String text)
             }
             
             u32 glyphIndex = 0;
-            SingleFont *curFont = get_font_from_codepoint(font, codepoint, useBold, &glyphIndex);
-            
             if (is_end_of_line(codepoint))
             {
                 x = 0;
-                y += get_line_advance(curFont) * 1.2f;
+                y += (f32)(get_line_advance(curFont) + 20) * fontScale;
             }
             else
             {
-                f32 modKern = 0.0f;
+                curFont = get_font_from_codepoint(font, codepoint, useBold, &glyphIndex);
+                
                 if (glyphIndex && prevGlyph)
                 {
                     s32 kerning = stbtt_GetGlyphKernAdvance(&curFont->stbFont, prevGlyph, glyphIndex);
-                    modKern = curFont->fontScale * (f32)kerning;
+                    x += fontScale * (f32)kerning;
                 }
                 
                 s32 stbAdv, stbLsb;
                 stbtt_GetGlyphHMetrics(&curFont->stbFont, glyphIndex, &stbAdv, &stbLsb);
                 
-                f32 atX = x + curFont->fontScale * (f32)stbLsb + modKern;
+                f32 atX = x + fontScale * (f32)stbLsb;
                 f32 atY = y;
                 
                 s32 ix0, ix1, iy0, iy1;
                 
 #if SUBPIXEL_LOCATION
-                stbtt_GetGlyphBitmapBoxSubpixel(&curFont->stbFont, glyphIndex, curFont->fontScale, curFont->fontScale,
-                                                atX - (s32)atX, atY - (s32)atY,
+                f32 shiftX = atX - (f32)(s32)atX;
+                //f32 shiftY = atY - (f32)(s32)atY;
+                f32 shiftY = 0.0f;
+                
+                stbtt_GetGlyphBitmapBoxSubpixel(&curFont->stbFont, glyphIndex, fontScale, fontScale,
+                                                shiftX, shiftY,
                                                 &ix0, &iy0, &ix1, &iy1);
 #else
-                stbtt_GetGlyphBitmapBox(&curFont->stbFont, glyphIndex, curFont->fontScale, curFont->fontScale,
+                stbtt_GetGlyphBitmapBox(&curFont->stbFont, glyphIndex, fontScale, fontScale,
                                         &ix0, &iy0, &ix1, &iy1);
 #endif
                 
@@ -362,20 +365,20 @@ create_text_image(StbFont *font, String text)
                 s32 modY = s32_from_f32_truncate(atY);
 #endif
                 
-                u8 *start = result.image.pixels + modY * result.image.width + modX;
+                u8 *start = result->image.pixels + modY * result->image.width + modX;
                 
 #if SUBPIXEL_LOCATION
                 stbtt_MakeGlyphBitmapSubpixel(&curFont->stbFont, start, 
                                               ix1 - ix0 + 5, iy1 - iy0 + 5,
-                                              result.image.width,
-                                              curFont->fontScale, curFont->fontScale,
-                                              atX - (s32)atX, atY - (s32)atY, glyphIndex);
+                                              result->image.width,
+                                              fontScale, fontScale,
+                                              shiftX, shiftY, glyphIndex);
 #else
-                stbtt_MakeGlyphBitmap(&curFont->stbFont, start, ix1 - ix0 + 5, iy1 - iy0 + 5, result.image.width,
-                                      curFont->fontScale, curFont->fontScale, glyphIndex);
+                stbtt_MakeGlyphBitmap(&curFont->stbFont, start, ix1 - ix0 + 5, iy1 - iy0 + 5, result->image.width,
+                                      fontScale, fontScale, glyphIndex);
 #endif
                 
-                x += curFont->fontScale * (f32)stbAdv;
+                x += fontScale * (f32)stbAdv;
             }
             
             prevGlyph = glyphIndex;
@@ -391,7 +394,19 @@ create_text_image(StbFont *font, String text)
         }
     }
     
-    return result;
+    struct timespec endTime = get_wall_clock();
+    fprintf(stdout, "Generated font text in %f seconds\n", get_seconds_elapsed(startTime, endTime));
+}
+
+internal void
+update_text_image(StbFont *font, TextImage *orig, String text, f32 pixelHeight)
+{
+    if ((orig->pixelHeight != pixelHeight) ||
+        (orig->text != text))
+    {
+        sub_dealloc(font->allocator, orig->image.pixels);
+        create_text_image(font, text, pixelHeight, orig);
+    }
 }
 
 DRAW_IMAGE(draw_image)
@@ -433,7 +448,7 @@ DRAW_IMAGE(draw_image)
         String regularDevaFont = static_string("/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf");
         String boldDevaFont    = static_string("/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf");
         
-        init_stb_font(&stbState->font, 45.0f);
+        init_stb_font(&stbState->font);
         add_dual_stb_font(&stbState->font, regularFont, boldFont);
         add_dual_stb_font(&stbState->font, regularCJKFont, boldCJKFont);
         add_dual_stb_font(&stbState->font, regularThaiFont, boldThaiFont);
@@ -445,12 +460,8 @@ DRAW_IMAGE(draw_image)
                                         "And some more text for\nVAWA jij and fij ffi\n"
                                         "\xD0\x81 \xD1\xAA");
         
-        struct timespec start = get_wall_clock();
-        stbState->textA = create_text_image(&stbState->font, testStrA);
-        stbState->textB = create_text_image(&stbState->font, static_string("Test B | T.W.Lewis\nficellé fffffi. VAV.\nتسجّل يتكلّم\nДуо вёжи дёжжэнтиюнт ут\n緳 踥踕\nहालाँकि प्रचलित रूप पूजा"));
-        struct timespec end = get_wall_clock();
-        
-        fprintf(stdout, "Generated fonts in %f seconds\n", get_seconds_elapsed(start, end));
+        create_text_image(&stbState->font, testStrA, 35.0f, &stbState->textA);
+        create_text_image(&stbState->font, static_string("Test B | T.W.Lewis\nficellé fffffi. VAV.\nتسجّل يتكلّم\nДуо вёжи дёжжэнтиюнт ут\n緳 踥踕\nहालाँकि प्रचलित रूप पूजा"), 45.0f, &stbState->textB);
         
         state->initialized = true;
     }
@@ -461,9 +472,16 @@ DRAW_IMAGE(draw_image)
     
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
+    if (keyboard->keys[Key_C].isPressed) {
+        String one = static_string("WWWAAWWAAhoopsiee Doopsiee");
+        String other = static_string("Test B | T.W.Lewis\nficellé fffffi. VAV.\nتسجّل يتكلّم\nДуо вёжи дёжжэнтиюнт ут\n緳 踥踕\nहालाँकि प्रचलित रूप पूजा");
+        String update = (stbState->textB.text == one) ? other : one;
+        update_text_image(&stbState->font, &stbState->textB, update, 60.0f);
+    } 
+    
     if (keyboard->keys[Key_A].isDown) {
         draw_image(image, 20, 20, &stbState->textB.image);
-    }else {
+    } else {
         draw_image(image, 20, 20, &stbState->textA.image, V4(1, 1, 0, 1));
     }
     
