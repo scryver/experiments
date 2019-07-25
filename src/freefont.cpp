@@ -17,10 +17,10 @@ DRAW_IMAGE(draw_image);
 #include "../libberdip/std_file.c"
 #include "../libberdip/drawing.cpp"
 
-#define FONT_REGULAR_TOKEN   0xC1
-#define FONT_BOLD_TOKEN      0xC2
-#define FONT_START_REGULAR   "\xC1\xC1"
-#define FONT_START_BOLD      "\xC2\xC2"
+#define FONT_REGULAR_TOKEN   0x06
+#define FONT_BOLD_TOKEN      0x15
+#define FONT_START_REGULAR   "\x06"
+#define FONT_START_BOLD      "\x15"
 
 struct SingleFont
 {
@@ -73,6 +73,9 @@ struct FTState
     FT_Library ftLibrary;
     FTFont font;
     
+    TextImage textA;
+    TextImage textB;
+    
     b32 useHarfbuzz;
     HBFont hbFont;
 };
@@ -116,8 +119,14 @@ add_ft_font(FTFont *font, String filename)
 {
     SingleFont result = {};
     result.memory = read_entire_file(filename);
-    i_expect(result.memory.size);
-    load_ft_font(font, result.memory, &result.face, font->pixelHeight);
+    if (result.memory.size)
+    {
+        load_ft_font(font, result.memory, &result.face, font->pixelHeight);
+    }
+    else
+    {
+        fprintf(stderr, "Could not load font file '%.*s'\n", STR_FMT(filename));
+    }
     return result;
 }
 
@@ -146,7 +155,7 @@ finalize_ft_font(FTFont *font)
         f32 regAdvance = (f32)(dualFont->regular.face->size->metrics.height) * oneOver64;
         f32 boldAdvance = (f32)(dualFont->bold.face->size->metrics.height) * oneOver64;
         i_expect(regAdvance == boldAdvance);
-        if (lineAdvance < regAdvance) {
+        if (fontIdx == 0) { //(lineAdvance < regAdvance) {
             lineAdvance = regAdvance;
         }
     }
@@ -175,30 +184,34 @@ get_glyph_from_index(FT_Face face, u32 glyphIndex)
     return result;
 }
 
-internal FT_GlyphSlot
-get_glyph_from_codepoint(FTFont *font, u32 codepoint, b32 useBold = false, u32 *glyphIndex = 0)
+internal FT_Face
+get_face_from_codepoint(FTFont *font, u32 codepoint, b32 useBold = false, u32 *glyphIndex = 0)
 {
     i_expect(font->fontCount);
-    FT_GlyphSlot result = 0;
-    FT_Face face = useBold ? font->fonts[0].bold.face : font->fonts[0].regular.face;
+    FT_Face face = 0;
     
     u32 index = 0;
     for (u32 fontIdx = 0; fontIdx < font->fontCount; ++fontIdx)
     {
         DualFont *dFont = font->fonts + fontIdx;
-        face = useBold ? dFont->bold.face : dFont->regular.face;
+        FT_Face test = useBold ? dFont->bold.face : dFont->regular.face;
         
-        index = FT_Get_Char_Index(face, codepoint);
+        index = FT_Get_Char_Index(test, codepoint);
         if (index) {
             if (glyphIndex) {
                 *glyphIndex = index;
             }
+            face = test;
             break;
         }
     }
-    result = get_glyph_from_index(face, index);
     
-    return result;
+    if (!face) {
+        face = useBold ? font->fonts[0].bold.face : font->fonts[0].regular.face;
+    }
+    get_glyph_from_index(face, index);
+    
+    return face;
 }
 
 internal void
@@ -237,6 +250,135 @@ draw_glyph(Image *screen, u32 xStart, u32 yStart, FT_Bitmap *glyph, v4 modColour
     }
 }
 
+internal TextImage
+create_text_image(FTFont *font, String text, v4 colour = V4(1, 1, 1, 1))
+{
+    TextImage result = {};
+    result.text = text;
+    result.image.height = s32_from_f32_round(font->lineAdvance);
+    
+    // TODO(michiel): Merge two groups somehow, temp memory maybe?
+    u8 *scan = text.data;
+    b32 useBold = false;
+    u32 prevGlyph = 0;
+    u32 maxX = 0;
+    for (u32 textIdx = 0; textIdx < text.size;)
+    {
+        if ((scan[0] != FONT_REGULAR_TOKEN) &&
+            (scan[0] != FONT_BOLD_TOKEN))
+        {
+            u32 codepoint = 0;
+            u32 advance = get_code_point_from_utf8(scan, &codepoint);
+            if (!advance) {
+                fprintf(stderr, "Invalid utf character 0x%02X\n", text.data[textIdx]);
+                advance = 1;
+            }
+            
+            u32 glyphIndex = 0;
+            if (is_end_of_line(codepoint))
+            {
+                if (result.image.width < maxX) {
+                    result.image.width = maxX;
+                }
+                maxX = 0;
+                result.image.height += s32_from_f32_round(font->lineAdvance * 1.5f);
+            }
+            else
+            {
+                FT_Face face = get_face_from_codepoint(font, codepoint, useBold, &glyphIndex);
+                
+                if (font->hasKerning && prevGlyph && glyphIndex)
+                {
+                    FT_Vector kerning = {};
+                    b32 error = FT_Get_Kerning(face, prevGlyph, glyphIndex, FT_KERNING_DEFAULT, &kerning);
+                    if (error) {
+                        fprintf(stderr, "Could not get the kerning info needed between %u and %u\n",
+                                prevGlyph, glyphIndex);
+                    }
+                    
+                    maxX += kerning.x >> 6;
+                }
+                
+                maxX += face->glyph->advance.x >> 6;
+            }
+            
+            prevGlyph = glyphIndex;
+            
+            scan += advance;
+            textIdx += advance;
+        }
+        else
+        {
+            useBold = scan[0] == FONT_BOLD_TOKEN;
+            ++scan;
+            ++textIdx;
+        }
+    }
+    
+    if (result.image.width < maxX) {
+        result.image.width = maxX;
+    }
+    
+    result.image.pixels = allocate_array(u32, result.image.width * result.image.height);
+    
+    scan = text.data;
+    useBold = false;
+    prevGlyph = 0;
+    u32 x = 0;
+    u32 y = u32_from_f32_round(font->lineAdvance);
+    for (u32 textIdx = 0; textIdx < text.size;)
+    {
+        if ((scan[0] != FONT_REGULAR_TOKEN) &&
+            (scan[0] != FONT_BOLD_TOKEN))
+        {
+            u32 codepoint = 0;
+            u32 advance = get_code_point_from_utf8(scan, &codepoint);
+            if (!advance) {
+                fprintf(stderr, "Invalid utf character 0x%02X\n", text.data[textIdx]);
+                advance = 1;
+            }
+            
+            u32 glyphIndex = 0;
+            if (is_end_of_line(codepoint))
+            {
+                x = 0;
+                y += s32_from_f32_round(font->lineAdvance * 1.5f);
+            }
+            else
+            {
+                FT_Face face = get_face_from_codepoint(font, codepoint, useBold, &glyphIndex);
+                if (font->hasKerning && prevGlyph && glyphIndex)
+                {
+                    FT_Vector kerning = {};
+                    b32 error = FT_Get_Kerning(face, prevGlyph, glyphIndex, FT_KERNING_DEFAULT, &kerning);
+                    if (error) {
+                        fprintf(stderr, "Could not get the kerning info needed between %u and %u\n",
+                                prevGlyph, glyphIndex);
+                    }
+                    
+                    x += kerning.x >> 6;
+                }
+                
+                draw_glyph(&result.image, x + face->glyph->bitmap_left, y - face->glyph->bitmap_top,
+                           &face->glyph->bitmap, colour);
+                x += face->glyph->advance.x >> 6;
+            }
+            
+            prevGlyph = glyphIndex;
+            
+            scan += advance;
+            textIdx += advance;
+        }
+        else
+        {
+            useBold = scan[0] == FONT_BOLD_TOKEN;
+            ++scan;
+            ++textIdx;
+        }
+    }
+    
+    return result;
+}
 
 DRAW_IMAGE(draw_image)
 {
@@ -271,13 +413,35 @@ DRAW_IMAGE(draw_image)
             String boldFont    = static_string("/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf");
             String regularCJKFont = static_string("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc");
             String boldCJKFont    = static_string("/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc");
+            String regularThaiFont = static_string("/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf");
+            String boldThaiFont    = static_string("/usr/share/fonts/truetype/noto/NotoSansThai-Bold.ttf");
+            //String regularArabFont = static_string("/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf");
+            //String boldArabFont    = static_string("/usr/share/fonts/truetype/noto/NotoSansArabic-Bold.ttf");
+            String regularDevaFont = static_string("/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf");
+            String boldDevaFont    = static_string("/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf");
             
             init_ft_font(ftState->ftLibrary, &ftState->font, 32.0f);
             add_dual_ft_font(&ftState->font, regularFont, boldFont);
             add_dual_ft_font(&ftState->font, regularCJKFont, boldCJKFont);
+            add_dual_ft_font(&ftState->font, regularThaiFont, boldThaiFont);
+            //add_dual_ft_font(&ftState->font, regularArabFont, boldArabFont); // NOTE(michiel): Add rtl support
+            add_dual_ft_font(&ftState->font, regularDevaFont, boldDevaFont);
             finalize_ft_font(&ftState->font);
             
             init_hb_font(&ftState->hbFont, &ftState->font);
+            
+            
+            String testStrA = static_string(FONT_START_BOLD "Hello, world!" FONT_START_REGULAR " <And greetings... \xCE\x94 \xCF\x80 +=->\n"
+                                            "\xEB\xB8\xA0\xEB\xB8\xA1\xEB\xB8\xA2\xEB\xB8\xA3\n"
+                                            "And some more text for\nVAWA jij and fij ffi\n"
+                                            "\xD0\x81 \xD1\xAA");
+            
+            struct timespec start = get_wall_clock();
+            ftState->textA = create_text_image(&ftState->font, testStrA, V4(1, 1, 0, 1));
+            ftState->textB = create_text_image(&ftState->font, static_string("Test B | T.W.Lewis\nficellé fffffi. VAV.\nتسجّل يتكلّم\nДуо вёжи дёжжэнтиюнт ут\n緳 踥踕\nहालाँकि प्रचलित रूप पूजा"), V4(1, 1, 1, 1));
+            struct timespec end = get_wall_clock();
+            
+            fprintf(stdout, "Generated fonts in %f seconds\n", get_seconds_elapsed(start, end));
         }
         
         state->initialized = true;
@@ -289,17 +453,25 @@ DRAW_IMAGE(draw_image)
     
     if (keyboard->keys[Key_Space].isPressed) {
         ftState->font.hasKerning = !ftState->font.hasKerning;
-        fprintf(stdout, "This font has%s got kerning support!\n", ftState->font.hasKerning ? "" : "n't");
+        fprintf(stdout, "Forcing%s kerning support!\n", ftState->font.hasKerning ? "" : " no");
     }
     
+    fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
+    
+    if (keyboard->keys[Key_A].isDown) {
+        draw_image(image, 20, 20, &ftState->textA.image);
+    } else {
+        draw_image(image, 20, 20, &ftState->textB.image);
+    }
+    
+#if 0   
     if (keyboard->keys[Key_H].isPressed) {
         ftState->useHarfbuzz = !ftState->useHarfbuzz;
         fprintf(stdout, "%sing Harfbuzz to support lygitures\n",
                 ftState->useHarfbuzz ? "U" : "Not u");
     }
     
-    fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+    // TODO(michiel): Move this hb stuff to some nice functions to test all options
     {
         // NOTE(michiel): Loading glyphs
         u32 startX = 20;
@@ -314,38 +486,28 @@ DRAW_IMAGE(draw_image)
         b32 useRegular = true;
         while (testStr.size)
         {
-            if ((testStr.data[0] == FONT_REGULAR_TOKEN) &&
-                (testStr.size > 1) &&
-                (testStr.data[1] == FONT_REGULAR_TOKEN))
+            if (testStr.data[0] == FONT_REGULAR_TOKEN)
             {
                 useRegular = true;
-                testStr.data += 2;
-                testStr.size -= 2;
+                ++testStr.data;
+                --testStr.size;
             }
-            else if ((testStr.data[0] == FONT_BOLD_TOKEN) &&
-                     (testStr.size > 1) &&
-                     (testStr.data[1] == FONT_BOLD_TOKEN))
+            else if (testStr.data[0] == FONT_BOLD_TOKEN)
             {
                 useRegular = false;
-                testStr.data += 2;
-                testStr.size -= 2;
+                ++testStr.data;
+                --testStr.size;
             }
             else
             {
                 String text = testStr;
                 
-                for (u32 idx = 1; idx < text.size; ++idx)
+                for (u32 idx = 0; idx < text.size; ++idx)
                 {
-                    if ((text.data[idx - 1] == FONT_REGULAR_TOKEN) &&
-                        (text.data[idx] == FONT_REGULAR_TOKEN))
+                    if ((text.data[idx] == FONT_REGULAR_TOKEN) ||
+                        (text.data[idx] == FONT_BOLD_TOKEN))
                     {
-                        text.size = idx - 1;
-                        break;
-                    }
-                    else if ((text.data[idx - 1] == FONT_BOLD_TOKEN) &&
-                             (text.data[idx] == FONT_BOLD_TOKEN))
-                    {
-                        text.size = idx - 1;
+                        text.size = idx;
                         break;
                     }
                 }
@@ -356,6 +518,7 @@ DRAW_IMAGE(draw_image)
                     hb_font_t   *hbFont = useRegular ? ftState->hbFont.regularFont : ftState->hbFont.boldFont;
                     hb_buffer_add_utf8(buffer, (char *)text.data, text.size, 0, text.size);
                     hb_buffer_guess_segment_properties(buffer);
+                    
                     hb_shape(hbFont, buffer, 0, 0);
                     
                     u32 glyphCount = hb_buffer_get_length(buffer);
@@ -418,7 +581,7 @@ DRAW_IMAGE(draw_image)
                                 error = FT_Get_Kerning(face, prevGlyph, glyphIndex, FT_KERNING_DEFAULT, &kerning);
                                 if (error) {
                                     fprintf(stderr, "Could not get the kerning info needed between %u and %u\n",
-                                            prevGlyph, glyphIndex);
+                                            prevGlyph, glyphIndex);.
                                 }
                                 
                                 x += kerning.x >> 6;
@@ -439,6 +602,7 @@ DRAW_IMAGE(draw_image)
             }
         }
     }
+#endif
     
     ftState->prevMouseDown = mouse.mouseDowns;
     ftState->seconds += dt;

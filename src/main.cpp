@@ -148,7 +148,7 @@ struct Vertex
     v2 uv;
 };
 
-internal inline struct timespec
+internal struct timespec
 get_wall_clock(void)
 {
     struct timespec clock;
@@ -156,7 +156,7 @@ get_wall_clock(void)
     return clock;
 }
 
-internal inline f32
+internal f32
 get_seconds_elapsed(struct timespec start, struct timespec end)
 {
     return ((f32)(end.tv_sec - start.tv_sec)
