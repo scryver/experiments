@@ -19,7 +19,7 @@ pushd "$buildDir" > /dev/null
 #    clang++ $flags $exceptions "$codeDir/precompile.cpp" -o precompile
 #    ./precompile "$codeDir/flowfield.cpp"
 
-: << 'TEST'
+cat > /dev/null << IGNORE_ME
     clang++ $flags $exceptions "$codeDir/randomness.cpp" -o randomness -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/mazer.cpp" -o mazer -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/salesman.cpp" -o salesman -lX11 -lGL &
@@ -37,7 +37,7 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/gameoflife.cpp" -o game-of-life -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/fractal01.cpp" -o fractal01 -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/lsystem.cpp" -o lsystem -lX11 -lGL &
-    clang++ $flags $exceptions "$codeDir/mandelbrot.cpp" -o mandelbrot -lX11 -lGL &
+
     clang++ $flags $exceptions "$codeDir/mousemove.cpp" -o mousemove -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/evolving_vehicle.cpp" -o evolving-vehicle -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/evolving_salesman.cpp" -o evolving-salesman -lX11 -lGL &
@@ -67,19 +67,32 @@ pushd "$buildDir" > /dev/null
     clang++ $flags $exceptions "$codeDir/raycast.cpp" -o raycast -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/raytrace.cpp" -o raytrace -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/flowers.cpp" -o flowers -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/mandelbrot.cpp" -o mandelbrot -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/mandelbrotset.cpp" -o mandelbrotset -lX11 -lGL &
-TEST
     clang++ $flags $exceptions "$codeDir/blackbox.cpp" -o blackbox -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/phasespace.cpp" -o phase-space -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/fluider.cpp" -o fluider -lX11 -lGL &
 
     clang++ $flags $exceptions -I/usr/include/harfbuzz $(pkg-config --cflags freetype2) "$codeDir/freefont.cpp" -o freefont $(pkg-config --libs freetype2) -lharfbuzz -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/stbfont.cpp" -o stbfont -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/stbfont2.cpp" -o stbfont2 -lX11 -lGL &
 
     clang++ $flags $exceptions "$testDir/test_neuron.cpp" -o test-neuron
     clang++ $flags $exceptions "$testDir/test_neural_net.cpp" -o test-neural-net
     clang++ $flags $exceptions "$testDir/test_neural_layer.cpp" -o test-neural-layer
 
     clang++ $flags $exceptions "$codeDir/selector.cpp" -o selector -lX11 -lGL &
+IGNORE_ME
+
+    clang++ $flags $exceptions "$codeDir/maurerrose.cpp" -o maurer-rose -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/rdplinesimplefy.cpp" -o rdp-line -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/collatzconjecture.cpp" -o collatz-conjecture -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/fft.cpp" -o fft -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/tictactoe.cpp" -o tic-tac-toe -lX11 -lGL &
+
 popd > /dev/null
 
 #flagsC="-O0 -g -ggdb -Wall -Werror -pedantic -pthread"
 #clang $flagsC $exceptions "$testDir/test_waves.c" -o test-waves -lX11 -lm &
+
+wait 

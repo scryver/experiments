@@ -41,7 +41,7 @@ internal Complex32
 operator -(Complex32 a, Complex32 b)
 {
     Complex32 result = a;
-    a -= b;
+    result -= b;
     return result;
 }
 
@@ -119,7 +119,7 @@ euler_power(f32 imagPower)
 }
 
 internal f32
-abs(Complex32 c)
+absolute(Complex32 c)
 {
     return square_root(square(c.real) + square(c.imag));
 }
@@ -128,6 +128,23 @@ internal Complex32
 square(Complex32 c)
 {
     return c * c;
+}
+
+internal v2
+magnitude_angle(Complex32 c, f32 epsilon = 0.00001f)
+{
+    v2 result;
+    result.x = absolute(c);
+    if ((c.real > -epsilon) && (c.real < epsilon) &&
+        (c.imag > -epsilon) && (c.imag < epsilon))
+    {
+        result.y = 0.0f;
+    }
+    else
+    {
+        result.y = atan2(c.imag, c.real);
+    }
+    return result;
 }
 
 struct Complex64
@@ -251,7 +268,7 @@ euler_power(f64 imagPower)
 }
 
 internal f64
-abs(Complex64 c)
+absolute(Complex64 c)
 {
     return square_root(square(c.real) + square(c.imag));
 }

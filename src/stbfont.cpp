@@ -37,8 +37,8 @@ STBTT_memset(void *dest, s32 value, umm size)
 #define stbtt_uint32       u32
 #define stbtt_int32        s32
 
-#define STBTT_ifloor(x)    floor((s32)(x))
-#define STBTT_iceil(x)     ceil((s32)(x))
+#define STBTT_ifloor(x)    ((s32)floor(x))
+#define STBTT_iceil(x)     ((s32)ceil(x))
 #define STBTT_sqrt(x)      square_root(x)
 #define STBTT_pow(x, y)    pow(x, y)
 #define STBTT_fmod(x, y)   modulus(x, y)
@@ -298,8 +298,8 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
     scan = text.data;
     useBold = false;
     prevGlyph = 0;
-    f32 x = 0;
-    f32 y = (f32)curFont->ascender * fontScale;
+    s32 x = 0;
+    s32 y = curFont->ascender;
     for (u32 textIdx = 0; textIdx < text.size;)
     {
         if ((scan[0] != FONT_REGULAR_TOKEN) &&
@@ -316,7 +316,7 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
             if (is_end_of_line(codepoint))
             {
                 x = 0;
-                y += (f32)(get_line_advance(curFont) + 20) * fontScale;
+                y += get_line_advance(curFont) + 20;
             }
             else
             {
@@ -325,19 +325,19 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                 if (glyphIndex && prevGlyph)
                 {
                     s32 kerning = stbtt_GetGlyphKernAdvance(&curFont->stbFont, prevGlyph, glyphIndex);
-                    x += fontScale * (f32)kerning;
+                    x += kerning;
                 }
                 
                 s32 stbAdv, stbLsb;
                 stbtt_GetGlyphHMetrics(&curFont->stbFont, glyphIndex, &stbAdv, &stbLsb);
                 
-                f32 atX = x + fontScale * (f32)stbLsb;
-                f32 atY = y;
+                f32 atX = (f32)(x + stbLsb) * fontScale;
+                f32 atY = (f32)y * fontScale;
                 
                 s32 ix0, ix1, iy0, iy1;
                 
 #if SUBPIXEL_LOCATION
-                f32 shiftX = atX - (f32)(s32)atX;
+                f32 shiftX = atX - (s32)atX;
                 //f32 shiftY = atY - (f32)(s32)atY;
                 f32 shiftY = 0.0f;
                 
@@ -369,16 +369,16 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                 
 #if SUBPIXEL_LOCATION
                 stbtt_MakeGlyphBitmapSubpixel(&curFont->stbFont, start, 
-                                              ix1 - ix0 + 5, iy1 - iy0 + 5,
+                                              ix1 - ix0 + 10, iy1 - iy0 + 10,
                                               result->image.width,
                                               fontScale, fontScale,
                                               shiftX, shiftY, glyphIndex);
 #else
-                stbtt_MakeGlyphBitmap(&curFont->stbFont, start, ix1 - ix0 + 5, iy1 - iy0 + 5, result->image.width,
+                stbtt_MakeGlyphBitmap(&curFont->stbFont, start, ix1 - ix0, iy1 - iy0, result->image.width,
                                       fontScale, fontScale, glyphIndex);
 #endif
                 
-                x += fontScale * (f32)stbAdv;
+                x += stbAdv;
             }
             
             prevGlyph = glyphIndex;
@@ -460,8 +460,12 @@ DRAW_IMAGE(draw_image)
                                         "And some more text for\nVAWA jij and fij ffi\n"
                                         "\xD0\x81 \xD1\xAA");
         
-        create_text_image(&stbState->font, testStrA, 35.0f, &stbState->textA);
+        s32 sizeA = 28;
+        create_text_image(&stbState->font, testStrA, (f32)sizeA, &stbState->textA);
+        create_text_image(&stbState->font, static_string("Simple test"), 45.0f, &stbState->textB);
+#if 0        
         create_text_image(&stbState->font, static_string("Test B | T.W.Lewis\nficellé fffffi. VAV.\nتسجّل يتكلّم\nДуо вёжи дёжжэнтиюнт ут\n緳 踥踕\nहालाँकि प्रचलित रूप पूजा"), 45.0f, &stbState->textB);
+#endif
         
         state->initialized = true;
     }
@@ -480,7 +484,7 @@ DRAW_IMAGE(draw_image)
     } 
     
     if (keyboard->keys[Key_A].isDown) {
-        draw_image(image, 20, 20, &stbState->textB.image);
+        draw_image(image, 0, 0, &stbState->textB.image);
     } else {
         draw_image(image, 20, 20, &stbState->textA.image, V4(1, 1, 0, 1));
     }

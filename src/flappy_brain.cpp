@@ -209,7 +209,7 @@ bird_hit_pipe(Bird *bird, Pipe *pipe)
 internal inline void
 draw_bird(Image *image, Bird *bird)
 {
-    fill_circle(image, bird->position.x, bird->position.y, u32_from_f32_truncate(bird->radius),
+    fill_circle(image, bird->position.x, bird->position.y, bird->radius,
                 V4(1, 1, 1, 0.3f));
 }
 

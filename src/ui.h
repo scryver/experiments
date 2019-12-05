@@ -444,7 +444,7 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind 
     f32 value01 = map01(slider->value, slider->maxValue);
     u32 dimModVal = (u32)(value01 * trackLength);
     v2u dimMod = (horizontal ? V2U(rect.min.x + dimModVal, rect.min.y)
-                  : V2U(rect.min.x, rect.min.y + dimModVal));
+                  : V2U(rect.min.x, rect.min.y + (trackLength - dimModVal)));
     dimMod += handle.x / 2;
     
     v4 backColour = clamp01(colour - V4(0.3f, 0.3f, 0.3f, 0.0f));
@@ -791,7 +791,8 @@ ui_checkbox_is_clicked(UIState *state, UICheckbox *checkbox)
 internal b32
 ui_slider_is_set(UIState *state, UISlider *slider)
 {
-    return (!state->clicked && (state->activeItem == slider->id));
+    return ((!state->clicked && (state->activeItem == slider->id)) ||
+            ((state->mouseScroll != 0) && (state->hotItem == slider->id)));
 }
 
 internal b32

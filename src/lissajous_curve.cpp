@@ -30,9 +30,9 @@ internal void
 add_point(Curve *curve, u32 x, u32 y)
 {
     u32 nextIndex = (curve->pathIndex + 1) & (curve->maxPaths - 1);
-        v2u *point = curve->paths + curve->pathIndex;
-        point->x = x;
-        point->y = y;
+    v2u *point = curve->paths + curve->pathIndex;
+    point->x = x;
+    point->y = y;
     
     if (curve->pathCount < curve->maxPaths)
     {
@@ -94,7 +94,7 @@ DRAW_IMAGE(draw_image)
         // lissaJous->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         lissaJous->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         
-         lissaJous->tileW = 80;
+        lissaJous->tileW = 80;
         lissaJous->rows = image->height / lissaJous->tileW - 1;
         lissaJous->columns = image->width / lissaJous->tileW - 1;
         
@@ -123,10 +123,10 @@ DRAW_IMAGE(draw_image)
         u32 cy = lissaJous->tileW / 2;
         outline_circle(image, cx, cy, r, 2.0f, V4(1, 1, 1, 1));
         
-        s32 x = round(r * cos((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f));
-        s32 y = round(r * sin((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f));
+        s32 x = s32_from_f32_round(r * cos((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f));
+        s32 y = s32_from_f32_round(r * sin((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f));
         
-        fill_circle(image, cx + x, cy + y, 4, V4(0, 1, 0, 1));
+        fill_circle(image, (s32)cx + x, (s32)cy + y, 4, V4(0, 1, 0, 1));
         
         draw_line(image, cx + x, 0, cx + x, image->height, V4(0, 1, 0, 0.4f));
         
@@ -139,16 +139,16 @@ DRAW_IMAGE(draw_image)
         u32 cy = row * lissaJous->tileW + lissaJous->tileW + lissaJous->tileW / 2;
         outline_circle(image, cx, cy, r, 2.0f, V4(1, 1, 1, 1));
         
-        s32 x = round(r * cos((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f));
-        s32 y = round(r * sin((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f));
+        s32 x = s32_from_f32_round(r * cos((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f));
+        s32 y = s32_from_f32_round(r * sin((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f));
         
-        fill_circle(image, cx + x, cy + y, 4, V4(0, 0, 1, 1));
+        fill_circle(image, (s32)cx + x, (s32)cy + y, 4, V4(0, 0, 1, 1));
         
         draw_line(image, 0, cy + y, image->width, cy + y, V4(0, 0, 1, 0.4f));
         
         lissaJous->currentYs[row] = cy + y;
     }
-
+    
     Curve *currentCurve = lissaJous->curves;
     for (u32 row = 0; row < lissaJous->rows; ++row)
     {
@@ -174,7 +174,7 @@ DRAW_IMAGE(draw_image)
         lissaJous->angle -= F32_TAU;
     }
 #endif
-
+    
     //lissaJous->prevMouseDown = mouse.mouseDowns;
     lissaJous->seconds += dt;
     ++lissaJous->ticks;

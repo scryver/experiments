@@ -55,8 +55,7 @@ init_ray(v2 pos)
 internal void
 draw_ray(Image *image, Ray ray, v4 colour = V4(1, 1, 1, 1))
 {
-    draw_line2(image, round(ray.pos.x), round(ray.pos.y),
-               round(ray.pos.x + ray.dir.x * 20.0f), round(ray.pos.y + ray.dir.y * 20.0f), colour);
+    draw_line(image, ray.pos, ray.pos + ray.dir * 20.0f, colour);
 }
 
 internal RayBundle

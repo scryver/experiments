@@ -1,11 +1,59 @@
 #include "../libberdip/platform.h"
 #include "../libberdip/random.h"
 #include "interface.h"
+#include "fixedpoint.h"
+
 DRAW_IMAGE(draw_image);
+
+#define COMPLEX_32  1
+#define COMPLEX_64  0
+#define COMPLEX_UFP 0
 
 #include "main.cpp"
 
 #include "../libberdip/drawing.cpp"
+
+struct ComplexUFP
+{
+    FixedPoint real;
+    FixedPoint imag;
+};
+
+struct v2fp
+{
+    FixedPoint x;
+    FixedPoint y;
+};
+
+struct v2d
+{
+    f64 x;
+    f64 y;
+};
+
+struct DrawMandelbrotWork
+{
+    Image *image;
+    
+    v2s minDraw;
+    v2s maxDraw;
+    
+#if COMPLEX_UFP
+    v2fp min;
+    v2fp max;
+#elif COMPLEX_64
+    v2d min;
+    v2d max;
+#elif COMPLEX_32
+    v2 min;
+    v2 max;
+#else
+#error "No known way to make the mandelbrot without a type"
+#endif
+    
+    u32 paletteCount;
+    v4 *palette;
+};
 
 struct FractalState
 {
@@ -15,8 +63,16 @@ struct FractalState
     u32 paletteCount;
     v4 *palette;
     
+#if COMPLEX_UFP
+    v2fp minDraw;
+    v2fp maxDraw;
+#elif COMPLEX_64
+    v2d minDraw;
+    v2d maxDraw;
+#else
     v2 minDraw;
     v2 maxDraw;
+#endif
     
     Image mandelbrot;
     
@@ -25,6 +81,49 @@ struct FractalState
     
     u32 prevMouseDown;
 };
+
+internal FixedPoint
+absolute(ComplexUFP c)
+{
+    FixedPoint result = {};
+    return result;
+}
+
+internal ComplexUFP
+square(ComplexUFP c)
+{
+    ComplexUFP result = {};
+    return result;
+}
+
+internal ComplexUFP
+operator +(ComplexUFP a, ComplexUFP b)
+{
+    ComplexUFP result = {};
+    return result;
+}
+
+internal inline v4
+get_mandelbrot(ComplexUFP c0, u32 paletteCount, v4 *palette, u32 maxIteration = 100)
+{
+    ComplexUFP c = {};
+    u32 iteration = 0;
+    FixedPoint blowUp = square(fixed_point(2, 0, array_count(c.real.digits) * 32 - 3));
+    while ((absolute(c) < blowUp) &&
+           (iteration < maxIteration))
+    {
+        c = square(c) + c0;
+        ++iteration;
+    }
+    v4 colour = {};
+    colour.a = 1.0f;
+    if (iteration != maxIteration)
+    {
+        colour = palette[iteration % paletteCount];
+    }
+    
+    return colour;
+}
 
 internal inline v4
 get_mandelbrot(Complex64 c0, u32 paletteCount, v4 *palette, u32 maxIteration = 100, f64 blowUpPoint = 2.0)
@@ -70,20 +169,6 @@ get_mandelbrot(Complex32 c0, u32 paletteCount, v4 *palette, u32 maxIteration = 1
     return colour;
 }
 
-struct DrawMandelbrotWork
-{
-    Image *image;
-    
-    v2s minDraw;
-    v2s maxDraw;
-    
-    v2 min;
-    v2 max;
-    
-    u32 paletteCount;
-    v4 *palette;
-};
-
 internal void
 draw_mandelbrot(DrawMandelbrotWork *work)
 {
@@ -91,7 +176,13 @@ draw_mandelbrot(DrawMandelbrotWork *work)
     {
         for (s32 x = work->minDraw.x; x < work->maxDraw.x; ++x)
         {
-#if 1
+#if COMPLEX_UFP
+            ComplexUFP point;
+            point.real = map((f64)x, (f64)work->minDraw.x, (f64)work->maxDraw.x,
+                             (f64)work->min.x, (f64)work->max.x);
+            point.imag = map((f64)y, (f64)work->minDraw.y, (f64)work->maxDraw.y,
+                             (f64)work->min.y, (f64)work->max.y);
+#elif COMPLEX_64
             Complex64 point;
             point.real = map((f64)x, (f64)work->minDraw.x, (f64)work->maxDraw.x,
                              (f64)work->min.x, (f64)work->max.x);
@@ -285,8 +376,8 @@ draw_mandelbrot(PlatformWorkQueue *queue, FractalState *state)
     draw_mandelbrot(queue, &state->mandelbrot, state->minDraw, state->maxDraw,
                     state->paletteCount, state->palette);
     
-    f32 zoomLevel = (state->maxDraw.x - state->minDraw.x) / 3.5f;
-    fprintf(stdout, "Zoom level: %8.6f | Magnify: %8.6f\n", zoomLevel, 1.0f / zoomLevel);
+    f64 zoomLevel = (state->maxDraw.x - state->minDraw.x) / 3.5;
+    fprintf(stdout, "Zoom level: %10.9f | Magnify: %8.1f\n", zoomLevel, 1.0 / zoomLevel);
 }
 
 DRAW_IMAGE(draw_image)
@@ -308,7 +399,7 @@ DRAW_IMAGE(draw_image)
         
         v4 lastColour = V4(0, 0, 0, 1);
         u32 redGreenBlue = 0;
-        f32 colourStep = 0.2f; // 3.0f / (f32)fractalState->paletteCount;
+        f32 colourStep = 3.0f / (f32)fractalState->paletteCount;
         for (u32 col = 0; col < fractalState->paletteCount; ++col)
         {
             //f32 gray = (f32)col / (f32)array_count(palette);

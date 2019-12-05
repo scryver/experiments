@@ -711,6 +711,7 @@ int main(int argc, char **argv)
     Image *image = allocate_struct(Image);
     image->width = windowWidth;
     image->height = windowHeight;
+    //image->rowPitch = windowWidth;
     image->pixels = allocate_array(u32, windowWidth * windowHeight);
     
     State *state = allocate_struct(State);
@@ -998,7 +999,7 @@ int main(int argc, char **argv)
         glBindTexture(GL_TEXTURE_2D, textureBuf);
         
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, image->width, image->height, 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, (void *)image->pixels);
+                     GL_BGRA, GL_UNSIGNED_BYTE, (void *)image->pixels);
         
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

@@ -49,7 +49,7 @@ DRAW_IMAGE(draw_image)
     PhysicState *physics = (PhysicState *)state->memory;
     if (!state->initialized)
     {
-         physics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
+        physics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         physics->moverCount = array_count(physics->movers);
         
         for (u32 moverIndex = 0; moverIndex < physics->moverCount; ++moverIndex)
@@ -76,9 +76,9 @@ DRAW_IMAGE(draw_image)
     for (u32 moverIndex = 0; moverIndex < physics->moverCount; ++moverIndex)
     {
         Mover *mover = physics->movers + moverIndex;
-    
-    //apply_force(mover, V2(0.0f, 0.3f*mover->mass));
-    //apply_force(mover, V2(0.2f, 0.0f));
+        
+        //apply_force(mover, V2(0.0f, 0.3f*mover->mass));
+        //apply_force(mover, V2(0.2f, 0.0f));
         //apply_friction(mover);
         //apply_drag(mover);
         //apply_gravity(mover, &ground);
@@ -100,7 +100,7 @@ DRAW_IMAGE(draw_image)
     {
         Mover *mover = physics->movers + moverIndex;
         fill_circle(image, mover->position.x, mover->position.y,
-                    (u32)(20.0f * mover->mass + 0.5f),
+                    20.0f * mover->mass + 0.5f,
                     V4(0.6f, 0.7f, 0.6f, 1.0f));
     }
     ++physics->ticks;
