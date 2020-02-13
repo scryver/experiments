@@ -256,6 +256,11 @@ DRAW_IMAGE(draw_image)
         state->initialized = true;
     }
     
+    v2 tileSize;
+    tileSize.x = tileSize.y = (size.height - 20.0f) / 3.0f;
+    v2 start = {10, 10};
+    v2 end = start + 3.0f * tileSize;
+    
     //
     // NOTE(michiel): Update
     //
@@ -271,7 +276,19 @@ DRAW_IMAGE(draw_image)
         {
             case State_Started: {
                 reset_game(game);
+                
+#if 1
+                if (mouse.mouseDowns & Mouse_Left)
+                {
+                    f32 mouseX = clamp(0.0f, (mouse.pixelPosition.x - start.x) / tileSize.x, 2.0f);
+                    f32 mouseY = clamp(0.0f, (mouse.pixelPosition.y - start.y) / tileSize.y, 2.0f);
+                    u32 gridIndex = 3 * u32_from_f32_floor(mouseY) + u32_from_f32_floor(mouseX);
+                    game->grid[gridIndex] = game->currentPlayer;
+                    set_timeout(game, State_PlayerChange, 20);
+                }
+#else
                 set_timeout(game, State_PlayerInput, 30);
+#endif
             } break;
             
             case State_PlayerChange: {
@@ -313,11 +330,6 @@ DRAW_IMAGE(draw_image)
     //
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     
-    v2 tileSize;
-    tileSize.x = tileSize.y = (size.height - 20.0f) / 3.0f;
-    
-    v2 start = {10, 10};
-    v2 end = start + 3.0f * tileSize;
     Rectangle2 boardRect = rect_min_dim(start, 3.0f * tileSize);
     
     if (game->state == State_EndOfGame)

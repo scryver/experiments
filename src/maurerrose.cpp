@@ -34,6 +34,8 @@ DRAW_IMAGE(draw_image)
         state->initialized = true;
     }
     
+    f32 step = F32_PI / 10.0f; //1.0f / 11.0f;
+    
 #if 1
     maurer->d = clamp(1.0f, maurer->d, 361.0f);
     maurer->n = clamp(1.0f, maurer->n, 21.0f);
@@ -49,7 +51,7 @@ DRAW_IMAGE(draw_image)
     for (u32 i = 0; i < array_count(linePoints); ++i)
     {
         f32 k = (f32)i * maurer->d;
-        f32 l = sin(deg2rad(k*maurer->n));
+        f32 l = sin((f32)deg2rad(k*maurer->n));
         linePoints[i] = polar_to_cartesian(200.0f * l, deg2rad(k)) + center;
     }
     draw_lines(image, array_count(linePoints), linePoints, V4(1, 1, 1, 1));
@@ -57,14 +59,14 @@ DRAW_IMAGE(draw_image)
     maurer->prevMouseDown = mouse.mouseDowns;
     maurer->seconds += dt;
     ++maurer->ticks;
-    if ((maurer->ticks % 10) == 0)
+    //if (maurer->ticks)
     {
-        fprintf(stdout, "D: %2.0f, N: %2.0f\n", maurer->d, maurer->n);
+        //fprintf(stdout, "D: %2.0f, N: %2.0f\n", maurer->d, maurer->n);
         
-        ++maurer->d;
+        maurer->d += step;
         if (maurer->d > 360.0f)
         {
-            maurer->d = 1.0f;
+            maurer->d -= 360.0f;
             ++maurer->n;
             if (maurer->n > 20.0f)
             {
