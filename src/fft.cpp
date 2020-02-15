@@ -127,9 +127,15 @@ fft_iter(u32 dftCount, v2 *signal, Complex32 *dftSignal)
     for (u32 index = 0; index < dftCount; ++index)
     {
         u32 reversedIndex = reverse_bits(index, highBit.index);
-        Complex32 *c = dftSignal + reversedIndex;
-        c->real = signal[index + 0].y;
-        c->imag = 0.0f;
+        if (reversedIndex > index)
+        {
+            dftSignal[index] = {signal[reversedIndex].y, 0};
+            dftSignal[reversedIndex] = {signal[index].y, 0};
+        }
+        else if (reversedIndex == index)
+        {
+            dftSignal[index] = {signal[index].y, 0};
+        }
     }
     
     u32 halfM = 1;
