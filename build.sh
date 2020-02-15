@@ -7,7 +7,7 @@ codeDir="$curDir/src"
 testDir="$curDir/test"
 buildDir="$curDir/gebouw"
 
-flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread"
+flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread -msse4"
 
 exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces -Wno-gnu-zero-variadic-macro-arguments -Wno-c99-extensions"
 
@@ -89,6 +89,7 @@ IGNORE_ME
     clang++ $flags $exceptions "$codeDir/collatzconjecture.cpp" -o collatz-conjecture -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/fft.cpp" -o fft -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/tictactoe.cpp" -o tic-tac-toe -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/hilbertcurve.cpp" -o hilbert-curve -lX11 -lGL &
 
 popd > /dev/null
 

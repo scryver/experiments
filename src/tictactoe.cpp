@@ -1,6 +1,7 @@
 #include "../libberdip/platform.h"
 #include "../libberdip/random.h"
 #include "../libberdip/perlin.h"
+#include "../libberdip/multilane.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -35,16 +36,16 @@ struct GameState
     TicTacToePlayer currentPlayer;
     
     TicTacToeState state;
-    u32 ticksToProceed;
+    f32 secondsToWait;
     TicTacToeState nextState;
     
     u8 grid[9];
 };
 
 internal void
-set_timeout(GameState *state, TicTacToeState toState, u32 timeoutTicks)
+set_timeout(GameState *state, TicTacToeState toState, f32 timeoutSecs)
 {
-    state->ticksToProceed = timeoutTicks;
+    state->secondsToWait = timeoutSecs;
     state->nextState = toState;
 }
 
@@ -88,6 +89,26 @@ internal TicTacToePlayer
 check_winner(GameState *state)
 {
     TicTacToePlayer result = Player_None;
+    
+#if 0    
+    u32 results[8];
+    results[0] = ((get_tile(state, 0, 0) == get_tile(state, 1, 0)) &&
+                  (get_tile(state, 1, 0) == get_tile(state, 2, 0)));
+    results[1] = ((get_tile(state, 0, 1) == get_tile(state, 1, 1)) &&
+                  (get_tile(state, 1, 1) == get_tile(state, 2, 1)));
+    results[2] = ((get_tile(state, 0, 2) == get_tile(state, 1, 2)) &&
+                  (get_tile(state, 1, 2) == get_tile(state, 2, 2)));
+    results[3] = ((get_tile(state, 0, 0) == get_tile(state, 0, 1)) &&
+                  (get_tile(state, 0, 1) == get_tile(state, 0, 2)));
+    results[4] = ((get_tile(state, 1, 0) == get_tile(state, 1, 1)) &&
+                  (get_tile(state, 1, 1) == get_tile(state, 1, 2)));
+    results[5] = ((get_tile(state, 2, 0) == get_tile(state, 2, 1)) &&
+                  (get_tile(state, 2, 1) == get_tile(state, 2, 2)));
+    results[6] = ((get_tile(state, 0, 2) == get_tile(state, 1, 1)) &&
+                  (get_tile(state, 1, 1) == get_tile(state, 2, 0)));
+    results[7] = ((get_tile(state, 0, 0) == get_tile(state, 1, 1)) &&
+                  (get_tile(state, 1, 1) == get_tile(state, 2, 2)));
+#endif
     
     for (u32 idx = 0; idx < 3; ++idx)
     {
@@ -265,9 +286,9 @@ DRAW_IMAGE(draw_image)
     // NOTE(michiel): Update
     //
     
-    if (game->ticksToProceed)
+    if (game->secondsToWait > 0.0f)
     {
-        --game->ticksToProceed;
+        game->secondsToWait -= dt;
     }
     else
     {
@@ -284,23 +305,23 @@ DRAW_IMAGE(draw_image)
                     f32 mouseY = clamp(0.0f, (mouse.pixelPosition.y - start.y) / tileSize.y, 2.0f);
                     u32 gridIndex = 3 * u32_from_f32_floor(mouseY) + u32_from_f32_floor(mouseX);
                     game->grid[gridIndex] = game->currentPlayer;
-                    set_timeout(game, State_PlayerChange, 20);
+                    set_timeout(game, State_PlayerChange, 0.5f);
                 }
 #else
-                set_timeout(game, State_PlayerInput, 30);
+                set_timeout(game, State_PlayerInput, 0.5f);
 #endif
             } break;
             
             case State_PlayerChange: {
                 game->currentPlayer = other_player(game->currentPlayer);
-                set_timeout(game, State_PlayerInput, 20);
+                set_timeout(game, State_PlayerInput, 0.25f);
             } break;
             
             case State_PlayerInput: {
                 TicTacToePlayer winner = check_winner(game);
                 if (winner != Player_None)
                 {
-                    set_timeout(game, State_EndOfGame, 120);
+                    set_timeout(game, State_EndOfGame, 2.0f);
                 }
                 else
                 {
@@ -313,12 +334,12 @@ DRAW_IMAGE(draw_image)
                         next_move_random(game);
                     }
                     
-                    set_timeout(game, State_PlayerChange, 20);
+                    set_timeout(game, State_PlayerChange, 0.25f);
                 }
             } break;
             
             case State_EndOfGame: {
-                set_timeout(game, State_Started, 90);
+                set_timeout(game, State_Started, 1.5f);
             } break;
             
             INVALID_DEFAULT_CASE;
