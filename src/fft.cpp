@@ -20,20 +20,21 @@ struct FFTState
     u32 origSignalCount;
     v2 *origSignal;
     Complex32 *dftSignal;
+    v2 *reconstructSignal;
     
     v2 *origSinc;
     Complex32 *dftSinc;
 };
 
 internal void
-dft(u32 dftCount, v2 *signal, Complex32 *dftSignal, u32 step = 1)
+dft(u32 dftCount, v2 *signal, Complex32 *dftSignal)
 {
     f32 oneOverCount = 1.0f / (f32)dftCount;
     for (u32 dftIndex = 0; dftIndex < dftCount; ++dftIndex)
     {
         Complex32 sum = {};
         f32 powerStep = -(f32)dftIndex * oneOverCount;
-        for (u32 sampleIndex = 0; sampleIndex < dftCount; sampleIndex += step)
+        for (u32 sampleIndex = 0; sampleIndex < dftCount; ++sampleIndex)
         {
             f32 inp = signal[sampleIndex].y;
             f32 k = powerStep * (f32)sampleIndex;
@@ -41,6 +42,27 @@ dft(u32 dftCount, v2 *signal, Complex32 *dftSignal, u32 step = 1)
             sum.imag = sum.imag + inp * sin_f32(k);
         }
         dftSignal[dftIndex] = sum;
+    }
+}
+
+internal void
+idft(u32 dftCount, Complex32 *signal, v2 *reconstruct)
+{
+    f32 oneOverCount = 1.0f / (f32)dftCount;
+    for (u32 dftIndex = 0; dftIndex < dftCount; ++dftIndex)
+    {
+        Complex32 sum = {};
+        f32 powerStep = (f32)dftIndex * oneOverCount;
+        for (u32 sampleIndex = 0; sampleIndex < dftCount; ++sampleIndex)
+        {
+            f32 k = powerStep * (f32)sampleIndex;
+            Complex32 x;
+            x.real = cos_f32(k);
+            x.imag = sin_f32(k);
+            Complex32 inp = signal[sampleIndex];
+            sum += inp * x;
+        }
+        reconstruct[dftIndex].y = (oneOverCount * sum).real;
     }
 }
 
@@ -75,6 +97,37 @@ fft_recurse(u32 dftCount, v2 *signal, Complex32 *dftSignal, u32 step = 1)
     }
 }
 
+internal void
+ifft_recurse(u32 dftCount, Complex32 *signal, Complex32 *reconstruct, u32 step = 1)
+{
+    i_expect(is_pow2(dftCount));
+    
+    if (dftCount == 1)
+    {
+        *reconstruct = *signal;
+    }
+    else
+    {
+        u32 halfCount = dftCount / 2;
+        ifft_recurse(halfCount, signal, reconstruct, step * 2);
+        ifft_recurse(halfCount, signal + step, reconstruct + halfCount, step * 2);
+        
+        f32 oneOverCount = 1.0f / (f32)dftCount;
+        Complex32 TStep;
+        TStep.real = cos_f32(oneOverCount);
+        TStep.imag = sin_f32(oneOverCount);
+        Complex32 T = {1, 0};
+        f32 amplMod = step * oneOverCount;
+        for (u32 index = 0; index < halfCount; ++index, T *= TStep)
+        {
+            Complex32 E = reconstruct[index];
+            Complex32 O = T * reconstruct[index + halfCount];
+            reconstruct[index] = (E + O) * amplMod;
+            reconstruct[index + halfCount] = (E - O) * amplMod;
+        }
+    }
+}
+
 internal u32
 reverse_bits(u32 b, u32 msb)
 {
@@ -89,32 +142,6 @@ reverse_bits(u32 b, u32 msb)
     }
     result <<= msb;
     return result & mask;
-}
-
-internal f32_4x
-reverse_bits_4x(f32_4x b, u32 msb)
-{
-    //u32 origMsb = msb;
-    f32_4x one = S32_4x(1);
-    f32_4x shiftCount = S32_4x(msb, 0, 0, 0);
-    f32_4x mask = s32_4x_sub(s32_4x_sll(one, shiftCount), one);
-    
-    shiftCount = S32_4x(1, 0, 0, 0);
-    
-    f32_4x result = b;
-    --msb;
-    
-    for (b = s32_4x_srl(b, shiftCount); any(b); b = s32_4x_srl(b, shiftCount))
-    {
-        result = s32_4x_sll(result, shiftCount);
-        result = s32_4x_or(result, s32_4x_and(b, one));
-        --msb;
-    }
-    
-    shiftCount = S32_4x(msb, 0, 0, 0);
-    result = s32_4x_sll(result, shiftCount);
-    result = s32_4x_and(result, mask);
-    return result;
 }
 
 internal void
@@ -167,6 +194,59 @@ fft_iter(u32 dftCount, v2 *signal, Complex32 *dftSignal)
     }
 }
 
+internal void
+ifft_iter(u32 dftCount, Complex32 *signal, Complex32 *reconstruct)
+{
+    i_expect(is_pow2(dftCount));
+    i_expect(dftCount > 2);
+    
+    BitScanResult highBit = find_most_significant_set_bit(dftCount);
+    for (u32 index = 0; index < dftCount; ++index)
+    {
+        u32 reversedIndex = reverse_bits(index, highBit.index);
+        if (reversedIndex > index)
+        {
+            reconstruct[index] = signal[reversedIndex];
+            reconstruct[reversedIndex] = signal[index];
+        }
+        else if (reversedIndex == index)
+        {
+            reconstruct[reversedIndex] = signal[index];
+        }
+    }
+    
+    u32 halfM = 1;
+    u32 m = 2;
+    u32 d = dftCount / 2;
+    while (m <= dftCount)
+    {
+        Complex32 Wm;
+        
+        f32 oneOverM = 1.0f / (f32)m;
+        Wm.real = cos_f32(oneOverM);
+        Wm.imag = sin_f32(oneOverM);
+        
+        for (u32 k = 0; k < dftCount; k += m)
+        {
+            Complex32 w;
+            w.real = 1.0f;
+            w.imag = 0.0f;
+            f32 amplMod = (f32)d * oneOverM;
+            for (u32 j = 0; j < halfM; ++j)
+            {
+                Complex32 E = reconstruct[k + j];
+                Complex32 O = w * reconstruct[k + j + halfM];
+                reconstruct[k + j] = (E + O) * amplMod;
+                reconstruct[k + j + halfM] = (E - O) * amplMod;
+                w = w * Wm;
+            }
+        }
+        halfM = m;
+        m <<= 1;
+        d >>= 1;
+    }
+}
+
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(FFTState) <= state->memorySize);
@@ -182,6 +262,7 @@ DRAW_IMAGE(draw_image)
         fftState->origSignalCount = 8192;
         fftState->origSignal = allocate_array(v2, fftState->origSignalCount);
         fftState->dftSignal = allocate_array(Complex32, fftState->origSignalCount);
+        fftState->reconstructSignal = allocate_array(v2, fftState->origSignalCount);
         
         f32 oneOverCount = 1.0f / (f32)fftState->origSignalCount;
         for (u32 idx = 0; idx < fftState->origSignalCount; ++idx)
@@ -193,6 +274,10 @@ DRAW_IMAGE(draw_image)
             point->y = sin(mod * 4.0f * F32_TAU) + 0.5f * sin(mod * 6.0f * F32_TAU - 0.5f * F32_PI);
             //point->y = sin(mod * 400.0f * F32_TAU) + 0.5f * sin(mod * 600.0f * F32_TAU - 0.5f * F32_PI);
             //point->y = random_bilateral(&fftState->randomizer);
+            
+            v2 *point2 = fftState->reconstructSignal + idx;
+            point2->x = mod;
+            point2->y = 0.0f;
         }
         
 #if 0        
@@ -229,6 +314,15 @@ DRAW_IMAGE(draw_image)
     
     TempMemory tempMem = temporary_memory(&fftState->drawArena);
     
+    Complex32 *idftBuf = arena_allocate_array(&fftState->drawArena, Complex32, fftState->origSignalCount);
+    //idft(fftState->origSignalCount, fftState->dftSignal, fftState->reconstructSignal);
+    //ifft_recurse(fftState->origSignalCount, fftState->dftSignal, idftBuf);
+    ifft_iter(fftState->origSignalCount, fftState->dftSignal, idftBuf);
+    for (u32 idx = 0; idx < fftState->origSignalCount; ++idx)
+    {
+        fftState->reconstructSignal[idx].y = idftBuf[idx].real;
+    }
+    
     f32 oneOverCount = 1.0f / (f32)fftState->origSignalCount;
     v3 *dftSig = arena_allocate_array(&fftState->drawArena, v3, fftState->origSignalCount);
     for (u32 idx = 0; idx < fftState->origSignalCount; ++idx)
@@ -245,6 +339,11 @@ DRAW_IMAGE(draw_image)
     
     draw_lines(image, fftState->origSignalCount, dftSig, V3(0.5f * size.x + 10.0f, 0.5f * size.y, 0.25f * size.y),
                V3(0.5f * size.x - 20.0f, -0.5f * size.y + 20.0f, -0.25f * size.y / F32_PI + 20.0f), V4(1, 1, 1, 1), V4(1, 0, 0, 1));
+    
+    draw_lines(image, fftState->origSignalCount, dftSig, V3(10.0f, size.y - 10.0f, 0.75f * size.y),
+               V3(0.5f * size.x - 20.0f, -0.5f * size.y + 20.0f, -0.25f * size.y / F32_PI + 20.0f), V4(1, 1, 1, 1), V4(1, 0, 0, 1));
+    
+    draw_lines(image, fftState->origSignalCount, fftState->reconstructSignal, V2(0.5f * size.x + 10.0f, 0.75f * size.y), V2(0.45f * size.x, -0.2f * size.y), V4(1, 1, 1, 1));
     
     destroy_temporary(tempMem);
     
