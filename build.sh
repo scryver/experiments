@@ -87,9 +87,10 @@ IGNORE_ME
     clang++ $flags $exceptions "$codeDir/maurerrose.cpp" -o maurer-rose -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/rdplinesimplefy.cpp" -o rdp-line -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/collatzconjecture.cpp" -o collatz-conjecture -lX11 -lGL &
-    clang++ $flags $exceptions "$codeDir/fft.cpp" -o fft -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/tictactoe.cpp" -o tic-tac-toe -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/hilbertcurve.cpp" -o hilbert-curve -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/fft.cpp" -o fft -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/fft_memaccess.cpp" -o fft-memaccess -lX11 -lGL &
 
 popd > /dev/null
 
