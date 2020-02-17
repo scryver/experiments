@@ -477,24 +477,19 @@ fft_iter_inplace2(u32 dftCount, Complex32 *signal)
         Complex32 Wm3 = Wm2 * Wm;
         Complex32 Wm4 = Wm3 * Wm;
         
-#if 1
+        f32_4x wm4_real_4x = F32_4x(Wm4.real);
+        f32_4x wm4_imag_4x = F32_4x(Wm4.imag);
+        
         for (u32 k = 0; k < dftCount; k += m)
         {
-            Complex32 w;
-            w.real = 1.0f;
-            w.imag = 0.0f;
             Complex32 *src0 = signal + k;
             Complex32 *src1 = signal + k + halfM;
             
-            Complex32 w2 = w * Wm;
-            Complex32 w3 = w * Wm2;
-            Complex32 w4 = w * Wm3;
+            f32_4x w_real_4x = F32_4x(1.0f, Wm.real, Wm2.real, Wm3.real);
+            f32_4x w_imag_4x = F32_4x(0.0f, Wm.imag, Wm2.imag, Wm3.imag);
             
-            for (u32 j = 0; j < halfM; j += 4)
+            for (u32 j = 0; j < halfM; j += 8)
             {
-                f32_4x w_real_4x = F32_4x(w.real, w2.real, w3.real, w4.real);
-                f32_4x w_imag_4x = F32_4x(w.imag, w2.imag, w3.imag, w4.imag);
-                
                 f32 *EGrab = (f32 *)(src0 + j);
                 f32 *OGrab = (f32 *)(src1 + j);
                 f32 *EPut  = (f32 *)(src0 + j);
@@ -503,6 +498,7 @@ fft_iter_inplace2(u32 dftCount, Complex32 *signal)
                 f32_4x a01 = F32_4x(OGrab);
                 OGrab += 4;
                 f32_4x a23 = F32_4x(OGrab);
+                OGrab += 4;
                 
                 f32_4x a_real;
                 f32_4x a_imag;
@@ -514,23 +510,19 @@ fft_iter_inplace2(u32 dftCount, Complex32 *signal)
                 f32_4x mulX2 = w_real_4x * a_imag;
                 f32_4x mulX3 = w_imag_4x * a_real;
                 
-                f32_4x O_real = mulX0 - mulX1;
-                f32_4x O_imag = mulX2 + mulX3;
-                
-                w = w * Wm4;
-                w2 = w2 * Wm4;
-                w3 = w3 * Wm4;
-                w4 = w4 * Wm4;
+                f32_4x O0_real = mulX0 - mulX1;
+                f32_4x O0_imag = mulX2 + mulX3;
                 
                 f32_4x E01 = F32_4x(EGrab);
                 EGrab += 4;
                 f32_4x E23 = F32_4x(EGrab);
+                EGrab += 4;
                 
                 f32_4x O01;
                 f32_4x O23;
-                O01.m = _mm_shuffle_ps(O_real.m, O_imag.m, MULTILANE_SHUFFLE_MASK(0, 1, 0, 1));
+                O01.m = _mm_shuffle_ps(O0_real.m, O0_imag.m, MULTILANE_SHUFFLE_MASK(0, 1, 0, 1));
                 O01.m = _mm_shuffle_epi32(O01.m, MULTILANE_SHUFFLE_MASK(0, 2, 1, 3));
-                O23.m = _mm_shuffle_ps(O_real.m, O_imag.m, MULTILANE_SHUFFLE_MASK(2, 3, 2, 3));
+                O23.m = _mm_shuffle_ps(O0_real.m, O0_imag.m, MULTILANE_SHUFFLE_MASK(2, 3, 2, 3));
                 O23.m = _mm_shuffle_epi32(O23.m, MULTILANE_SHUFFLE_MASK(0, 2, 1, 3));
                 
                 f32_4x add01 = E01 + O01;
@@ -543,27 +535,63 @@ fft_iter_inplace2(u32 dftCount, Complex32 *signal)
                 _mm_store_ps(OPut, sub01.m);
                 OPut += 4;
                 _mm_store_ps(EPut, add23.m);
+                EPut += 4;
                 _mm_store_ps(OPut, sub23.m);
+                OPut += 4;
+                
+                f32_4x temp_w = (w_real_4x * wm4_real_4x) - (w_imag_4x * wm4_imag_4x);
+                w_imag_4x = (w_real_4x * wm4_imag_4x) + (w_imag_4x * wm4_real_4x);
+                w_real_4x = temp_w;
+                
+                f32_4x a45 = F32_4x(OGrab);
+                OGrab += 4;
+                f32_4x a67 = F32_4x(OGrab);
+                OGrab += 4;
+                
+                f32_4x b_real;
+                f32_4x b_imag;
+                b_real.m = _mm_shuffle_ps(a45.m, a67.m, MULTILANE_SHUFFLE_MASK(0, 2, 0, 2));
+                b_imag.m = _mm_shuffle_ps(a45.m, a67.m, MULTILANE_SHUFFLE_MASK(1, 3, 1, 3));
+                
+                f32_4x mulY0 = w_real_4x * b_real;
+                f32_4x mulY1 = w_imag_4x * b_imag;
+                f32_4x mulY2 = w_real_4x * b_imag;
+                f32_4x mulY3 = w_imag_4x * b_real;
+                
+                f32_4x O1_real = mulY0 - mulY1;
+                f32_4x O1_imag = mulY2 + mulY3;
+                
+                f32_4x E45 = F32_4x(EGrab);
+                EGrab += 4;
+                f32_4x E67 = F32_4x(EGrab);
+                EGrab += 4;
+                
+                f32_4x O45;
+                f32_4x O67;
+                O45.m = _mm_shuffle_ps(O1_real.m, O1_imag.m, MULTILANE_SHUFFLE_MASK(0, 1, 0, 1));
+                O45.m = _mm_shuffle_epi32(O45.m, MULTILANE_SHUFFLE_MASK(0, 2, 1, 3));
+                O67.m = _mm_shuffle_ps(O1_real.m, O1_imag.m, MULTILANE_SHUFFLE_MASK(2, 3, 2, 3));
+                O67.m = _mm_shuffle_epi32(O67.m, MULTILANE_SHUFFLE_MASK(0, 2, 1, 3));
+                
+                f32_4x add45 = E45 + O45;
+                f32_4x add67 = E67 + O67;
+                f32_4x sub45 = E45 - O45;
+                f32_4x sub67 = E67 - O67;
+                
+                _mm_store_ps(EPut, add45.m);
+                EPut += 4;
+                _mm_store_ps(OPut, sub45.m);
+                OPut += 4;
+                _mm_store_ps(EPut, add67.m);
+                EPut += 4;
+                _mm_store_ps(OPut, sub67.m);
+                OPut += 4;
+                
+                temp_w = (w_real_4x * wm4_real_4x) - (w_imag_4x * wm4_imag_4x);
+                w_imag_4x = (w_real_4x * wm4_imag_4x) + (w_imag_4x * wm4_real_4x);
+                w_real_4x = temp_w;
             }
         }
-#else
-        for (u32 k = 0; k < dftCount; k += m)
-        {
-            Complex32 w;
-            w.real = 1.0f;
-            w.imag = 0.0f;
-            Complex32 *src0 = signal + k;
-            Complex32 *src1 = signal + k + halfM;
-            for (u32 j = 0; j < halfM; ++j)
-            {
-                Complex32 E = *src0;
-                Complex32 O = w * *src1;
-                *src0++ = E + O;
-                *src1++ = E - O;
-                w *= Wm;
-            }
-        }
-#endif
         
         halfM = m;
         m <<= 1;

@@ -6,6 +6,8 @@
 #include "complex.h"
 #include "fft_impl.cpp"
 
+#include "../../../../Programs/fftw-3.3.8/api/fftw3.h"
+
 internal void
 fft_iter_inplace_address(u32 dftCount)
 {
@@ -65,7 +67,7 @@ int main(int argc, char **argv)
 {
     fft_iter_inplace_address(8);
     
-    u32 testCount = 16*8192;
+    u32 testCount = 128*8192;
     
     f32 *signal = allocate_array(f32, testCount);
     Complex32 *fftSignal = allocate_array(Complex32, testCount);
@@ -142,6 +144,17 @@ int main(int argc, char **argv)
     end = get_wall_clock();
     f32 fftIterInPlaceCopy3Time = get_seconds_elapsed(start, end);
     
+    fftwf_complex *in;
+    fftwf_plan p;
+    in  = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex) * testCount);
+    p   = fftwf_plan_dft_1d(testCount, in, in, FFTW_FORWARD, FFTW_MEASURE);
+    start = get_wall_clock();
+    fftwf_execute(p);
+    end = get_wall_clock();
+    f32 fftwTime = get_seconds_elapsed(start, end);
+    fftwf_destroy_plan(p);
+    fftwf_free(in);
+    
     fprintf(stdout, "Timings:\n");
 #if DO_DFT
     fprintf(stdout, "  DFT                          : %f sec\n", dftTime);
@@ -154,5 +167,6 @@ int main(int argc, char **argv)
     fprintf(stdout, "  FFT Iterate inplace no copy  : %f sec\n", fftIterInPlaceTime);
     fprintf(stdout, "  FFT Iterate inplace w/copy2  : %f sec\n", fftIterInPlaceCopy2Time);
     fprintf(stdout, "  FFT Iterate inplace w/copy3  : %f sec\n", fftIterInPlaceCopy3Time);
+    fprintf(stdout, "  FFTW library                 : %f sec\n", fftwTime);
     
 }

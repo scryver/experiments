@@ -90,7 +90,7 @@ IGNORE_ME
     clang++ $flags $exceptions "$codeDir/tictactoe.cpp" -o tic-tac-toe -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/hilbertcurve.cpp" -o hilbert-curve -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/fft.cpp" -o fft -lX11 -lGL &
-    clang++ $flags $exceptions "$codeDir/fft_memaccess.cpp" -o fft-memaccess -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/fft_memaccess.cpp" -o fft-memaccess -lX11 -lGL -L$HOME/Programs/fftw-3.3.8/build/.libs -lfftw3f -lm &
 
 popd > /dev/null
 
