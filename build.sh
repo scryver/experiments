@@ -10,6 +10,7 @@ buildDir="$curDir/gebouw"
 flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread -msse4"
 
 exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces -Wno-gnu-zero-variadic-macro-arguments -Wno-c99-extensions"
+exceptions="$exceptions -Wno-unused-variable"
 
 echo "Start build..."
 
@@ -92,6 +93,7 @@ IGNORE_ME
     clang++ $flags $exceptions "$codeDir/fft.cpp" -o fft -lX11 -lGL &
     clang++ $flags $exceptions -DLIBBERDIP_EXPECT=0 "$codeDir/fft_memaccess.cpp" -o fft-memaccess -lX11 -lGL -L$HOME/Programs/fftw-3.3.8/build/.libs -lfftw3f -lm &
     clang++ $flags $exceptions "$codeDir/bitreversal.cpp" -o bitreversal &
+    clang++ $flags $exceptions "$codeDir/clampline.cpp" -o clamp-line &
 
 popd > /dev/null
 

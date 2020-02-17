@@ -406,7 +406,8 @@ DRAW_IMAGE(draw_image)
     {
         idftBuf[idx] = fftState->dftSignal[idx];
     }
-    ifft_iter_inplace(fftState->origSignalCount, idftBuf);
+    //ifft_iter_inplace(fftState->origSignalCount, idftBuf);
+    ifft(fftState->origSignalCount, idftBuf);
     
     for (u32 idx = 0; idx < fftState->origSignalCount; ++idx)
     {
