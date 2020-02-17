@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -52,7 +50,7 @@ print_hidden2(u32 layerCount, u32 *layerSizes, f32 *hidden)
         
         for (u32 c = 0; c < count; ++c)
         {
-                fprintf(stdout, "% .8f|\n%s", *h++, c < (count - 1) ? "|" : "");
+            fprintf(stdout, "% .8f|\n%s", *h++, c < (count - 1) ? "|" : "");
         }
         
         fprintf(stdout, "-------------\n\n");
@@ -91,11 +89,11 @@ print_weights2(u32 inputCount, u32 layerCount, u32 *layerSizes, f32 *weights)
         fprintf(stdout, "\n|");
         
         for (u32 c = 0; c < count; ++c)
-            {
-            for (u32 p = 0; p < prevCount; ++p)
         {
+            for (u32 p = 0; p < prevCount; ++p)
+            {
                 fprintf(stdout, "% .8f%s", *w++, p < (prevCount - 1) ? "," : "");
-                        }
+            }
             fprintf(stdout, "|\n%s", c < (count - 1) ? "|" : "");
         }
         
@@ -210,13 +208,13 @@ DRAW_IMAGE(draw_image)
         
         f32 *deltaWeights = allocate_array(f32, net->totalWeights);
         f32 *deltaBiases  = allocate_array(f32, net->totalNeurons);
-        #if 1
+#if 1
         back_propagate(net, &train, deltaWeights, deltaBiases);
-        #else
+#else
         predict(train.inputCount, train.inputs, net->layerCount, net->layerSizes,
                 net->hidden, net->weights, net->biases);
         
-         TempMemory tempMem = temporary_memory();
+        TempMemory tempMem = temporary_memory();
         
         f32 *act = net->hidden;
         f32 *w = net->weights + net->totalWeights;
@@ -238,56 +236,56 @@ DRAW_IMAGE(draw_image)
             
             dnb -= count;
             dnw -= count * prevCount;
-        
+            
             if (layerIdx == net->layerCount - 1)
             {
-        // NOTE(michiel): LayerIdx = -1
-        i_expect(count == 1);
-        i_expect(prevCount == 2);
-        
-            errors[0] = act[5] - train.outputs[0];
-        
-        dnb[0] = errors[0];
-        dnw[0] = errors[0] * act[3];
-        dnw[1] = errors[0] * act[4];
+                // NOTE(michiel): LayerIdx = -1
+                i_expect(count == 1);
+                i_expect(prevCount == 2);
+                
+                errors[0] = act[5] - train.outputs[0];
+                
+                dnb[0] = errors[0];
+                dnw[0] = errors[0] * act[3];
+                dnw[1] = errors[0] * act[4];
             }
             else if (layerIdx == net->layerCount - 2)
             {
-        // NOTE(michiel): LayerIdx = -2
-        i_expect(count == 2);
-        i_expect(prevCount == 3);
-        
-        errors[0] = w[0] * nextErr[0] * (act[3] * (1.0f - act[3]));
-        errors[1] = w[1] * nextErr[0] * (act[4] * (1.0f - act[4]));
-        
-        dnb[0] = errors[0];
-        dnb[1] = errors[1];
-        dnw[0] = errors[0] * act[0];
-        dnw[1] = errors[0] * act[1];
-        dnw[2] = errors[0] * act[2];
-        dnw[3] = errors[1] * act[0];
-        dnw[4] = errors[1] * act[1];
-        dnw[5] = errors[1] * act[2];
+                // NOTE(michiel): LayerIdx = -2
+                i_expect(count == 2);
+                i_expect(prevCount == 3);
+                
+                errors[0] = w[0] * nextErr[0] * (act[3] * (1.0f - act[3]));
+                errors[1] = w[1] * nextErr[0] * (act[4] * (1.0f - act[4]));
+                
+                dnb[0] = errors[0];
+                dnb[1] = errors[1];
+                dnw[0] = errors[0] * act[0];
+                dnw[1] = errors[0] * act[1];
+                dnw[2] = errors[0] * act[2];
+                dnw[3] = errors[1] * act[0];
+                dnw[4] = errors[1] * act[1];
+                dnw[5] = errors[1] * act[2];
             }
             else if (layerIdx == 0)
             {
-        // NOTE(michiel): LayerIdx = -3 = Input
-        i_expect(count == 3);
-        i_expect(prevCount == 2);
-        
-        errors[0] = (w[0] * nextErr[0] + w[3] * nextErr[1]) * (act[0] * (1.0f - act[0]));
-        errors[1] = (w[1] * nextErr[0] + w[4] * nextErr[1]) * (act[1] * (1.0f - act[1]));
-        errors[2] = (w[2] * nextErr[0] + w[5] * nextErr[1]) * (act[2] * (1.0f - act[2]));
-        
-        dnb[0] = errors[0];
-        dnb[1] = errors[1];
-        dnb[2] = errors[2];
-        dnw[0] = errors[0] * train.inputs[0];
-        dnw[1] = errors[0] * train.inputs[1];
-        dnw[2] = errors[1] * train.inputs[0];
-        dnw[3] = errors[1] * train.inputs[1];
-        dnw[4] = errors[2] * train.inputs[0];
-        dnw[5] = errors[2] * train.inputs[1];
+                // NOTE(michiel): LayerIdx = -3 = Input
+                i_expect(count == 3);
+                i_expect(prevCount == 2);
+                
+                errors[0] = (w[0] * nextErr[0] + w[3] * nextErr[1]) * (act[0] * (1.0f - act[0]));
+                errors[1] = (w[1] * nextErr[0] + w[4] * nextErr[1]) * (act[1] * (1.0f - act[1]));
+                errors[2] = (w[2] * nextErr[0] + w[5] * nextErr[1]) * (act[2] * (1.0f - act[2]));
+                
+                dnb[0] = errors[0];
+                dnb[1] = errors[1];
+                dnb[2] = errors[2];
+                dnw[0] = errors[0] * train.inputs[0];
+                dnw[1] = errors[0] * train.inputs[1];
+                dnw[2] = errors[1] * train.inputs[0];
+                dnw[3] = errors[1] * train.inputs[1];
+                dnw[4] = errors[2] * train.inputs[0];
+                dnw[5] = errors[2] * train.inputs[1];
             }
             
             w -= count * prevCount;
@@ -298,7 +296,7 @@ DRAW_IMAGE(draw_image)
         }
         
         destroy_temporary(tempMem);
-        #endif
+#endif
         
         fprintf(stdout, "dWeights\n");
         print_weights(neuronCalc->inputCount, net->layerCount, net->layerSizes, deltaWeights);

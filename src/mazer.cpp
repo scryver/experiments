@@ -1,4 +1,3 @@
-#include "../libberdip/platform.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -6,15 +5,13 @@ DRAW_IMAGE(draw_image);
 
 #include "main.cpp"
 
-#include "../libberdip/random.h"
-
 enum Walls
 {
     Wall_Top = 0x1,
     Wall_Right = 0x2,
     Wall_Bottom = 0x4,
-Wall_Left = 0x8,
-    };
+    Wall_Left = 0x8,
+};
 struct Cell
 {
     u32 x;
@@ -37,12 +34,12 @@ struct MazeState
     
     u32 cellCount;
     Grid grid;
-
+    
     Cell *current;
     
     u32 stackCount;
     Cell **visitedStack;
-    };
+};
 
 global u32 width = 10;
 
@@ -105,7 +102,7 @@ next_cell(RandomSeriesPCG *randomizer, Grid *grid, Cell *current)
     if (neighbourCount)
     {
         u32 randomNeighbour = random_choice(randomizer, neighbourCount);
-         result = neighbours[randomNeighbour];
+        result = neighbours[randomNeighbour];
     }
     
     return result;
@@ -142,7 +139,7 @@ remove_walls(Cell *a, Cell *b)
 DRAW_IMAGE(draw_image)
 {
     MazeState *mazeState = (MazeState *)state->memory;
-         if (!state->initialized)
+    if (!state->initialized)
     {
         mazeState->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         Grid *grid = &mazeState->grid;
@@ -150,7 +147,7 @@ DRAW_IMAGE(draw_image)
         grid->rows = image->height / width;
         grid->cells = allocate_array(Cell, grid->columns * grid->rows);
         
-         mazeState->cellCount = 0;
+        mazeState->cellCount = 0;
         for (u32 row = 0; row < grid->rows; ++row)
         {
             for (u32 col = 0; col < grid->columns; ++col)
@@ -169,7 +166,7 @@ DRAW_IMAGE(draw_image)
         mazeState->visitedStack = allocate_array(Cell *, mazeState->cellCount);
         
         state->initialized = true;
-        }
+    }
     
     Grid *grid = &mazeState->grid;
     Cell *current = mazeState->current;
@@ -178,13 +175,13 @@ DRAW_IMAGE(draw_image)
     if (1) // (mazeState->ticks % 16) == 0)
     {
         Cell *next = next_cell(&mazeState->randomizer, grid, current);
-    if (next)
-    {
+        if (next)
+        {
             i_expect(mazeState->stackCount < mazeState->cellCount);
             mazeState->visitedStack[mazeState->stackCount++] = current;
-        remove_walls(current, next);
-    mazeState->current = next;
-    }
+            remove_walls(current, next);
+            mazeState->current = next;
+        }
         else if (mazeState->stackCount)
         {
             mazeState->current = mazeState->visitedStack[--mazeState->stackCount];
@@ -240,4 +237,4 @@ DRAW_IMAGE(draw_image)
     }
     
     ++mazeState->ticks;
-    }
+}

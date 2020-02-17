@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -54,17 +52,17 @@ DRAW_IMAGE(draw_image)
     
     for (u32 test = 0; test < testDataSet.count; ++test)
     {
-    Training *testData = testDataSet.set + test;
-    testData->inputCount = 25;
-    testData->outputCount = 4;
-    testData->inputs = allocate_array(f32, testData->inputCount);
-    testData->outputs = allocate_array(f32, testData->outputCount);
+        Training *testData = testDataSet.set + test;
+        testData->inputCount = 25;
+        testData->outputCount = 4;
+        testData->inputs = allocate_array(f32, testData->inputCount);
+        testData->outputs = allocate_array(f32, testData->outputCount);
     }
     
     
     {
         Training *testData = testDataSet.set;
-    
+        
         for (u32 y = 0; y < 5; ++y)
         {
             f32 *inputs = testData->inputs + y * 5;
@@ -133,10 +131,10 @@ DRAW_IMAGE(draw_image)
     {
         u32 xBase = 10 + t * resolution * (5 + 8);
         u32 xOffset = xBase;
-            u32 yOffset = 10;
-    Training *train = testDataSet.set + t;
+        u32 yOffset = 10;
+        Training *train = testDataSet.set + t;
         predict(&handwrite->brain, train);
-    
+        
         f32 *inputs = train->inputs;
         for (u32 y = 0; y < 5; ++y)
         {
@@ -152,121 +150,57 @@ DRAW_IMAGE(draw_image)
         outline_rectangle(image, xOffset, yOffset, resolution * 5, resolution * 5,
                           V4(0, 1, 0, 1));
         
-    xOffset = xBase;
-    yOffset += resolution * 5 + 5;
-    
-    u32 rows = 3;
-    u32 columns = 3;
-    f32 *weights = feature->featureMap.weights;
-    for (u32 m = 0; m < feature->featureMap.mapCount && m < 7 * 3; ++m)
-    {
-        f32 *wMap = weights + m * rows * columns;
-        for (u32 y = 0; y < rows; ++y)
-        {
-            f32 *wRow = wMap + y * columns;
-            for (u32 x = 0; x < columns; ++x)
-            {
-                    f32 gray = wRow[x];
-                    //f32 gray = activate_neuron(wRow[x]);
-                v4 colour = V4(gray, gray, gray, 1);
-                fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
-                               resolution, resolution, colour);
-            }
-        }
-        outline_rectangle(image, xOffset, yOffset, resolution * columns, resolution * rows,
-                          V4(0, 1, 0, 1));
-        
-        xOffset += resolution * columns + 5;
-        
-        if (((m + 1) % 7) == 0)
-        {
-            yOffset += resolution * rows + 5;
-            xOffset = xBase;
-        }
-    }
-    
-     xOffset = xBase;
-    yOffset += resolution * rows + 5;
-    
-    for (u32 y = 0; y < 2; ++y)
-    {
-        f32 *outRow = train->outputs + y * 2;
-        for (u32 x = 0; x < 2; ++x)
-        {
-            f32 gray = outRow[x];
-            v4 colour = V4(gray, gray, gray, 1.0f);
-            fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
-                           resolution, resolution, colour);
-        }
-    }
-        outline_rectangle(image, xOffset, yOffset, resolution * 2, resolution * 2,
-                          V4(0, 1, 0, 1));
-        
-        xOffset += resolution * 2 + 5;
-    
-    f32 *outputs = feature->outputs;
-    for (u32 m = 0; m < feature->featureMap.mapCount && m < 7 * 3; ++m)
-    {
-        u32 outputStep = feature->outputCount / feature->featureMap.mapCount;
-    for (u32 y = 0; y < 2; ++y)
-    {
-        f32 *outRow = outputs + y * 2;
-        for (u32 x = 0; x < 2; ++x)
-        {
-            f32 gray = outRow[x];
-            v4 colour = V4(gray, gray, gray, 1.0f);
-            fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
-                           resolution, resolution, colour);
-        }
-        }
-        outline_rectangle(image, xOffset, yOffset, resolution * 2, resolution * 2,
-                          V4(0, 1, 0, 1));
-        
-        xOffset += resolution * 2 + 5;
-        outputs += outputStep;
-    }
-
-    {
-            Arena tempArena = {0};
-        
-        f32 *deltaWeights = arena_allocate_array(&tempArena, f32, 3 * 3 * feature->featureMap.mapCount);
-            f32 *deltaBias = arena_allocate_array(&tempArena, f32, feature->featureMap.mapCount);
-    back_propagate(&handwrite->brain, train, deltaWeights, deltaBias);
-        
         xOffset = xBase;
-        yOffset += resolution * 2 + 5;
+        yOffset += resolution * 5 + 5;
         
-        f32 *weights = deltaWeights;
-        f32 *bias = deltaBias;
+        u32 rows = 3;
+        u32 columns = 3;
+        f32 *weights = feature->featureMap.weights;
         for (u32 m = 0; m < feature->featureMap.mapCount && m < 7 * 3; ++m)
         {
-        for (u32 y = 0; y < rows; ++y)
-        {
-            f32 *wRow = weights + y * columns;
-            for (u32 x = 0; x < columns; ++x)
+            f32 *wMap = weights + m * rows * columns;
+            for (u32 y = 0; y < rows; ++y)
             {
-                        f32 gray = wRow[x];
-                //f32 gray = activate_neuron(wRow[x]);
-                        v4 colour = V4(gray, gray, gray, 1);
-                fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
-                               resolution, resolution, colour);
-            }
+                f32 *wRow = wMap + y * columns;
+                for (u32 x = 0; x < columns; ++x)
+                {
+                    f32 gray = wRow[x];
+                    //f32 gray = activate_neuron(wRow[x]);
+                    v4 colour = V4(gray, gray, gray, 1);
+                    fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
+                                   resolution, resolution, colour);
+                }
             }
             outline_rectangle(image, xOffset, yOffset, resolution * columns, resolution * rows,
                               V4(0, 1, 0, 1));
             
-            weights += feature->featureMap.featureWidth * feature->featureMap.featureHeight;
-        
-        f32 b = activate_neuron(*bias++);
-        v4 colour = V4(b, b, b, 1.0f);
-        fill_rectangle(image, xOffset, yOffset + resolution * rows + 5, resolution, resolution, colour);
-                outline_rectangle(image, xOffset, yOffset + resolution * rows + 5, resolution, resolution, V4(0, 1, 0, 1));
-                
-                xOffset += resolution * columns + 5;
+            xOffset += resolution * columns + 5;
+            
+            if (((m + 1) % 7) == 0)
+            {
+                yOffset += resolution * rows + 5;
+                xOffset = xBase;
+            }
         }
         
         xOffset = xBase;
-            yOffset += resolution * (rows + 2) + 5;
+        yOffset += resolution * rows + 5;
+        
+        for (u32 y = 0; y < 2; ++y)
+        {
+            f32 *outRow = train->outputs + y * 2;
+            for (u32 x = 0; x < 2; ++x)
+            {
+                f32 gray = outRow[x];
+                v4 colour = V4(gray, gray, gray, 1.0f);
+                fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
+                               resolution, resolution, colour);
+            }
+        }
+        outline_rectangle(image, xOffset, yOffset, resolution * 2, resolution * 2,
+                          V4(0, 1, 0, 1));
+        
+        xOffset += resolution * 2 + 5;
         
         f32 *outputs = feature->outputs;
         for (u32 m = 0; m < feature->featureMap.mapCount && m < 7 * 3; ++m)
@@ -277,7 +211,7 @@ DRAW_IMAGE(draw_image)
                 f32 *outRow = outputs + y * 2;
                 for (u32 x = 0; x < 2; ++x)
                 {
-                    f32 gray = activate_neuron(outRow[x]);
+                    f32 gray = outRow[x];
                     v4 colour = V4(gray, gray, gray, 1.0f);
                     fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
                                    resolution, resolution, colour);
@@ -290,8 +224,72 @@ DRAW_IMAGE(draw_image)
             outputs += outputStep;
         }
         
+        {
+            Arena tempArena = {0};
+            
+            f32 *deltaWeights = arena_allocate_array(&tempArena, f32, 3 * 3 * feature->featureMap.mapCount);
+            f32 *deltaBias = arena_allocate_array(&tempArena, f32, feature->featureMap.mapCount);
+            back_propagate(&handwrite->brain, train, deltaWeights, deltaBias);
+            
+            xOffset = xBase;
+            yOffset += resolution * 2 + 5;
+            
+            f32 *weights = deltaWeights;
+            f32 *bias = deltaBias;
+            for (u32 m = 0; m < feature->featureMap.mapCount && m < 7 * 3; ++m)
+            {
+                for (u32 y = 0; y < rows; ++y)
+                {
+                    f32 *wRow = weights + y * columns;
+                    for (u32 x = 0; x < columns; ++x)
+                    {
+                        f32 gray = wRow[x];
+                        //f32 gray = activate_neuron(wRow[x]);
+                        v4 colour = V4(gray, gray, gray, 1);
+                        fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
+                                       resolution, resolution, colour);
+                    }
+                }
+                outline_rectangle(image, xOffset, yOffset, resolution * columns, resolution * rows,
+                                  V4(0, 1, 0, 1));
+                
+                weights += feature->featureMap.featureWidth * feature->featureMap.featureHeight;
+                
+                f32 b = activate_neuron(*bias++);
+                v4 colour = V4(b, b, b, 1.0f);
+                fill_rectangle(image, xOffset, yOffset + resolution * rows + 5, resolution, resolution, colour);
+                outline_rectangle(image, xOffset, yOffset + resolution * rows + 5, resolution, resolution, V4(0, 1, 0, 1));
+                
+                xOffset += resolution * columns + 5;
+            }
+            
+            xOffset = xBase;
+            yOffset += resolution * (rows + 2) + 5;
+            
+            f32 *outputs = feature->outputs;
+            for (u32 m = 0; m < feature->featureMap.mapCount && m < 7 * 3; ++m)
+            {
+                u32 outputStep = feature->outputCount / feature->featureMap.mapCount;
+                for (u32 y = 0; y < 2; ++y)
+                {
+                    f32 *outRow = outputs + y * 2;
+                    for (u32 x = 0; x < 2; ++x)
+                    {
+                        f32 gray = activate_neuron(outRow[x]);
+                        v4 colour = V4(gray, gray, gray, 1.0f);
+                        fill_rectangle(image, xOffset + x * resolution, yOffset + y * resolution,
+                                       resolution, resolution, colour);
+                    }
+                }
+                outline_rectangle(image, xOffset, yOffset, resolution * 2, resolution * 2,
+                                  V4(0, 1, 0, 1));
+                
+                xOffset += resolution * 2 + 5;
+                outputs += outputStep;
+            }
+            
             arena_free(&tempArena);
-    }
+        }
     }
     
     //if ((handwrite->ticks % 256) == 0)
@@ -317,7 +315,7 @@ DRAW_IMAGE(draw_image)
     {
         randomize_weights(&handwrite->randomizer, &handwrite->brain);
     }
-
+    
     handwrite->prevMouseDown = mouse.mouseDowns;
     ++handwrite->ticks;
 }

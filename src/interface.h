@@ -1,3 +1,8 @@
+#include "../libberdip/platform.h"
+#include "../libberdip/random.h"
+#include "../libberdip/perlin.h"
+#include "../libberdip/complex.h"
+#include "../libberdip/multilane.h"
 #include "complex.h"
 #include "multithread.h"
 

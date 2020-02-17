@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -56,7 +54,7 @@ draw_curve(Image *image, Curve *curve, v4 colour)
         }
         else
         {
-            draw_line(image, prevLine->x, prevLine->y, line->x, line->y, colour);
+            draw_line(image, (s32)prevLine->x, (s32)prevLine->y, (s32)line->x, (s32)line->y, colour);
         }
         prevLine = line;
     }

@@ -1,6 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
-#include "../libberdip/perlin.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 

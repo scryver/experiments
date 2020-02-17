@@ -2,10 +2,8 @@
 #include <stdlib.h>
 #include <sys/mman.h>     // PROT_*, MAP_*, munmap
 
-#include "../libberdip/platform.h"
 #include "../src/interface.h"
 
-#include "../libberdip/random.h"
 #include "../libberdip/std_file.c"
 
 #define MATRIX_TEST 1
@@ -45,7 +43,7 @@ int main(int argc, char **argv)
         }
         h2hWeights += oldNet.inputToHiddenWeights.columns;
     }
-
+    
 #if 0    
     f32 *rowOld = oldNet.hiddenBias.m;
     f32 *rowNew = newNet.hiddenBias;
@@ -53,8 +51,8 @@ int main(int argc, char **argv)
     {
         *rowNew++ = *rowOld++;
     }
-    #endif
-
+#endif
+    
     for (u32 row = 0; row < oldNet.hiddenBias.rows; ++row)
     {
         f32 *rowOld = oldNet.hiddenBias.m + row * oldNet.hiddenBias.columns;
@@ -119,10 +117,10 @@ int main(int argc, char **argv)
             newNet.hidden[0], newNet.hidden[1], newNet.hidden[2]);
     
     fprintf(stdout, "Training\n");
-
-f32 trainingData[6] = {0.1f, 0.2f, 0.3f, 0.4f, -1.0f, 1.0f};
     
-    #if 1
+    f32 trainingData[6] = {0.1f, 0.2f, 0.3f, 0.4f, -1.0f, 1.0f};
+    
+#if 1
     train(&oldNet, inputCount, trainingData, outputCount, trainingData + inputCount);
     train(&newNet, inputCount, trainingData, outputCount, trainingData + inputCount,
           learningRate);
@@ -138,7 +136,7 @@ f32 trainingData[6] = {0.1f, 0.2f, 0.3f, 0.4f, -1.0f, 1.0f};
             oldNet.hidden.m[0], oldNet.hidden.m[1], oldNet.hidden.m[2],
             newNet.hidden[0], newNet.hidden[1], newNet.hidden[2]);
     
-    #else
+#else
     
     feed_forward(&oldNet, inputCount, inputs);
     predict(&newNet, inputCount, inputs);
@@ -281,8 +279,8 @@ f32 trainingData[6] = {0.1f, 0.2f, 0.3f, 0.4f, -1.0f, 1.0f};
             oldNet.hiddenBias.m[0], oldNet.hiddenBias.m[1], oldNet.hiddenBias.m[2],
             newNet.hiddenBias[0], newNet.hiddenBias[1], newNet.hiddenBias[2]);
     
-    #endif
-
+#endif
+    
     
     return 0;
 }

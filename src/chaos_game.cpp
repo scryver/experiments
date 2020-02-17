@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -39,12 +37,12 @@ choose_point(RandomSeriesPCG *random, v2 *points)
     v2 goTo = points[(point + 1) % 3];
     v2 diff = goTo - result;
     diff *= random_unilateral(random);
-     result += diff;
+    result += diff;
     
     goTo = points[(point + 2) % 3];
     diff = goTo - result;
     diff *= random_unilateral(random);
-     result += diff;
+    result += diff;
     
     return result;
 }

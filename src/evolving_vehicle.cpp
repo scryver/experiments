@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -47,13 +45,13 @@ struct EvolveSettings
     
     f32 poisonWeight;     //   5.00f
     f32 poisonHealth;     //  -0.50f  per eating
-f32 poisonPerception; // 100.00f  pixels
+    f32 poisonPerception; // 100.00f  pixels
     
     f32 healthDrop;       //   0.1f   per second
     f32 cloneRate;        //   0.005f percentage
     f32 foodSpawnRate;    //   0.05f  percentage
     f32 poisonSpawnRate;  //   0.01f  percentage
-    };
+};
 
 struct EvolveState
 {
@@ -90,7 +88,7 @@ init_vehicle(RandomSeriesPCG *random, EvolveVehicle *vehicle,
     vehicle->maxForce = maxForce;
     vehicle->maxSpeed = maxSpeed;
     vehicle->mover.velocity = V2(random_bilateral(random) * maxSpeed * 0.5f,
-                                   random_bilateral(random) * maxSpeed * 0.5f);
+                                 random_bilateral(random) * maxSpeed * 0.5f);
     
     vehicle->health = 1.0f;
     
@@ -155,7 +153,7 @@ seperate(u32 vehicleIndex, EvolveVehicle *vehicle,
     {
         if (neighbourIndex != vehicleIndex)
         {
-    EvolveVehicle *neighbour = neighbours + neighbourIndex;
+            EvolveVehicle *neighbour = neighbours + neighbourIndex;
             v2 diff = vehicle->mover.position - neighbour->mover.position;
             if (length_squared(diff) < square(40.0f))
             {
@@ -164,7 +162,7 @@ seperate(u32 vehicleIndex, EvolveVehicle *vehicle,
                 seperationForce += force;
             }
         }
-        }
+    }
     
     return seperationForce;
 }
@@ -181,11 +179,11 @@ eat(EvolveVehicle *vehicle, WorldFood *food, f32 healthMod = 0.0f, f32 perceptio
     {
         Food *current = food->foodies + foodIndex;
         
-    v2 direction = current->position - vehicle->mover.position;
+        v2 direction = current->position - vehicle->mover.position;
         f32 dirDistSqr = length_squared(direction);
         if (dirDistSqr < square(4.0f))
         {
-             *current = food->foodies[--food->foodCount];
+            *current = food->foodies[--food->foodCount];
             vehicle->health += healthMod;
             if (vehicle->health > 1.0f)
             {
@@ -206,9 +204,9 @@ eat(EvolveVehicle *vehicle, WorldFood *food, f32 healthMod = 0.0f, f32 perceptio
     
     if (recordSqr < F32_INF)
     {
-            result = seeking_force(&vehicle->mover, closest.position, vehicle->maxSpeed,
+        result = seeking_force(&vehicle->mover, closest.position, vehicle->maxSpeed,
                                vehicle->maxForce);
-        }
+    }
     
     return result;
 }
@@ -239,11 +237,11 @@ within_boundary_force(Mover *mover, v2 minBound, v2 maxBound, f32 maxSpeed, f32 
     if ((desired.x != 0.0f) ||
         (desired.y != 0.0f))
     {
-    desired = set_length(desired, maxSpeed);
+        desired = set_length(desired, maxSpeed);
         desired = desired - mover->velocity;
         if (length_squared(desired) > maxForce)
         {
-             desired = set_length(desired, maxForce);
+            desired = set_length(desired, maxForce);
         }
     }
     return desired;
@@ -329,7 +327,7 @@ DRAW_IMAGE(draw_image)
         
         evolveState->poison.maxFoodCount = 200;
         evolveState->poison.foodies = allocate_array(Food, evolveState->poison.maxFoodCount);
-          evolveState->poison.foodCount = 10;
+        evolveState->poison.foodCount = 10;
         
         for (u32 foodIndex = 0; foodIndex < evolveState->poison.foodCount; ++foodIndex)
         {
@@ -402,7 +400,7 @@ DRAW_IMAGE(draw_image)
     
     for (u32 vehicleIndex = 0; vehicleIndex < evolveState->vehicleCount; ++vehicleIndex)
     {
-         EvolveVehicle *vehicle = evolveState->currentVehicles + vehicleIndex;
+        EvolveVehicle *vehicle = evolveState->currentVehicles + vehicleIndex;
         
         v2 dir = vehicle->mover.velocity;
         dir = normalize(dir);
@@ -423,20 +421,20 @@ DRAW_IMAGE(draw_image)
         }
         
         front += vehicle->mover.position;
-         backUp += vehicle->mover.position;
-         backDo += vehicle->mover.position;
-         good += vehicle->mover.position;
-         bad += vehicle->mover.position;
+        backUp += vehicle->mover.position;
+        backDo += vehicle->mover.position;
+        good += vehicle->mover.position;
+        bad += vehicle->mover.position;
         
         if (evolveState->debug)
         {
-        draw_line(image, vehicle->mover.position.x + 1, vehicle->mover.position.y + 1, 
-                  good.x, good.y, foodColour);
-        draw_line(image, vehicle->mover.position.x - 1, vehicle->mover.position.y - 1, 
-                  bad.x, bad.y, poisonColour);
-        outline_circle(image, vehicle->mover.position.x, vehicle->mover.position.y,
+            draw_line(image, vehicle->mover.position.x + 1, vehicle->mover.position.y + 1, 
+                      good.x, good.y, foodColour);
+            draw_line(image, vehicle->mover.position.x - 1, vehicle->mover.position.y - 1, 
+                      bad.x, bad.y, poisonColour);
+            outline_circle(image, vehicle->mover.position.x, vehicle->mover.position.y,
                            food_perception(settings, vehicle), 2.0f, foodColour);
-        outline_circle(image, vehicle->mover.position.x, vehicle->mover.position.y,
+            outline_circle(image, vehicle->mover.position.x, vehicle->mover.position.y,
                            poison_perception(settings, vehicle), 2.0f, poisonColour);
         }
         

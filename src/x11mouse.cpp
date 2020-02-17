@@ -1,4 +1,3 @@
-#include "../libberdip/platform.h"
 #include "interface.h"
 
 #include <unistd.h>
@@ -78,14 +77,14 @@ int main(int argc, char **argv)
                 if ((winX >= 0) && (winY >= 0))
                 {
                     mouseP.x = winX;
-                mouseP.y = winY;
+                    mouseP.y = winY;
                 }
             }
         }
         
         XEvent event;
         while (XPending(display))
-               {
+        {
             XNextEvent(display, &event);
             
             if ((event.type == Expose) &&
@@ -122,7 +121,7 @@ int main(int argc, char **argv)
                 XDrawLine(display, window, gc, halfWidth, halfHeight + halfHeight / 2, halfWidth + mouseddP.x,
                           halfHeight + halfHeight / 2 + mouseddP.y);
             }
-               }
+        }
         
         XFlush(display);
         //usleep(10000);

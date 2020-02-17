@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -19,7 +17,7 @@ struct NeuralState
     
     u32 inputCount;
     f32 *inputs;
-    };
+};
 
 DRAW_IMAGE(draw_image)
 {
@@ -37,7 +35,7 @@ DRAW_IMAGE(draw_image)
         init_neural_network(&neuralState->randomizer, &neuralState->brain, 
                             neuralState->inputCount, 100, 1, 0.1f);
         
-    state->initialized = true;
+        state->initialized = true;
     }
     
     f32 trainigData[4][3] = 
@@ -47,7 +45,7 @@ DRAW_IMAGE(draw_image)
         {1, 0, 1},
         {1, 1, 0},
     };
-
+    
     for (u32 t = 0; t < 100; ++t)
     {
         u32 randomIndex = random_choice(&neuralState->randomizer, 4);
@@ -63,16 +61,16 @@ DRAW_IMAGE(draw_image)
     {
         u32 iteration = neuralState->ticks * 100;
         fprintf(stdout, "Iteration: %u\n", iteration);
-    for (u32 i = 0; i < 4; ++i)
-    {
-        neuralState->inputs[0] = trainigData[i][0];
-        neuralState->inputs[1] = trainigData[i][1];
-        feed_forward(&neuralState->brain, neuralState->inputCount, neuralState->inputs);
-        fprintf(stdout, "Got: %f, expected: %f, error: %+f\n",
+        for (u32 i = 0; i < 4; ++i)
+        {
+            neuralState->inputs[0] = trainigData[i][0];
+            neuralState->inputs[1] = trainigData[i][1];
+            feed_forward(&neuralState->brain, neuralState->inputCount, neuralState->inputs);
+            fprintf(stdout, "Got: %f, expected: %f, error: %+f\n",
                     neuralState->brain.outputs.m[0],
-                trainigData[i][2],
+                    trainigData[i][2],
                     trainigData[i][2] - neuralState->brain.outputs.m[0]);
-    }
+        }
         fprintf(stdout, "\n");
     }
     

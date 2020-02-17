@@ -1,6 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
-#include "../libberdip/perlin.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -180,14 +177,14 @@ draw_playing_grid(Image *image, PlayingGrid *grid, u32 tileWidth, v2u mouseP)
         Ray *ray = grid->rays + rayIdx;
         if (ray->type != Ray_None)
         {
-            v2u start = startP + ray->start * tileWidth;
-            v2u end = startP + ray->end * tileWidth;
-            v2u at = lerp(start, ray->tCast, end);
-            draw_line(image, start.x + halfTileWidth, start.y + halfTileWidth,
+            v2s start = V2S(startP) + V2S(ray->start * tileWidth);
+            v2s end = V2S(startP) + V2S(ray->end * tileWidth);
+            v2s at = lerp(start, ray->tCast, end);
+            draw_line(image, start.x + (s32)halfTileWidth, start.y + halfTileWidth,
                       at.x + halfTileWidth, at.y + halfTileWidth, V4(1, 0, 0, 1));
             
-            fill_triangle(image, start + V2U(5, tileWidth - 5), start + V2U(halfTileWidth, 5),
-                          start + V2U(tileWidth - 5, tileWidth - 5), V4(0.7f, 0.7f, 1.0f, 1));
+            fill_triangle(image, start + V2S(5, tileWidth - 5), start + V2S(halfTileWidth, 5),
+                          start + V2S(tileWidth - 5, tileWidth - 5), V4(0.7f, 0.7f, 1.0f, 1));
         }
     }
 }

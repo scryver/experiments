@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -33,7 +31,7 @@ init_particle(Particle *particle, v2 position, RandomSeriesPCG *random = 0)
     particle->pos = position;
     if (random)
     {
-    particle->vel = V2(random_bilateral(random), random_bilateral(random));
+        particle->vel = V2(random_bilateral(random), random_bilateral(random));
         particle->vel *= 5.0f;
     }
     else
@@ -51,7 +49,7 @@ update_particle(Particle *particle)
     particle->pos += particle->vel;
     particle->acc = V2(0, 0);
     
-        particle->lifeSpan -= 1;
+    particle->lifeSpan -= 1;
 }
 
 internal inline b32
@@ -91,8 +89,8 @@ add_particle(ParticleSystem *system)
     Particle *particle = 0;
     if (system->particleCount < system->maxParticles)
     {
-    particle = system->particles + system->particleCount++;
-    init_particle(particle, system->origin, system->randomizer);
+        particle = system->particles + system->particleCount++;
+        init_particle(particle, system->origin, system->randomizer);
     }
     return particle;
 }
@@ -111,7 +109,7 @@ sort_particles(ParticleSystem *system, s32 startIndex, s32 endIndex)
     // NOTE(michiel): Oldest particles get moved to end of array
     if (startIndex < endIndex)
     {
-         Particle *pivot = system->particles + endIndex;
+        Particle *pivot = system->particles + endIndex;
         u32 index = startIndex;
         for (u32 j = startIndex; j < endIndex - 1; ++j)
         {
@@ -159,7 +157,7 @@ update_particles(ParticleSystem *system)
             ++particleIndex;
         }
     }
-    }
+}
 
 internal void
 render_particles(Image *image, ParticleSystem *system)
@@ -169,7 +167,7 @@ render_particles(Image *image, ParticleSystem *system)
         Particle *particle = system->particles + particleIndex;
         render_particle(image, particle);
     }
-    }
+}
 
 struct ParticleState
 {
@@ -203,7 +201,7 @@ DRAW_IMAGE(draw_image)
     
     s32 removeCount = system->maxParticles - system->particleCount;
     removeCount = maximum(0, 60 - removeCount);
-        system->particleCount -= removeCount;
+    system->particleCount -= removeCount;
     
     for (u32 i = 0; i < 60; ++i)
     {
@@ -223,7 +221,7 @@ DRAW_IMAGE(draw_image)
         fprintf(stdout, "Frames: %d (%5.2fms)\n", particleState->ticks,
                 (f32)particleState->ticks / 1000.0f);
         particleState->ticks = 0;
-                particleState->secondsCount -= 1.0f;
+        particleState->secondsCount -= 1.0f;
     }
     
     ++particleState->ticks;

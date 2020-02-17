@@ -100,22 +100,6 @@ ifft_recurse(u32 dftCount, Complex32 *signal, Complex32 *reconstruct, u32 step =
     }
 }
 
-internal u32
-reverse_bits(u32 b, u32 msb)
-{
-    u32 mask = (1 << msb) - 1;
-    u32 result = b;
-    --msb;
-    for (b >>= 1; b; b>>= 1)
-    {
-        result <<= 1;
-        result |= b & 1;
-        --msb;
-    }
-    result <<= msb;
-    return result & mask;
-}
-
 internal void
 fft_iter(u32 dftCount, f32 *signal, Complex32 *dftSignal)
 {

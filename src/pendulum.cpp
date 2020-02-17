@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -46,8 +44,8 @@ DRAW_IMAGE(draw_image)
     draw_line(image, round(pendulum->origin.x), round(pendulum->origin.y),
               round(pendulum->bob.x), round(pendulum->bob.y), V4(1, 1, 1, 1));
     fill_circle(image, round(pendulum->bob.x), round(pendulum->bob.y), 16, V4(1, 1, 1, 1));
-
-pendulum->angle += pendulum->aVel;
+    
+    pendulum->angle += pendulum->aVel;
     if (pendulum->angle > F32_TAU)
     {
         pendulum->angle -= F32_TAU;
@@ -57,6 +55,6 @@ pendulum->angle += pendulum->aVel;
     pendulum->aAcc = -0.01f * sin(pendulum->angle);
     
     pendulum->aVel *= 0.99f;
-
+    
     ++pendulum->ticks;
 }

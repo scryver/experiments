@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 #include "fixedpoint.h"
 
@@ -23,12 +21,6 @@ struct v2fp
 {
     FixedPoint x;
     FixedPoint y;
-};
-
-struct v2d
-{
-    f64 x;
-    f64 y;
 };
 
 struct DrawMandelbrotWork
@@ -131,7 +123,7 @@ get_mandelbrot(Complex64 c0, u32 paletteCount, v4 *palette, u32 maxIteration = 1
     Complex64 c = {};
     u32 iteration = 0;
     f64 blowUp = square(blowUpPoint);
-    while ((abs(c) < blowUp) &&
+    while ((absolute(c) < blowUp) &&
            (iteration < maxIteration))
     {
         c = square(c) + c0;
@@ -153,7 +145,7 @@ get_mandelbrot(Complex32 c0, u32 paletteCount, v4 *palette, u32 maxIteration = 1
     Complex32 c = {};
     u32 iteration = 0;
     f32 blowUp = square(blowUpPoint);
-    while ((abs(c) < blowUp) &&
+    while ((absolute(c) < blowUp) &&
            (iteration < maxIteration))
     {
         c = square(c) + c0;

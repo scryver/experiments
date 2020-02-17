@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -18,7 +16,7 @@ struct ColourState
     RandomSeriesPCG randomizer;
     u32 ticks;
     
-     Neural brain;
+    Neural brain;
     
     u32 inputCount;
     f32 *inputs;
@@ -49,7 +47,7 @@ print_network(Neural *network)
     fprintf(stdout, "  internals:\n");
     
     u32 rows = network->inputCount;
-        f32 *hidden = network->hidden;
+    f32 *hidden = network->hidden;
     f32 *h2hWeight = network->weights;
     f32 *hiddenBias = network->biases;
     for (u32 layerIndex = 0; layerIndex < network->layerCount - 1; ++layerIndex)
@@ -59,28 +57,11 @@ print_network(Neural *network)
         if (layerIndex < network->layerCount - 1)
         {
             count = network->layerSizes[layerIndex];
-        fprintf(stdout, "    hidden[%d]: [", layerIndex + 1);
-        for (u32 index = 0; index < count; ++index)
-        {
-            fprintf(stdout, "%f", hidden[index]);
-            if (index == count - 1)
+            fprintf(stdout, "    hidden[%d]: [", layerIndex + 1);
+            for (u32 index = 0; index < count; ++index)
             {
-                fprintf(stdout, "]\n");
-            }
-            else
-            {
-                fprintf(stdout, ", ");
-            }
-        }
-        
-        fprintf(stdout, "    hiddenWeight[%d]:\n", layerIndex + 1);
-        for (u32 row = 0; row < count; ++row)
-        {
-            fprintf(stdout, "      [");
-            for (u32 col = 0; col < rows; ++col)
-            {
-                fprintf(stdout, "% 5.2f", h2hWeight[row * rows + col]);
-                if (col == rows - 1)
+                fprintf(stdout, "%f", hidden[index]);
+                if (index == count - 1)
                 {
                     fprintf(stdout, "]\n");
                 }
@@ -89,23 +70,40 @@ print_network(Neural *network)
                     fprintf(stdout, ", ");
                 }
             }
-        }
+            
+            fprintf(stdout, "    hiddenWeight[%d]:\n", layerIndex + 1);
+            for (u32 row = 0; row < count; ++row)
+            {
+                fprintf(stdout, "      [");
+                for (u32 col = 0; col < rows; ++col)
+                {
+                    fprintf(stdout, "% 5.2f", h2hWeight[row * rows + col]);
+                    if (col == rows - 1)
+                    {
+                        fprintf(stdout, "]\n");
+                    }
+                    else
+                    {
+                        fprintf(stdout, ", ");
+                    }
+                }
+            }
             
             h2hWeight += count * rows;
-        
-        fprintf(stdout, "    hiddenBias[%d]: [", layerIndex + 1);
-        for (u32 index = 0; index < count; ++index)
-        {
-            fprintf(stdout, "%f", hiddenBias[index]);
-            if (index == count - 1)
+            
+            fprintf(stdout, "    hiddenBias[%d]: [", layerIndex + 1);
+            for (u32 index = 0; index < count; ++index)
             {
-                fprintf(stdout, "]\n");
+                fprintf(stdout, "%f", hiddenBias[index]);
+                if (index == count - 1)
+                {
+                    fprintf(stdout, "]\n");
+                }
+                else
+                {
+                    fprintf(stdout, ", ");
+                }
             }
-            else
-            {
-                fprintf(stdout, ", ");
-            }
-        }
         }
         else
         {
@@ -160,7 +158,7 @@ print_network(Neural *network)
             fprintf(stdout, ", ");
         }
     }
-    }
+}
 
 DRAW_IMAGE(draw_image)
 {
@@ -214,10 +212,10 @@ DRAW_IMAGE(draw_image)
                     *colourState->brain.outputs,
                     trainigData[i][2],
                     trainigData[i][2] - *colourState->brain.outputs);
-            }
-        fprintf(stdout, "\n");
-    // print_network(&colourState->brain);
         }
+        fprintf(stdout, "\n");
+        // print_network(&colourState->brain);
+    }
     
     u32 resolution = 10;
     u32 rows = image->height / resolution;

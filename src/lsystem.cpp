@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -49,19 +47,19 @@ DRAW_IMAGE(draw_image)
         lSystem->currentY = 0;
         
         state->initialized = true;
-        }
+    }
     
     if (lSystem->currentY < image->height)
     {
-    u32 nextBuffer = (lSystem->currentBuffer + 1) & 1;
+        u32 nextBuffer = (lSystem->currentBuffer + 1) & 1;
         if (lSystem->buffer[lSystem->currentBuffer][0] == 0)
-    {
-        lSystem->buffer[nextBuffer][0] = 'A';
+        {
+            lSystem->buffer[nextBuffer][0] = 'A';
         }
-    else
-    {
+        else
+        {
             u8 *d = lSystem->buffer[nextBuffer];
-        for (u32 i = 0; i < lSystem->maxBufferSize / 4; ++i)
+            for (u32 i = 0; i < lSystem->maxBufferSize / 4; ++i)
             {
                 u8 s = lSystem->buffer[lSystem->currentBuffer][i];
                 
@@ -83,8 +81,8 @@ DRAW_IMAGE(draw_image)
                 }
             }
         }
-    lSystem->currentBuffer = nextBuffer;
-    
+        lSystem->currentBuffer = nextBuffer;
+        
         u8 *s = lSystem->buffer[lSystem->currentBuffer];
         for (u32 x = 0; x < image->width; ++x)
         {
@@ -92,7 +90,7 @@ DRAW_IMAGE(draw_image)
             if (*s == 'A')
             {
                 colour = V4(1, 0, 0, 1);
-                }
+            }
             else if (*s == 'B')
             {
                 colour = V4(0, 0, 1, 1);
@@ -102,8 +100,8 @@ DRAW_IMAGE(draw_image)
                 break;
             }
             draw_pixel(image, x, lSystem->currentY, colour);
-        ++s;
-            }
+            ++s;
+        }
         ++lSystem->currentY;
     }
     

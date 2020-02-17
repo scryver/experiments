@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -40,7 +38,7 @@ DRAW_IMAGE(draw_image)
     draw_line(image, round(center.x), round(center.y), round(xy.x), round(xy.y),
               V4(1, 1, 1, 1));
     fill_circle(image, round(xy.x), round(xy.y), 20.0f, V4(1, 1, 1, 1));
-              
+    
     polar->angle += polar->angleVel;
     if (polar->angle > F32_TAU)
     {

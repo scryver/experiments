@@ -1,8 +1,5 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
-#include "../libberdip/perlin.h"
-#include "../libberdip/suballoc.h"
 #include "interface.h"
+#include "../libberdip/suballoc.h"
 DRAW_IMAGE(draw_image);
 
 #define SUBPIXEL_LOCATION 0

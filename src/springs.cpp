@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -35,7 +33,7 @@ DRAW_IMAGE(draw_image)
         
         state->initialized = true;
     }
-
+    
     apply_spring(&springState->bob, springState->origin, springState->restLength);
     apply_drag(&springState->bob, 0.1f);
     

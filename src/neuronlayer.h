@@ -519,7 +519,7 @@ predict_layer(NeuralLayer *layer)
                         f32 *inputRow = in + y * outW * pW;
                         for (u32 x = 0; x < outPW; ++x)
                         {
-                            f32 max = F32_MIN;
+                            f32 max = -F32_MAX;
                             u32 maxIdx = U32_MAX;
                             for (u32 py = 0; py < pH; ++py)
                             {

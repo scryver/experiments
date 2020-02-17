@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -75,15 +73,15 @@ DRAW_IMAGE(draw_image)
         stochastic_gradient_descent(&handwrite->randomizer, &handwrite->brain,
                                     30, 2, 0.8f, t);
         u32 postCorrect = evaluate(&handwrite->brain, t, eval_single);
-
+        
         if ((handwrite->ticks % 20) == 0)
         {    
             u32 epochs = 20 * 30;
-        fprintf(stdout, "From %u to %u in %d epoch%s. (%f%% -> %f%%)\n",
-                preCorrect, postCorrect, 
+            fprintf(stdout, "From %u to %u in %d epoch%s. (%f%% -> %f%%)\n",
+                    preCorrect, postCorrect, 
                     epochs, epochs > 1 ? "s" : "",
                     100.0f * (f32)preCorrect / 4.0f,
-                100.0f * (f32)postCorrect / 4.0f);
+                    100.0f * (f32)postCorrect / 4.0f);
         }
     }
     

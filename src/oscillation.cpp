@@ -1,5 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -41,7 +39,7 @@ DRAW_IMAGE(draw_image)
             + 0.5f * oscillation->amplitude * sin( oscillation->angle + xStep * 0.01f);
         y *= 0.4f;
         y += center.y;
-    fill_circle(image, xStep, round(y), 22, V4(1, 1, 1, 0.9f));
+        fill_circle(image, xStep, round(y), 22, V4(1, 1, 1, 0.9f));
     }
     
     oscillation->angle += oscillation->angleStep;

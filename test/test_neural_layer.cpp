@@ -2,12 +2,10 @@
 #include <stdlib.h>
 #include <sys/mman.h>     // PROT_*, MAP_*, munmap
 
-#include "../libberdip/platform.h"
-#include "../libberdip/std_file.c"
 #include "../src/interface.h"
 #include "test_interface.h"
+#include "../libberdip/std_file.c"
 
-#include "../libberdip/random.h"
 #define MATRIX_TEST 1
 #include "../src/matrix.h"
 #include "../src/aitraining.h"
@@ -91,11 +89,11 @@ int main(int argc, char **argv)
     f32 o3 = 0.11f * -0.2f + 0.22f * -0.3f + 0.33f *  0.6f + 0.44f *  0.1f;
     i_expect(layer.outputs[0] == activate_neuron(o0));
     i_expect(layer.outputs[1] == activate_neuron(o1));
-             i_expect(layer.outputs[2] == activate_neuron(o2));
-                      i_expect(layer.outputs[3] == activate_neuron(o3));
+    i_expect(layer.outputs[2] == activate_neuron(o2));
+    i_expect(layer.outputs[3] == activate_neuron(o3));
     i_expect(almost_equal(layer.outputs[0], activate_neuron(-0.033f)));
     i_expect(almost_equal(layer.outputs[1], activate_neuron(-0.077f)));
-             i_expect(almost_equal(layer.outputs[2], activate_neuron( 0.374f)));
+    i_expect(almost_equal(layer.outputs[2], activate_neuron( 0.374f)));
     i_expect(almost_equal(layer.outputs[3], activate_neuron( 0.154f)));
     
     fprintf(stdout,
@@ -110,7 +108,7 @@ int main(int argc, char **argv)
     prevError[1] = layer.outputs[1] - test.outputs[1];
     prevError[2] = layer.outputs[2] - test.outputs[2];
     prevError[3] = layer.outputs[3] - test.outputs[3];
-
+    
     f32 *deltaw = allocate_array(f32, 2 * 2);
     f32 *deltab = allocate_array(f32, 1);
     

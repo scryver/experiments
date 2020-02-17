@@ -1,6 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
-#include "../libberdip/perlin.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -79,7 +76,7 @@ get_mandelbrot(Complex32 base, Complex32 c0, u32 paletteCount, v4 *palette,
     Complex32 c = base;
     u32 iteration = 0;
     f32 blowUp = square(blowUpPoint);
-    while ((abs(c) < blowUp) &&
+    while ((absolute(c) < blowUp) &&
            (iteration < maxIteration))
     {
         c = square(c) + c0;

@@ -1,6 +1,3 @@
-#include "../libberdip/platform.h"
-#include "../libberdip/random.h"
-#include "../libberdip/perlin.h"
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
@@ -25,7 +22,7 @@ DRAW_IMAGE(draw_image)
         f32 time1 = 0.0f;
         f32 time2 = 0.0f;
         
-                for (u32 y = 0; y < image->height; ++y)
+        for (u32 y = 0; y < image->height; ++y)
         {
             for (u32 x = 0; x < image->width; ++x)
             {
@@ -35,7 +32,7 @@ DRAW_IMAGE(draw_image)
                 if (x < image->width / 2)
                 {
                     start = get_wall_clock();
-                 n = perlin_noise(noise, V2(scale * x, scale * y));
+                    n = perlin_noise(noise, V2(scale * x, scale * y));
                     end = get_wall_clock();
                     time1 += get_seconds_elapsed(start, end);
                 }
@@ -50,9 +47,9 @@ DRAW_IMAGE(draw_image)
                 
                 u32 grayScale = (u32)round(255.0f * (0.5f * n + 0.5f)) & 0xFF;
                 
-            image->pixels[y * image->width + x] = 
+                image->pixels[y * image->width + x] = 
                     (0xFF << 24) | (grayScale << 16) | (grayScale << 8) | grayScale;
-                    }
+            }
         }
         
         fprintf(stdout, "Timing: 1 = %7.4f | 2 = %7.4f\n", time1, time2);
@@ -117,7 +114,7 @@ DRAW_IMAGE(draw_image)
             }
             
             result = perlin_noise(noise2, V2(100.0f * random_bilateral(&randomize),
-                                            100.0f * random_bilateral(&randomize)));
+                                             100.0f * random_bilateral(&randomize)));
             if (min2_v2 > result)
             {
                 min2_v2 = result;
@@ -128,8 +125,8 @@ DRAW_IMAGE(draw_image)
             }
             
             result = perlin_noise(noise2, V3(100.0f * random_bilateral(&randomize),
-                                            100.0f * random_bilateral(&randomize),
-                                            100.0f * random_bilateral(&randomize)));
+                                             100.0f * random_bilateral(&randomize),
+                                             100.0f * random_bilateral(&randomize)));
             if (min2_v3 > result)
             {
                 min2_v3 = result;
