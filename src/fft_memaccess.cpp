@@ -1,5 +1,9 @@
 #include <time.h>
 
+#ifndef WITH_FFTW
+#define WITH_FFTW  1
+#endif
+
 #include "../libberdip/platform.h"
 #include "../libberdip/multilane.h"
 #include "../libberdip/complex.h"
@@ -7,7 +11,9 @@
 #include "../libberdip/fft.cpp"
 #include "fft_impl.cpp"
 
-#include "../../../../Programs/fftw-3.3.8/api/fftw3.h"
+#if WITH_FFTW
+#include <fftw3.h>
+#endif
 
 internal void
 fft_iter_inplace_address(u32 dftCount)
@@ -234,6 +240,7 @@ int main(int argc, char **argv)
         accum_stats(fftIterInPlaceCopy3Time, get_seconds_elapsed(start, end));
     }
     
+#if WITH_FFTW
     fftwf_complex *in;
     fftwf_plan p;
     in  = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex) * testCount);
@@ -261,9 +268,10 @@ int main(int argc, char **argv)
     fftwf_destroy_plan(p);
     
     fftwf_free(in);
+#endif
     
     f32 oneOverTests = 1.0f / (f32)tests;
-    fprintf(stdout, "Timings:\n");
+    fprintf(stdout, "Timings for %u tests of size %u:\n", tests, testCount);
     print_timings(&allStats, oneOverTests);
     
 #if 0    

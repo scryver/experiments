@@ -2,12 +2,16 @@
 
 set -e
 
+WITH_EXPECT=1
+WITH_FFTW=1
+
 curDir="$(pwd)"
 codeDir="$curDir/src"
 testDir="$curDir/test"
 buildDir="$curDir/gebouw"
+fftwDir="$HOME/Programs/fftw-3.3.8/api"
 
-flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread -msse4"
+flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread -msse4 -DLIBBERDIP_EXPECT=$WITH_EXPECT"
 
 exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces -Wno-gnu-zero-variadic-macro-arguments -Wno-c99-extensions"
 exceptions="$exceptions -Wno-unused-variable"
@@ -91,7 +95,11 @@ IGNORE_ME
     clang++ $flags $exceptions "$codeDir/tictactoe.cpp" -o tic-tac-toe -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/hilbertcurve.cpp" -o hilbert-curve -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/fft.cpp" -o fft -lX11 -lGL &
-    clang++ $flags $exceptions -DLIBBERDIP_EXPECT=0 "$codeDir/fft_memaccess.cpp" -o fft-memaccess -lX11 -lGL -L$HOME/Programs/fftw-3.3.8/build/.libs -lfftw3f -lm &
+if [ $WITH_FFTW -ne 0 ]; then
+    clang++ $flags $exceptions -I"$fftwDir" "$codeDir/fft_memaccess.cpp" -o fft-memaccess -lX11 -lGL -L$HOME/Programs/fftw-3.3.8/build/.libs -lfftw3f -lm &
+else
+    clang++ $flags $exceptions -DWITH_FFTW=0 "$codeDir/fft_memaccess.cpp" -o fft-memaccess -lX11 -lGL &
+fi
     clang++ $flags $exceptions "$codeDir/bitreversal.cpp" -o bitreversal &
     clang++ $flags $exceptions "$codeDir/clampline.cpp" -o clamp-line &
 
