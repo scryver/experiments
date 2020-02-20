@@ -101,6 +101,50 @@ ifft_recurse(u32 dftCount, Complex32 *signal, Complex32 *reconstruct, u32 step =
 }
 
 internal void
+fft_recurse2(u32 dftCount, f32 *signal, Complex32 *dftSignal, u32 step = 1, u32 N = 16)
+{
+    i_expect(is_pow2(dftCount));
+    
+    if (dftCount <= N)
+    {
+        f32 oneOverCount = 1.0f / (f32)dftCount;
+        for (u32 dftIndex = 0; dftIndex < dftCount; ++dftIndex)
+        {
+            Complex32 sum = {};
+            f32 powerStep = -(f32)dftIndex * oneOverCount;
+            u32 powerIndex = 0;
+            for (u32 sampleIndex = 0; sampleIndex < step * dftCount; sampleIndex += step)
+            {
+                f32 inp = signal[sampleIndex];
+                f32 k = powerStep * (f32)(powerIndex++);
+                sum.real = sum.real + inp * cos_f32(k);
+                sum.imag = sum.imag + inp * sin_f32(k);
+            }
+            dftSignal[dftIndex] = sum;
+        }
+    }
+    else
+    {
+        u32 halfCount = dftCount / 2;
+        fft_recurse2(halfCount, signal, dftSignal, step * 2, N);
+        fft_recurse2(halfCount, signal + step, dftSignal + halfCount, step * 2, N);
+        
+        f32 oneOverCount = 1.0f / (f32)dftCount;
+        for (u32 index = 0; index < halfCount; ++index)
+        {
+            Complex32 T;
+            T.real = cos_f32(-(f32)index * oneOverCount);
+            T.imag = sin_f32(-(f32)index * oneOverCount);
+            
+            Complex32 E = dftSignal[index];
+            Complex32 O = dftSignal[index + halfCount];
+            dftSignal[index] = E + T * O;
+            dftSignal[index + halfCount] = E - T * O;
+        }
+    }
+}
+
+internal void
 fft_iter(u32 dftCount, f32 *signal, Complex32 *dftSignal)
 {
     i_expect(is_pow2(dftCount));
@@ -139,6 +183,74 @@ fft_iter(u32 dftCount, f32 *signal, Complex32 *dftSignal)
             Complex32 *src1 = dftSignal + k + halfM;
             for (u32 j = 0; j < halfM; ++j)
             {
+                Complex32 E = *src0;
+                Complex32 O = w * *src1;
+                *src0++ = E + O;
+                *src1++ = E - O;
+                w *= Wm;
+            }
+        }
+        halfM = m;
+        m <<= 1;
+    }
+}
+
+internal void
+fft_iter2(u32 dftCount, f32 *signal, Complex32 *dftSignal)
+{
+    i_expect(is_pow2(dftCount));
+    i_expect(dftCount > 2);
+    
+    u32 baseDftCount = 8;
+    f32 oneOverCount = 1.0f / (f32)baseDftCount;
+    
+    u32 dftStep = dftCount / baseDftCount;
+    BitScanResult highBit = find_most_significant_set_bit(dftStep);
+    
+    for (u32 blockIndex = 0; blockIndex < dftStep; ++blockIndex)
+    {
+        u32 reversedIndex = reverse_bits(blockIndex, highBit.index);
+        f32 *source = signal + reversedIndex;
+        Complex32 *dest = dftSignal + blockIndex * baseDftCount;
+        for (u32 dftIndex = 0; dftIndex < baseDftCount; ++dftIndex)
+        {
+            Complex32 *sum = dest + dftIndex;
+            sum->real = 0.0f;
+            sum->imag = 0.0f;
+            f32 powerStep = -(f32)dftIndex * oneOverCount;
+            u32 powerIndex = 0;
+            for (u32 sampleIndex = 0; sampleIndex < dftCount; sampleIndex += dftStep)
+            {
+                f32 inp = source[sampleIndex];
+                f32 k = powerStep * (f32)(powerIndex++);
+                sum->real = sum->real + inp * cos_f32(k);
+                sum->imag = sum->imag + inp * sin_f32(k);
+            }
+        }
+    }
+    
+    u32 halfM = baseDftCount;
+    u32 m = 2 * baseDftCount;
+    
+    while (m <= dftCount)
+    {
+        f32 oneOverM = 1.0f / (f32)m;
+        Complex32 Wm;
+        Wm.real = cos_f32(-oneOverM);
+        Wm.imag = sin_f32(-oneOverM);
+        
+        for (u32 k = 0; k < dftCount; k += m)
+        {
+            Complex32 w;
+            w.real = 1.0f;
+            w.imag = 0.0f;
+            Complex32 *src0 = dftSignal + k;
+            Complex32 *src1 = dftSignal + k + halfM;
+            for (u32 j = 0; j < halfM; ++j)
+            {
+                //Complex32 w;
+                //w.real = cos_f32(-(f32)j * oneOverM);
+                //w.imag = sin_f32(-(f32)j * oneOverM);
                 Complex32 E = *src0;
                 Complex32 O = w * *src1;
                 *src0++ = E + O;

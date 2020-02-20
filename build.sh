@@ -102,6 +102,7 @@ else
 fi
     clang++ $flags $exceptions "$codeDir/bitreversal.cpp" -o bitreversal &
     clang++ $flags $exceptions "$codeDir/clampline.cpp" -o clamp-line &
+    clang++ $flags $exceptions "$codeDir/drawfft.cpp" -o draw-fft &
 
 popd > /dev/null
 

@@ -233,6 +233,16 @@ int main(int argc, char **argv)
                 end = get_wall_clock();
                 accum_stats(fftRecTime, get_seconds_elapsed(start, end));
             }
+            
+            Stats *fftRec2Time = create_stat(&allStats, static_string("FFT Recursive 2              "));
+            for (u32 testIndex = 0; testIndex < tests; ++testIndex)
+            {
+                fft_recurse2(testCount, signal, fftSignal);
+                start = get_wall_clock();
+                fft_recurse2(testCount, signal, fftSignal, 1, 2);
+                end = get_wall_clock();
+                accum_stats(fftRec2Time, get_seconds_elapsed(start, end));
+            }
         }
         
         Stats *fftIterTime = create_stat(&allStats, static_string("FFT Iterate                  "));
@@ -244,6 +254,18 @@ int main(int argc, char **argv)
             end = get_wall_clock();
             accum_stats(fftIterTime, get_seconds_elapsed(start, end));
         }
+        
+#if 0        
+        Stats *fftIter2Time = create_stat(&allStats, static_string("FFT Iterate 2                "));
+        for (u32 testIndex = 0; testIndex < tests; ++testIndex)
+        {
+            fft_iter2(testCount, signal, fftSignal);
+            start = get_wall_clock();
+            fft_iter2(testCount, signal, fftSignal);
+            end = get_wall_clock();
+            accum_stats(fftIter2Time, get_seconds_elapsed(start, end));
+        }
+#endif
         
         Stats *fftIterInPlaceCopyTime = create_stat(&allStats, static_string("FFT Iterate inplace with copy"));
         for (u32 testIndex = 0; testIndex < tests; ++testIndex)
@@ -313,7 +335,12 @@ int main(int argc, char **argv)
         }
         fftwf_destroy_plan(p);
         
+        Stats *fftwMesTime = create_stat(&allStats, static_string("FFTW library Measuring       "));
+        start = get_wall_clock();
         p   = fftwf_plan_dft_1d(testCount, in, in, FFTW_FORWARD, FFTW_MEASURE);
+        end = get_wall_clock();
+        accum_stats(fftwMesTime, get_seconds_elapsed(start, end));
+        
         Stats *fftwOptTime = create_stat(&allStats, static_string("FFTW library Measure         "));
         for (u32 testIndex = 0; testIndex < tests; ++testIndex)
         {
