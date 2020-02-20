@@ -1,6 +1,8 @@
 #include "interface.h"
 DRAW_IMAGE(draw_image);
 
+#include <fftw3.h>
+
 #include "main.cpp"
 
 #include "../libberdip/fft.cpp"
@@ -21,6 +23,8 @@ struct FFTState
     
     v2 *origSinc;
     Complex32 *dftSinc;
+    
+    fftwf_plan fftwPlan;
 };
 
 internal void
@@ -493,6 +497,8 @@ DRAW_IMAGE(draw_image)
         }
         state->closeProgram = true;
 #endif
+        fftState->fftwPlan = fftwf_plan_dft_1d(fftState->origSignalCount, (fftwf_complex *)fftState->dftSignal,
+                                               (fftwf_complex *)fftState->dftSignal, FFTW_FORWARD, FFTW_MEASURE);
         
         state->initialized = true;
     }
@@ -514,6 +520,7 @@ DRAW_IMAGE(draw_image)
     }
     //fft_iter_inplace(fftState->origSignalCount, fftState->dftSignal);
     fft(fftState->origSignalCount, fftState->dftSignal);
+    //fftwf_execute(fftState->fftwPlan);
     
     Complex32 *idftBuf = arena_allocate_array(&fftState->drawArena, Complex32, fftState->origSignalCount);
     //idft(fftState->origSignalCount, fftState->dftSignal, fftState->reconstructSignal);
