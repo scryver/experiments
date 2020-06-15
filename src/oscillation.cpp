@@ -35,8 +35,8 @@ DRAW_IMAGE(draw_image)
     
     for (u32 xStep = 0; xStep < image->width + 22; xStep += 40)
     {
-        f32 y = oscillation->amplitude * sin(2.0f * oscillation->angle + xStep * 0.01f)
-            + 0.5f * oscillation->amplitude * sin( oscillation->angle + xStep * 0.01f);
+        f32 y = oscillation->amplitude * sin_pi(2.0f * oscillation->angle + xStep * 0.01f)
+            + 0.5f * oscillation->amplitude * sin_pi( oscillation->angle + xStep * 0.01f);
         y *= 0.4f;
         y += center.y;
         fill_circle(image, xStep, round(y), 22, V4(1, 1, 1, 0.9f));

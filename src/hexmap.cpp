@@ -230,8 +230,9 @@ hex_corner_offset(Layout *layout, s32 corner)
     v2 result = layout->size;
     f32 angle = F32_TAU * (layout->orientation.startAngle + (f32)corner) / 6.0f;
     
-    result.x *= cos(angle);
-    result.y *= sin(angle);
+    v2 sincos = sincos_pi(angle);
+    result.x *= sincos.y;
+    result.y *= sincos.x;
     
     return result;
 }

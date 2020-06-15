@@ -48,7 +48,7 @@ DRAW_IMAGE(draw_image)
     for (u32 i = 0; i < array_count(linePoints); ++i)
     {
         f32 k = (f32)i * maurer->d;
-        f32 l = sin((f32)deg2rad(k*maurer->n));
+        f32 l = sin_pi((f32)deg2rad(k*maurer->n));
         linePoints[i] = polar_to_cartesian(200.0f * l, deg2rad(k)) + center;
     }
     draw_lines(image, array_count(linePoints), linePoints, V4(1, 1, 1, 1));

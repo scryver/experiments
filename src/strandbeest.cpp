@@ -52,8 +52,9 @@ update_wheel(Wheel *wheel, f32 dt)
     {
         wheel->angularS -= F32_TAU;
     }
-    wheel->dir.x = cos(wheel->angularS);
-    wheel->dir.y = sin(wheel->angularS);
+    v2 sincos = sincos_pi(wheel->angularS);
+    wheel->dir.x = sincos.y;
+    wheel->dir.y = sincos.x;
 }
 
 internal void

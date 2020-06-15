@@ -89,7 +89,7 @@ DRAW_IMAGE(draw_image)
         {
             v2 *v = rdpState->origLine + idx;
             f32 x = (f32)idx * scaleFactor * 5.0f;
-            f32 y = exp(-x) * cos(F32_TAU * x);
+            f32 y = exp(-x) * cos_pi(F32_TAU * x);
             v->x = (x / 5.0f) * size.width;
             v->y = (-y + 1.0f) * 0.5f * size.height;
         }

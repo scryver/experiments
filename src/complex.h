@@ -113,8 +113,8 @@ internal Complex64
 euler_power(f64 imagPower)
 {
     Complex64 result;
-    result.real = cos(imagPower);
-    result.imag = sin(imagPower);
+    result.real = __builtin_cos(imagPower);
+    result.imag = __builtin_sin(imagPower);
     return result;
 }
 

@@ -33,8 +33,9 @@ turn_left(Turtle *turtle, f32 angleInDegree)
     // [ cos(t) sin(t)] [dir.x]  = [cos(t)*dir.x + sin(t)*dir.y]
     // [-sin(t) cos(t)] [dir.y]    [-sin(t)*dir.x + cos(t)*dir.y]
     
-    f32 cR = cos(radians);
-    f32 sR = sin(radians);
+    v2 sincos = sincos_pi(radians);
+    f32 cR = sincos.y;
+    f32 sR = sincos.x;
     v2 newDir = V2( cR * turtle->dir.x + sR * turtle->dir.y,
                    -sR * turtle->dir.x + cR * turtle->dir.y);
     return newDir;

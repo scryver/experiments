@@ -121,8 +121,9 @@ DRAW_IMAGE(draw_image)
         u32 cy = lissaJous->tileW / 2;
         outline_circle(image, cx, cy, r, 2.0f, V4(1, 1, 1, 1));
         
-        s32 x = s32_from_f32_round(r * cos((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f));
-        s32 y = s32_from_f32_round(r * sin((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f));
+        v2 sincos = sincos_pi((f32)(col + 1) * lissaJous->angle - F32_TAU * 0.25f);
+        s32 x = s32_from_f32_round(r * sincos.y);
+        s32 y = s32_from_f32_round(r * sincos.x);
         
         fill_circle(image, (s32)cx + x, (s32)cy + y, 4, V4(0, 1, 0, 1));
         
@@ -137,8 +138,9 @@ DRAW_IMAGE(draw_image)
         u32 cy = row * lissaJous->tileW + lissaJous->tileW + lissaJous->tileW / 2;
         outline_circle(image, cx, cy, r, 2.0f, V4(1, 1, 1, 1));
         
-        s32 x = s32_from_f32_round(r * cos((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f));
-        s32 y = s32_from_f32_round(r * sin((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f));
+        v2 sincos = sincos_pi((f32)(row + 1) * lissaJous->angle - F32_TAU * 0.25f);
+        s32 x = s32_from_f32_round(r * sincos.y);
+        s32 y = s32_from_f32_round(r * sincos.x);
         
         fill_circle(image, (s32)cx + x, (s32)cy + y, 4, V4(0, 0, 1, 1));
         

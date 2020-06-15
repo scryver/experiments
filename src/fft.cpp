@@ -468,7 +468,7 @@ DRAW_IMAGE(draw_image)
             f32 mod = oneOverCount * (f32)idx;
             point->x = mod;
             //point->y = ((f32)(idx % 4) / 3.0f) * 2.0f - 1.0f;
-            point->y = sin(mod * 4.0f * F32_TAU) + 0.5f * sin(mod * 6.0f * F32_TAU - 0.5f * F32_PI);
+            point->y = sin_pi(mod * 4.0f * F32_TAU) + 0.5f * sin_pi(mod * 6.0f * F32_TAU - 0.5f * F32_PI);
             //point->y = sin(mod * 400.0f * F32_TAU) + 0.5f * sin(mod * 600.0f * F32_TAU - 0.5f * F32_PI);
             //point->y = random_bilateral(&fftState->randomizer);
             
@@ -519,8 +519,9 @@ DRAW_IMAGE(draw_image)
         fftState->dftSignal[idx] = {fftState->origSignal[idx].y, 0};
     }
     //fft_iter_inplace(fftState->origSignalCount, fftState->dftSignal);
-    fft(fftState->origSignalCount, fftState->dftSignal);
+    //fft(fftState->origSignalCount, fftState->dftSignal);
     //fftwf_execute(fftState->fftwPlan);
+    fft_exact(fftState->origSignalCount, fftState->dftSignal);
     
     Complex32 *idftBuf = arena_allocate_array(&fftState->drawArena, Complex32, fftState->origSignalCount);
     //idft(fftState->origSignalCount, fftState->dftSignal, fftState->reconstructSignal);
@@ -531,7 +532,8 @@ DRAW_IMAGE(draw_image)
         idftBuf[idx] = fftState->dftSignal[idx];
     }
     //ifft_iter_inplace(fftState->origSignalCount, idftBuf);
-    ifft(fftState->origSignalCount, idftBuf);
+    //ifft(fftState->origSignalCount, idftBuf);
+    ifft_exact(fftState->origSignalCount, idftBuf);
     
     for (u32 idx = 0; idx < fftState->origSignalCount; ++idx)
     {

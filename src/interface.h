@@ -3,7 +3,7 @@
 #include "../libberdip/perlin.h"
 #include "../libberdip/complex.h"
 #include "../libberdip/multilane.h"
-#include "complex.h"
+//#include "complex.h"
 #include "multithread.h"
 
 struct State

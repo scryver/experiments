@@ -11,7 +11,7 @@ testDir="$curDir/test"
 buildDir="$curDir/gebouw"
 fftwDir="$HOME/Programs/fftw-3.3.8/api"
 
-flags="-O2 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread -msse4 -DLIBBERDIP_EXPECT=$WITH_EXPECT"
+flags="-O3 -g -ggdb -Wall -Werror -pedantic -std=c++11 -pthread -msse4 -DLIBBERDIP_EXPECT=$WITH_EXPECT"
 
 exceptions="-Wno-unused-function -Wno-writable-strings -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-missing-braces -Wno-gnu-zero-variadic-macro-arguments -Wno-c99-extensions"
 exceptions="$exceptions -Wno-unused-variable"
@@ -103,10 +103,16 @@ fi
     clang++ $flags $exceptions "$codeDir/bitreversal.cpp" -o bitreversal &
     clang++ $flags $exceptions "$codeDir/clampline.cpp" -o clamp-line &
     clang++ $flags $exceptions "$codeDir/drawfft.cpp" -o draw-fft &
+    clang++ $flags $exceptions "$codeDir/starpatterns.cpp" -o star-patterns -lX11 -lGL &
+#    clang++ $flags $exceptions "$codeDir/memory_test.cpp" -o memory-test &
+    clang++ $flags $exceptions "$codeDir/raymarching2d.cpp" -o ray-marching2d -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/raymarching3d.cpp" -o ray-marching3d -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/raymarchingshadertoy.cpp" -o ray-marching-shadertoy -lX11 -lGL &
+    clang++ $flags $exceptions "$codeDir/pixeldiff.cpp" -o pixel-diff-visual -lX11 -lGL &
 
 popd > /dev/null
 
 #flagsC="-O0 -g -ggdb -Wall -Werror -pedantic -pthread"
 #clang $flagsC $exceptions "$testDir/test_waves.c" -o test-waves -lX11 -lm &
 
-wait 
+wait

@@ -322,6 +322,7 @@ next_generation(Arena *arena, RandomSeriesPCG *random, u32 birdCount, Bird *pare
         Bird *bird = parentBirds + birdIndex;
         
         init_bird(random, bird, screenSize, &source->brain);
+        destroy_neural_network(&source->brain);
     }
     
     destroy_temporary(temp);

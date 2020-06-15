@@ -1,4 +1,5 @@
 #include "interface.h"
+#include "../libberdip/memory.h"
 #include "../libberdip/suballoc.h"
 DRAW_IMAGE(draw_image);
 
@@ -39,8 +40,8 @@ STBTT_memset(void *dest, s32 value, umm size)
 #define STBTT_sqrt(x)      square_root(x)
 #define STBTT_pow(x, y)    pow(x, y)
 #define STBTT_fmod(x, y)   modulus(x, y)
-#define STBTT_cos(x)       cos(x)
-#define STBTT_acos(x)      acos(x)
+#define STBTT_cos(x)       cos_pi(x)
+#define STBTT_acos(x)      acos_pi(x)
 #define STBTT_fabs(x)      absolute(x)
 
 #define STBTT_malloc(x, u) sub_alloc((SubAllocator *)u, x)

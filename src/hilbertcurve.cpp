@@ -4,6 +4,7 @@ DRAW_IMAGE(draw_image);
 #include "main.cpp"
 
 #include "../libberdip/drawing.cpp"
+#include "../libberdip/drawing_simd.cpp"
 
 struct HilbertState
 {
@@ -139,7 +140,7 @@ DRAW_IMAGE(draw_image)
         hilbert->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         
         hilbert->maxOrder = 12;
-        hilbert->order = 1;
+        hilbert->order = 9;
         
         hilbert->maxPointCount  = (1 << hilbert->maxOrder) * (1 << hilbert->maxOrder);
         hilbert->hilbertPoints  = arena_allocate_array(&hilbert->arena, v2, hilbert->maxPointCount);
@@ -166,7 +167,7 @@ DRAW_IMAGE(draw_image)
         state->initialized = true;
     }
     
-    fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
+    fill_rect_simd(image, V2(0, 0), size, V4(0, 0, 0, 1));
     
     u32 N = 1 << hilbert->order;
     if (hilbert->prevScroll != mouse.scroll)
@@ -213,11 +214,13 @@ DRAW_IMAGE(draw_image)
     {
         if (hilbert->arrayOfStructs)
         {
-            draw_lines(image, hilbert->count, hilbert->points, offset, scale);
+            draw_lines_simd(image, hilbert->count, hilbert->points, offset + V2(0.5f, 0.5f), scale);
+            //draw_lines(image, hilbert->count, hilbert->points, offset + V2(0.5f, 0.5f), scale);
         }
         else
         {
-            draw_lines(image, hilbert->count, hilbert->hilbertPoints, hilbert->hilbertColours, offset, scale);
+            draw_lines_simd(image, hilbert->count, hilbert->hilbertPoints, hilbert->hilbertColours, offset + V2(0.5f, 0.5f), scale);
+            //draw_lines(image, hilbert->count, hilbert->hilbertPoints, hilbert->hilbertColours, offset + V2(0.5f, 0.5f), scale);
         }
     }
     

@@ -131,6 +131,12 @@ init_neural_network(Neural *network, u32 inputCount,
 }
 
 internal void
+destroy_neural_network(Neural *network)
+{
+    arena_free(&network->arena);
+}
+
+internal void
 neural_copy(Neural *source, Neural *dest)
 {
     i_expect(source->inputCount == dest->inputCount);
@@ -553,7 +559,7 @@ delta_function(f32 a)
     return a * (1.0f - a);
 }
 
-#if 1
+#if 0
 internal inline f32
 cost_function(f32 a)
 {

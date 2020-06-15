@@ -37,8 +37,7 @@ DRAW_IMAGE(draw_image)
         state->initialized = true;
     }
     
-    pendulum->bob = pendulum->origin + pendulum->len * V2(sin(pendulum->angle),
-                                                          cos(pendulum->angle));
+    pendulum->bob = pendulum->origin + pendulum->len * sincos_pi(pendulum->angle);
     
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     draw_line(image, round(pendulum->origin.x), round(pendulum->origin.y),
@@ -52,7 +51,7 @@ DRAW_IMAGE(draw_image)
     }
     
     pendulum->aVel += pendulum->aAcc;
-    pendulum->aAcc = -0.01f * sin(pendulum->angle);
+    pendulum->aAcc = -0.01f * sin_pi(pendulum->angle);
     
     pendulum->aVel *= 0.99f;
     

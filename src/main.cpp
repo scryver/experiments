@@ -1,3 +1,11 @@
+#ifndef MAIN_WINDOW_WIDTH
+#define MAIN_WINDOW_WIDTH 800
+#endif
+
+#ifndef MAIN_WINDOW_HEIGHT
+#define MAIN_WINDOW_HEIGHT 600
+#endif
+
 #include <errno.h>
 #include <sys/stat.h>     // stat
 #include <sys/mman.h>     // PROT_*, MAP_*, munmap
@@ -142,7 +150,7 @@ xlib_error_callback(Display *display, XErrorEvent *event)
     return True;
 }
 
-struct Vertex 
+struct Vertex
 {
     v2 pos;
     v2 uv;
@@ -573,8 +581,8 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
 
 int main(int argc, char **argv)
 {
-    int windowWidth = 800;
-    int windowHeight = 600;
+    int windowWidth = MAIN_WINDOW_WIDTH;
+    int windowHeight = MAIN_WINDOW_HEIGHT;
     
     Display *display;
     Window window;
@@ -722,7 +730,7 @@ int main(int argc, char **argv)
                                MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
     
     state->workQueue = allocate_struct(PlatformWorkQueue);
-    init_work_queue(state->workQueue, 1);
+    init_work_queue(state->workQueue, 4);
     
     Mouse mouse = {};
     Keyboard keyboard = {};
@@ -741,7 +749,7 @@ int main(int argc, char **argv)
         }
     }
     
-    Vertex vertices[4] = 
+    Vertex vertices[4] =
     {
         // X      Y       U     V
         {{-1.0f, -1.0f}, {0.0f, 1.0f}},
@@ -770,36 +778,36 @@ int main(int argc, char **argv)
     {
         GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
         GLchar *vertexShaderCode = R"DOO(#version 330
-        in vec2 vertP;
-        in vec2 vertUV;
-        
-        smooth out vec2 fragUV;
-        
-        void main(void)
-        {
-             gl_Position = vec4(vertP, 0.0, 1.0);
-             
-             fragUV = vertUV;
-}
-        )DOO";
+                in vec2 vertP;
+                in vec2 vertUV;
+                
+                smooth out vec2 fragUV;
+                
+                void main(void)
+                {
+                     gl_Position = vec4(vertP, 0.0, 1.0);
+                     
+                     fragUV = vertUV;
+        }
+                )DOO";
         glShaderSource(vertexShaderID, 1, &vertexShaderCode, 0);
         glCompileShader(vertexShaderID);
         
         GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
         GLchar *fragmentShaderCode = R"DOO(#version 330
-        //todo: uniform float brightness
-        uniform sampler2D textureSampler;
-        
-        smooth in vec2 fragUV;
-        
-        out vec4 pixelColour;
-        
-        void main(void)
-        {
-        vec4 textureColour = texture(textureSampler, fragUV);
-        pixelColour = textureColour;
-}
-        )DOO";
+                //todo: uniform float brightness
+                uniform sampler2D textureSampler;
+                
+                smooth in vec2 fragUV;
+                
+                out vec4 pixelColour;
+                
+                void main(void)
+                {
+                vec4 textureColour = texture(textureSampler, fragUV);
+                pixelColour = textureColour;
+        }
+                )DOO";
         glShaderSource(fragmentShaderID, 1, &fragmentShaderCode, 0);
         glCompileShader(fragmentShaderID);
         

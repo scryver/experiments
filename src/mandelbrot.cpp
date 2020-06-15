@@ -7,6 +7,7 @@ DRAW_IMAGE(draw_image);
 #define COMPLEX_64  0
 #define COMPLEX_UFP 0
 
+#define MAIN_NUMBER_OF_THREADS 8
 #include "main.cpp"
 
 #include "../libberdip/drawing.cpp"

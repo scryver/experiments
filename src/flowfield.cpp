@@ -160,8 +160,8 @@ DRAW_IMAGE(draw_image)
             backDo = rotate(backDo, dir);
         }
         
-        fill_triangle(image, front + vehicle->mover.position, backUp + vehicle->mover.position,
-                      backDo + vehicle->mover.position, V4(1, 1, 0, 1));
+        fill_triangle(image, front + vehicle->mover.position, backDo + vehicle->mover.position,
+                      backUp + vehicle->mover.position, V4(1, 1, 0, 1));
     }
     
     flow->zMod += dt * 0.1f;
