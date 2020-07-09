@@ -177,7 +177,7 @@ DRAW_IMAGE(draw_image)
             v3 colour = shade(dist);
             draw_pixel(pixelRow++, V4(colour, 1.0f));
         }
-        pixels += image->width;
+        pixels += image->rowStride;
     }
     
     basics->prevMouseDown = mouse.mouseDowns;

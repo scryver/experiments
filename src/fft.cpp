@@ -461,6 +461,7 @@ DRAW_IMAGE(draw_image)
         fftState->dftSignal = allocate_array(Complex32, fftState->origSignalCount);
         fftState->reconstructSignal = allocate_array(v2, fftState->origSignalCount);
         
+#if 1
         f32 oneOverCount = 1.0f / (f32)fftState->origSignalCount;
         for (u32 idx = 0; idx < fftState->origSignalCount; ++idx)
         {
@@ -476,6 +477,28 @@ DRAW_IMAGE(draw_image)
             point2->x = mod;
             point2->y = 0.0f;
         }
+#else
+        f32 oneOverCount = 1.0f / (f32)fftState->origSignalCount;
+        u32 halfIdx = (fftState->origSignalCount + 1) / 2;
+        for (u32 idx = 0; idx < fftState->origSignalCount; ++idx)
+        {
+            v2 *point = fftState->origSignal + idx;
+            f32 mod = oneOverCount * (f32)idx;
+            point->x = mod;
+            
+            f32 calcX = ((f32)idx - (f32)halfIdx);
+            if (calcX == 0.0f) {
+                point->y = 1.0f;
+            } else {
+                point->y = sin_pi(calcX) / calcX;
+            }
+            point->y *= 1.0f / F32_PI;
+            
+            v2 *point2 = fftState->reconstructSignal + idx;
+            point2->x = mod;
+            point2->y = 0.0f;
+        }
+#endif
         
 #if 0        
         u32 indices[16];

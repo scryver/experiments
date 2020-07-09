@@ -47,7 +47,7 @@ DRAW_IMAGE(draw_image)
                 
                 u32 grayScale = (u32)round(255.0f * (0.5f * n + 0.5f)) & 0xFF;
                 
-                image->pixels[y * image->width + x] = 
+                image->pixels[y * image->rowStride + x] = 
                     (0xFF << 24) | (grayScale << 16) | (grayScale << 8) | grayScale;
             }
         }

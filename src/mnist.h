@@ -61,6 +61,7 @@ parse_mnist(String labelPath, String imagePath)
         Image *image = result.images + imageIdx;
         image->width = imageCols;
         image->height = imageRows;
+        image->rowStride = imageCols;
         image->pixels = (u32 *)i;
         i += stride;
     }
@@ -71,6 +72,9 @@ parse_mnist(String labelPath, String imagePath)
 internal void
 draw_mnist(Image *screen, u32 xStart, u32 yStart, Image *mnist, v4 modColour = V4(1, 1, 1, 1))
 {
+    draw_image(screen, xStart, yStart, mnist, modColour);
+    
+#if 0    
     u8 *imageAt = (u8 *)mnist->pixels;
     for (u32 y = yStart; (y < (yStart + mnist->height)) && (y < screen->height); ++y)
     {
@@ -85,6 +89,8 @@ draw_mnist(Image *screen, u32 xStart, u32 yStart, Image *mnist, v4 modColour = V
             draw_pixel(screen, x, y, pixel);
         }
     }
+#endif
+    
 }
 
 internal MnistSet

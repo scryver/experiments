@@ -288,6 +288,7 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
     f32 fontScale = stbtt_ScaleForPixelHeight(&curFont->stbFont, pixelHeight);
     result->image.width = s32_from_f32_ceil((f32)maxWidth * fontScale);
     result->image.height = s32_from_f32_ceil((f32)height * fontScale);
+    result->image.rowStride = result->image.width;
     
     umm pixelSize = result->image.width * result->image.height;
     result->image.pixels = sub_alloc_array(font->allocator, u8, pixelSize);
@@ -363,7 +364,7 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                 s32 modY = s32_from_f32_truncate(atY);
 #endif
                 
-                u8 *start = result->image.pixels + modY * result->image.width + modX;
+                u8 *start = result->image.pixels + modY * result->image.rowStride + modX;
                 
 #if SUBPIXEL_LOCATION
                 stbtt_MakeGlyphBitmapSubpixel(&curFont->stbFont, start, 

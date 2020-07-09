@@ -376,7 +376,7 @@ DRAW_IMAGE(draw_image)
             draw_pixel(pixelRow++, sRGB_from_linear(V4(colour, 1.0f)));
             //draw_pixel(pixelRow++, V4(colour, 1.0f));
         }
-        pixels += image->width;
+        pixels += image->rowStride;
     }
     
     basics->prevMouseDown = mouse.mouseDowns;

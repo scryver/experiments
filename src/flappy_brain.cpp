@@ -42,6 +42,24 @@ struct Pipe
     b32 active;
 };
 
+struct BirdWork
+{
+    u32 birdCount;
+    Bird *birds;
+    
+    u32 pipeCount;
+    Pipe *pipes;
+    
+    u32 closestPipeCount;
+    Pipe *closestPipes[3];
+    
+    v2 size;
+    v2 gravity;
+    f32 dt;
+    
+    u32 birdsAlive;
+};
+
 struct FlappyState
 {
     Arena arena;
@@ -64,6 +82,8 @@ struct FlappyState
     
     b32 sliding;
     u32 prevMouseDown;
+    
+    BirdWork workers[128];
 };
 
 internal inline void
@@ -75,7 +95,7 @@ init_pipe(FlappyState *state, v2 screenSize, f32 gapSize = 100.0f)
     
     pipe->gapMin.x = screenSize.x;
     pipe->gapMax.x = pipe->gapMin.x + 50.0f;
-    pipe->gapMin.y = random_choice(&state->randomizer, round(screenSize.y * 0.5f));
+    pipe->gapMin.y = 50.0f + random_choice(&state->randomizer, round(screenSize.y - gapSize - 100.0f));
     pipe->gapMax.y = pipe->gapMin.y + gapSize;
     
     pipe->active = true;
@@ -159,7 +179,7 @@ thinking(Bird *bird, u32 pipeCount, Pipe **pipes, v2 oneOverScreenSize)
 internal inline void
 update_bird(Bird *bird, v2 force, f32 dt)
 {
-    bird->score *= 1.1f;
+    bird->score *= 1.0001f;
     bird->velocity += (bird->acceleration + force) * dt;
     bird->velocity *= 0.99f;
     bird->velocity.x = minimum(maximum(bird->velocity.x, -500.0f), 500.0f);
@@ -202,6 +222,38 @@ bird_hit_pipe(Bird *bird, Pipe *pipe)
     }
     
     return result;
+}
+
+internal PLATFORM_WORK_QUEUE_CALLBACK(update_bird_work)
+{
+    BirdWork *work = (BirdWork *)data;
+    v2 oneOverSize = 1.0f / work->size;
+    
+    for (u32 birdIndex = 0; birdIndex < work->birdCount; ++birdIndex)
+    {
+        Bird *bird = work->birds + birdIndex;
+        for (u32 pipeIndex = 0; pipeIndex < work->pipeCount; ++pipeIndex)
+        {
+            Pipe *pipe = work->pipes + pipeIndex;
+            if (pipe->active)
+            {
+                if (bird_hit_pipe(bird, pipe))
+                {
+                    bird->alive = false;
+                    break;
+                }
+            }
+        }
+        
+        if (bird->alive)
+        {
+            thinking(bird, work->closestPipeCount, work->closestPipes, oneOverSize);
+            update_bird(bird, work->gravity, work->dt);
+            check_borders(bird, V2(0, 0), work->size);
+        }
+        
+        work->birdsAlive += bird->alive ? 1 : 0;
+    }
 }
 
 internal inline void
@@ -294,7 +346,7 @@ next_generation(Arena *arena, RandomSeriesPCG *random, u32 birdCount, Bird *pare
         init_neural_network(&bird->brain, best->brain.inputCount, best->brain.layerCount - 1,
                             best->brain.layerSizes, best->brain.outputCount);
         
-        if (random_unilateral(random) < 0.2f)
+        if (random_unilateral(random) < best->score)
         {
             neural_copy(&best->brain, &bird->brain);
         }
@@ -439,32 +491,40 @@ DRAW_IMAGE(draw_image)
             }
         }
         
-        u32 aliveBirds = 0;
-        v2 oneOverSize = 1.0f / size;
-        for (u32 birdIndex = 0; birdIndex < array_count(flappy->birds); ++birdIndex)
+        u32 birdsPerWork = array_count(flappy->birds) / array_count(flappy->workers);
+        i_expect(birdsPerWork * array_count(flappy->workers) == array_count(flappy->birds));
+        
+        Bird *birdAt = flappy->birds;
+        for (u32 workIndex = 0; workIndex < array_count(flappy->workers); ++workIndex)
         {
-            Bird *bird = flappy->birds + birdIndex;
-            for (u32 pipeIndex = 0; pipeIndex < array_count(flappy->pipes); ++pipeIndex)
-            {
-                Pipe *pipe = flappy->pipes + pipeIndex;
-                if (pipe->active)
-                {
-                    if (bird_hit_pipe(bird, pipe))
-                    {
-                        bird->alive = false;
-                        break;
-                    }
-                }
-            }
+            BirdWork *work = flappy->workers + workIndex;
             
-            if (bird->alive)
-            {
-                thinking(bird, array_count(closestPipes), closestPipes, oneOverSize);
-                update_bird(bird, flappy->gravity, innerDt);
-                check_borders(bird, V2(0, 0), size);
-            }
+            work->birdCount = birdsPerWork;
+            work->birds = birdAt;
+            birdAt += birdsPerWork;
             
-            aliveBirds += bird->alive ? 1 : 0;
+            work->pipeCount = array_count(flappy->pipes);
+            work->pipes = flappy->pipes;
+            
+            work->closestPipeCount = array_count(closestPipes);
+            copy(sizeof(closestPipes), closestPipes, work->closestPipes);
+            
+            work->size = size;
+            work->gravity = flappy->gravity;
+            work->dt = innerDt;
+            
+            work->birdsAlive = 0;
+            
+            platform_add_entry(state->workQueue, update_bird_work, work);
+        }
+        
+        platform_complete_all_work(state->workQueue);
+        
+        u32 aliveBirds = 0;
+        for (u32 workIndex = 0; workIndex < array_count(flappy->workers); ++workIndex)
+        {
+            BirdWork *work = flappy->workers + workIndex;
+            aliveBirds += work->birdsAlive;
         }
         
         ++flappy->distance;
@@ -472,10 +532,24 @@ DRAW_IMAGE(draw_image)
         {
             ++flappy->generation;
             fprintf(stdout, "Generation %5u: Best: %u\n", flappy->generation, flappy->distance);
+            {
+                Bird *best = 0;
+                for (u32 birdIndex = 0; birdIndex < array_count(flappy->birds); ++birdIndex)
+                {
+                    Bird *bird = flappy->birds + birdIndex;
+                    if (!best ||
+                        (best->score < bird->score))
+                    {
+                        best = bird;
+                    }
+                }
+                i_expect(best);
+                fprintf(stdout, "Bird score: %f\n", best->score);
+            }
             flappy->distance = 0;
             
             next_generation(&flappy->arena, &flappy->randomizer, 
-                            array_count(flappy->birds), flappy->birds, size, 0.1f, 0.1f);
+                            array_count(flappy->birds), flappy->birds, size, 0.03f, 0.1f);
             for (u32 pipeIndex = 0; pipeIndex < array_count(flappy->pipes); ++pipeIndex)
             {
                 Pipe *pipe = flappy->pipes + pipeIndex;
@@ -498,7 +572,7 @@ DRAW_IMAGE(draw_image)
     }
     
     for (u32 birdIndex = 0, drawn = 0;
-         (birdIndex < array_count(flappy->birds)) && (drawn < 100); 
+         (birdIndex < array_count(flappy->birds)) && (drawn < 10); 
          ++birdIndex)
     {
         Bird *bird = flappy->birds + birdIndex;

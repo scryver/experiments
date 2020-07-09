@@ -388,6 +388,7 @@ DRAW_IMAGE(draw_image)
         
         fractalState->mandelbrot.width = image->width;
         fractalState->mandelbrot.height = image->height;
+        fractalState->mandelbrot.rowStride = image->width;
         fractalState->mandelbrot.pixels = allocate_array(u32, image->width * image->height);
         
         v4 lastColour = V4(0, 0, 0, 1);

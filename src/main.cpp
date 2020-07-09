@@ -716,11 +716,18 @@ int main(int argc, char **argv)
         return -1;
     }
     
-    Image *image = allocate_struct(Image);
-    image->width = windowWidth;
-    image->height = windowHeight;
-    //image->rowPitch = windowWidth;
-    image->pixels = allocate_array(u32, windowWidth * windowHeight);
+    Image *imageA = allocate_struct(Image);
+    Image *imageB = allocate_struct(Image);
+    imageA->width = windowWidth;
+    imageA->height = windowHeight;
+    imageA->rowStride = windowWidth;
+    imageA->pixels = allocate_array(u32, windowWidth * windowHeight);
+    imageB->width = windowWidth;
+    imageB->height = windowHeight;
+    imageB->rowStride = windowWidth;
+    imageB->pixels = allocate_array(u32, windowWidth * windowHeight);
+    
+    Image *renderImage = imageA;
     
     State *state = allocate_struct(State);
     state->initialized = false;
@@ -989,7 +996,7 @@ int main(int argc, char **argv)
         f32 secondsElapsed = get_seconds_elapsed(lastTime, now);
         lastTime = now;
         
-        draw_image(state, image, mouse, &keyboard, secondsElapsed);
+        draw_image(state, renderImage, mouse, &keyboard, secondsElapsed);
         isRunning = !state->closeProgram;
         
         glViewport(0, 0, windowWidth, windowHeight);
@@ -1006,8 +1013,8 @@ int main(int argc, char **argv)
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textureBuf);
         
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, image->width, image->height, 0,
-                     GL_BGRA, GL_UNSIGNED_BYTE, (void *)image->pixels);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, renderImage->width, renderImage->height, 0,
+                     GL_BGRA, GL_UNSIGNED_BYTE, (void *)renderImage->pixels);
         
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -1017,6 +1024,12 @@ int main(int argc, char **argv)
         glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, indices);
         glXSwapBuffers(display, window);
+        
+        if (renderImage == imageA) {
+            renderImage = imageB;
+        } else {
+            renderImage = imageA;
+        }
     }
     
     return 0;

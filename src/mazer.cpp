@@ -231,7 +231,7 @@ DRAW_IMAGE(draw_image)
                     colour = 0xFFFF0000;
                 }
                 
-                image->pixels[y * image->width + x] = colour;
+                image->pixels[y * image->rowStride + x] = colour;
             }
         }
     }

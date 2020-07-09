@@ -24,7 +24,7 @@ pushd "$buildDir" > /dev/null
 #    clang++ $flags $exceptions "$codeDir/precompile.cpp" -o precompile
 #    ./precompile "$codeDir/flowfield.cpp"
 
-cat > /dev/null << IGNORE_ME
+#cat > /dev/null << IGNORE_ME
     clang++ $flags $exceptions "$codeDir/randomness.cpp" -o randomness -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/mazer.cpp" -o mazer -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/salesman.cpp" -o salesman -lX11 -lGL &
@@ -87,7 +87,7 @@ cat > /dev/null << IGNORE_ME
     clang++ $flags $exceptions "$testDir/test_neural_layer.cpp" -o test-neural-layer
 
     clang++ $flags $exceptions "$codeDir/selector.cpp" -o selector -lX11 -lGL &
-IGNORE_ME
+#IGNORE_ME
 
     clang++ $flags $exceptions "$codeDir/maurerrose.cpp" -o maurer-rose -lX11 -lGL &
     clang++ $flags $exceptions "$codeDir/rdplinesimplefy.cpp" -o rdp-line -lX11 -lGL &

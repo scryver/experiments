@@ -183,6 +183,7 @@ DRAW_IMAGE(draw_image)
         
         mandelState->mandelbrot.width = image->width;
         mandelState->mandelbrot.height = image->height;
+        mandelState->mandelbrot.rowStride = image->width;
         mandelState->mandelbrot.pixels = allocate_array(u32, image->width * image->height);
         
         v4 lastColour = V4(0, 0, 0, 1);

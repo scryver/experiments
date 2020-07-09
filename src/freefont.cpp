@@ -317,6 +317,7 @@ create_text_image(FTFont *font, String text, v4 colour = V4(1, 1, 1, 1))
     }
     
     result.image.pixels = allocate_array(u32, result.image.width * result.image.height);
+    result.image.rowStride = result.image.width;
     
     scan = text.data;
     useBold = false;

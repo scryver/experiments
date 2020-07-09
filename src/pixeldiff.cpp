@@ -68,8 +68,8 @@ find_diff_rectangles(Image *a, Image *b, u32 maxRectCount, Rectangle2u *rectangl
             }
         }
         
-        aPixels += a->width;
-        bPixels += a->width;
+        aPixels += a->rowStride;
+        bPixels += a->rowStride;
         
         // NOTE(michiel): Try to find a previous rectangle that touches a found line diff range.
         for (u32 lineIdx = 0; lineIdx < diffRowCount; ++lineIdx)
@@ -147,8 +147,10 @@ DRAW_IMAGE(draw_image)
         
         basics->a.width = 480;
         basics->a.height = 320;
+        basics->a.rowStride = basics->a.width;
         basics->b.width = 480;
         basics->b.height = 320;
+        basics->b.rowStride = basics->b.width;
         u32 arrayCount = 320 * 480;
         basics->a.pixels = allocate_array(u32, arrayCount);
         basics->b.pixels = allocate_array(u32, arrayCount);
@@ -168,8 +170,8 @@ DRAW_IMAGE(draw_image)
     u32 diffRowCount = 0;
     v2u diffRowLines[480]; // NOTE(michiel): Can't ever need 480 lines, that would mean every pixel needs a rect.
     
-    u32 *aPixels = basics->a.pixels + basics->atY * basics->a.width;
-    u32 *bPixels = basics->b.pixels + basics->atY * basics->b.width;
+    u32 *aPixels = basics->a.pixels + basics->atY * basics->a.rowStride;
+    u32 *bPixels = basics->b.pixels + basics->atY * basics->b.rowStride;
     
     //basics->rectangleCount = 0;
     v2u *diffAt = 0;
