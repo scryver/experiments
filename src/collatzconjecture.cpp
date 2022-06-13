@@ -11,11 +11,11 @@ struct ConjectureState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     PerlinNoise perlin;
     f32 modPerlin;
     f32 modPerlin2;
-    
+
     u32 maxSequenceCount;
     u32 sequenceCount;
     s32 *sequence;
@@ -42,23 +42,23 @@ collatz(s32 number)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(ConjectureState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     ConjectureState *conjecture = (ConjectureState*)state->memory;
     if (!state->initialized)
     {
         // conjecture->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         conjecture->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         init_perlin_noise(&conjecture->perlin, &conjecture->randomizer);
-        
+
         conjecture->maxSequenceCount = 1024 * 1024;
-        conjecture->sequence = allocate_array(s32, conjecture->maxSequenceCount);
-        
+        conjecture->sequence = arena_allocate_array(gMemoryArena, s32, conjecture->maxSequenceCount, default_memory_alloc());
+
         state->initialized = true;
-        
-#if 0        
+
+#if 0
         s32 number = (s32)(random_next_u32(&conjecture->randomizer) >> 8);
         u32 steps = 0;
         //fprintf(stdout, "%d\n", number);
@@ -71,11 +71,11 @@ DRAW_IMAGE(draw_image)
         fprintf(stdout, "%u => Steps: %u\n", conjecture->inputNumber, steps);
         state->closeProgram = true;
 #endif
-        
+
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     f32 len = 5.0f;
     f32 angle = (F32_PI / 12.0f) * absolute(perlin_noise(&conjecture->perlin, conjecture->modPerlin)); // 0.15f;
     //s32 number = 100;
@@ -100,7 +100,7 @@ DRAW_IMAGE(draw_image)
         {
             conjecture->sequence[conjecture->sequenceCount++] = 1;
         }
-        
+
         v2 baseP = V2(size.x * 0.5f, size.y - 20.0f);
         //v2 baseP = 0.5f * size;
         //v2 baseP = V2(0, size.y * 0.5f);
@@ -109,7 +109,7 @@ DRAW_IMAGE(draw_image)
         {
             u32 realIdx = conjecture->sequenceCount - idx - 1;
             s32 value = conjecture->sequence[realIdx];
-            
+
             //v2 point = V2(len, 0);
             v2 point = V2(0, -len);
             if (value & 0x1)
@@ -125,20 +125,19 @@ DRAW_IMAGE(draw_image)
             baseP += point;
         }
     }
-    
+
     conjecture->modPerlin += 0.01f;
     if (conjecture->modPerlin > 256.0f)
     {
         conjecture->modPerlin -= 256.0f;
     }
-    
+
     conjecture->modPerlin2 += 0.021f;
     if (conjecture->modPerlin2 > 256.0f)
     {
         conjecture->modPerlin2 -= 256.0f;
     }
-    
-    conjecture->prevMouseDown = mouse.mouseDowns;
+
     conjecture->seconds += dt;
     ++conjecture->ticks;
     if (conjecture->seconds > 1.0f)

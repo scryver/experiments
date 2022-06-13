@@ -14,12 +14,12 @@ enum CellFlags
     Cell_Visited  = 0x4,
     Cell_Active   = 0x8,
 };
-struct Cell 
+struct Cell
 {
     v2u p;
     enum32(CellFlags) flags;
     f32 cost;
-    
+
     Cell *prev;
 };
 
@@ -29,17 +29,17 @@ struct PathState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     u32 tileWidth;
     u32 rows;
     u32 columns;
     Cell *cells;
-    
+
     u32 visitAt;
     u32 visitCount;
     v2u *toVisit;
     f32 *costs;
-    
+
     Cell *pathStart;
 };
 
@@ -67,7 +67,7 @@ internal inline b32
 not_in_waiting_queue(u32 queueCount, v2u *queue, v2u p, u32 searchStart = 0)
 {
     b32 result = true;
-    for (u32 queueIndex = searchStart; 
+    for (u32 queueIndex = searchStart;
          queueIndex < queueCount;
          ++queueIndex)
     {
@@ -99,7 +99,7 @@ bread_first(PathState *state)
 {
     v2u at = state->toVisit[state->visitAt];
     Cell *cell = get_cell(state, at.x, at.y);
-    
+
     if (at.y > 0)
     {
         push_neighbour(state, at.x, at.y - 1, cell);
@@ -116,7 +116,7 @@ bread_first(PathState *state)
     {
         push_neighbour(state, at.x + 1, at.y, cell);
     }
-    
+
     cell->flags |= Cell_Visited;
     cell->flags &= ~Cell_Active;
     ++state->visitAt;
@@ -132,12 +132,12 @@ internal void
 push_cost_neighbour(PathState *state, u32 x, u32 y, Cell *prev, f32 costAt)
 {
     Cell *cell = get_cell(state, x, y);
-    
+
     if (not_visited(cell))
     {
         f32 cost = costAt + cell->cost;
         b32 found = false;
-        
+
         for (u32 queueIndex = state->visitAt; queueIndex < state->visitCount; ++queueIndex)
         {
             if ((state->toVisit[queueIndex].x == cell->p.x) &&
@@ -152,7 +152,7 @@ push_cost_neighbour(PathState *state, u32 x, u32 y, Cell *prev, f32 costAt)
                 break;
             }
         }
-        
+
         if (!found)
         {
             cell->prev = prev;
@@ -165,13 +165,13 @@ push_cost_neighbour(PathState *state, u32 x, u32 y, Cell *prev, f32 costAt)
                     break;
                 }
             }
-            
+
             for (u32 queueIndex = state->visitCount; queueIndex > insertionIndex; --queueIndex)
             {
                 state->toVisit[queueIndex] = state->toVisit[queueIndex - 1];
                 state->costs[queueIndex] = state->costs[queueIndex - 1];
             }
-            
+
             state->toVisit[insertionIndex] = V2U(x, y);
             state->costs[insertionIndex] = cost;
             ++state->visitCount;
@@ -185,7 +185,7 @@ dijkstra(PathState *state)
     v2u at = state->toVisit[state->visitAt];
     f32 costAt = state->costs[state->visitAt];
     Cell *cell = get_cell(state, at.x, at.y);
-    
+
     if (at.y > 0)
     {
         push_cost_neighbour(state, at.x, at.y - 1, cell, costAt);
@@ -202,7 +202,7 @@ dijkstra(PathState *state)
     {
         push_cost_neighbour(state, at.x + 1, at.y, cell, costAt);
     }
-    
+
     cell->flags |= Cell_Visited;
     cell->flags &= ~Cell_Active;
     ++state->visitAt;
@@ -230,7 +230,7 @@ init_grid(PathState *state)
         V2U(2, 21),
         V2U(29, 22),
     };
-    
+
     for (u32 row = 0; row < state->rows; ++row)
     {
         for (u32 col = 0; col < state->columns; ++col)
@@ -250,7 +250,7 @@ init_grid(PathState *state)
             {
                 v2u wallMin = walls[wIndex];
                 v2u wallMax = walls[wIndex + 1];
-                
+
                 if ((wallMin.x <= col) && (col <= wallMax.x) &&
                     (wallMin.y <= row) && (row <= wallMax.y))
                 {
@@ -259,7 +259,7 @@ init_grid(PathState *state)
                     break;
                 }
             }
-            
+
             if ((10 <= col) && (col < 30) &&
                 (15 <= row) && (row < 20))
             {
@@ -267,7 +267,7 @@ init_grid(PathState *state)
             }
         }
     }
-    
+
     state->visitAt = 0;
     state->visitCount = 1;
     state->toVisit[0] = startingPos;
@@ -277,67 +277,67 @@ init_grid(PathState *state)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(PathState) <= state->memorySize);
-    
+
     // v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     PathState *pathState = (PathState *)state->memory;
     if (!state->initialized)
     {
         // pathState->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         pathState->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         pathState->tileWidth = 20;
         pathState->columns = image->width / pathState->tileWidth;
         pathState->rows = image->height / pathState->tileWidth;
-        pathState->cells = allocate_array(Cell, pathState->columns * pathState->rows);
-        pathState->toVisit = allocate_array(v2u, pathState->rows * pathState->columns);
-        pathState->costs = allocate_array(f32, pathState->rows * pathState->columns);
-        
+        pathState->cells = arena_allocate_array(gMemoryArena, Cell, pathState->columns * pathState->rows, default_memory_alloc());
+        pathState->toVisit = arena_allocate_array(gMemoryArena, v2u, pathState->rows * pathState->columns, default_memory_alloc());
+        pathState->costs = arena_allocate_array(gMemoryArena, f32, pathState->rows * pathState->columns, default_memory_alloc());
+
         init_grid(pathState);
-        
+
         state->initialized = true;
     }
-    
-    if ((mouse.mouseDowns & Mouse_Left)
+
+    if (is_down(&mouse, Mouse_Left)
         //&& !(pathState->prevMouseDown & Mouse_Left)
         )
     {
         bread_first(pathState);
     }
-    
-    if ((mouse.mouseDowns & Mouse_Extended2)
+
+    if (is_down(&mouse, Mouse_Extended2)
         //&& !(pathState->prevMouseDown & Mouse_Extended2)
         )
     {
         dijkstra(pathState);
     }
-    
-    if ((mouse.mouseDowns & Mouse_Right) &&
+
+    if (is_down(&mouse, Mouse_Right) &&
         !(pathState->prevMouseDown & Mouse_Right))
     {
         init_grid(pathState);
     }
-    
+
     for (u32 cellIdx = 0; cellIdx < pathState->rows * pathState->columns; ++cellIdx)
     {
         Cell *cell = pathState->cells + cellIdx;
         f32 wh = pathState->tileWidth;
         f32 x = cell->p.x * wh;
         f32 y = cell->p.y * wh;
-        
+
         if ((x <= (f32)mouse.pixelPosition.x) && ((f32)mouse.pixelPosition.x < (x + wh)) &&
             (y <= (f32)mouse.pixelPosition.y) && ((f32)mouse.pixelPosition.y < (y + wh)))
         {
             pathState->pathStart = cell;
         }
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     for (u32 cellIdx = 0; cellIdx < pathState->rows * pathState->columns; ++cellIdx)
     {
         Cell *cell = pathState->cells + cellIdx;
-        
+
         v4 colour = V4(cell->cost / 10.0f, 0.5f, 0.5f, 1.0f);
         if (cell->flags & Cell_StartPos)
         {
@@ -358,18 +358,18 @@ DRAW_IMAGE(draw_image)
             colour += 0.3f;
             colour = clamp01(colour);
         }
-        
+
         u32 wh = pathState->tileWidth;
         u32 x = cell->p.x * wh;
         u32 y = cell->p.y * wh;
         fill_rectangle(image, x + 1, y + 1, wh - 2, wh - 2, colour);
     }
-    
+
     for (u32 cellIdx = 0; cellIdx < pathState->rows * pathState->columns; ++cellIdx)
     {
         Cell *cell = pathState->cells + cellIdx;
         Cell *prev = cell->prev;
-        
+
         if (prev)
         {
             s32 wh = pathState->tileWidth;
@@ -380,12 +380,12 @@ DRAW_IMAGE(draw_image)
             draw_line(image, x2, y2, x1, y1, V4(0, 0, 0, 1));
         }
     }
-    
+
     Cell *path = pathState->pathStart;
     while (path)
     {
         Cell *prev = path->prev;
-        
+
         if (prev)
         {
             s32 wh = pathState->tileWidth;
@@ -395,11 +395,10 @@ DRAW_IMAGE(draw_image)
             s32 y2 = prev->p.y * wh + wh / 2;
             draw_line(image, x2, y2, x1, y1, V4(1, 0, 0, 1));
         }
-        
+
         path = prev;
     }
-    
-    pathState->prevMouseDown = mouse.mouseDowns;
+
     pathState->seconds += dt;
     ++pathState->ticks;
     if (pathState->seconds > 1.0f)
@@ -411,7 +410,8 @@ DRAW_IMAGE(draw_image)
         for (u32 cellIndex = 0; cellIndex < pathState->visitCount; ++cellIndex)
         {
             v2u pos = pathState->toVisit[cellIndex];
-            if ((pos.x == pathState->pathStart->p.x) &&
+            if ((pathState->pathStart) &&
+                (pos.x == pathState->pathStart->p.x) &&
                 (pos.y == pathState->pathStart->p.y))
             {
                 cost = pathState->costs[cellIndex];

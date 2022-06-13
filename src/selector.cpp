@@ -20,41 +20,41 @@ struct SelectState
     u32 ticks;
     u32 prevMouseDown;
     s32 prevMouseScroll;
-    
+
     u32 selectedIndex;
-    
+
     UIState ui;
 };
 
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(SelectState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     SelectState *selector = (SelectState *)state->memory;
     if (!state->initialized)
     {
         // selector->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         selector->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         init_ui(&selector->ui, image, 64, static_string("data/output.font"));
-        
+
         state->initialized = true;
     }
-    
+
     selector->ui.mouse = hadamard(mouse.relativePosition, size);
     selector->ui.mouseScroll = mouse.scroll - selector->prevMouseScroll;
     // NOTE(michiel): UI buttons only return true if the mouse click is released
     //selector->ui.clicked = (!mouse.mouseDowns && selector->prevMouseDown);
     // NOTE(michiel): UI buttons return true if the mouse is down
-    selector->ui.clicked = mouse.mouseDowns;
-    
+    selector->ui.clicked = is_down(&mouse, Mouse_Left);
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
-    UILayout *layout = ui_begin(&selector->ui, Layout_Vertical, 
+
+    UILayout *layout = ui_begin(&selector->ui, Layout_Vertical,
                                 20, 20, image->width - 40, image->height - 40, 0);
-    
+
     UILayout *listLayout = ui_layout(&selector->ui, layout, Layout_Vertical, 2);
     TextItem textList[] = {
         {static_string("Test 1"), false},
@@ -86,8 +86,8 @@ DRAW_IMAGE(draw_image)
             listLayout->maxSize.y += fontAdvance;
         }
     }
-    
-#if 0    
+
+#if 0
     UILayout *innerLayout = ui_layout(&selector->ui, layout, Layout_Horizontal, 5);
     if (ui_button_imm(&selector->ui, innerLayout, "Hallo"))
     {
@@ -99,7 +99,7 @@ DRAW_IMAGE(draw_image)
     {
         fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 1, 0, 1));
     }
-    
+
     UILayout *sliderLayout = ui_layout(&selector->ui, layout, Layout_Vertical, 5);
     if (ui_slider_imm(&selector->ui, sliderLayout, &selector->slide1, 255U))
     {
@@ -116,7 +116,7 @@ DRAW_IMAGE(draw_image)
         selector->setting3 = selector->slide3;
         fprintf(stdout, "Floating: %f\n", selector->slide3);
     }
-    
+
     UILayout *bottomLayout = ui_layout(&selector->ui, layout, Layout_Horizontal, 5);
     if (ui_checkbox_imm(&selector->ui, bottomLayout, selector->check1))
     {
@@ -126,16 +126,16 @@ DRAW_IMAGE(draw_image)
     {
         selector->check2 = !selector->check2;
     }
-    
+
     if (ui_button_imm(&selector->ui, bottomLayout, "Dap \xCE\xA3\n"))
     {
         fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 1, 1));
     }
 #endif
-    
+
     ui_end(&selector->ui);
-    
-#if 0    
+
+#if 0
     if (keyboard->keys[Key_A].isDown)
     {
         if (selector->check1)
@@ -147,16 +147,16 @@ DRAW_IMAGE(draw_image)
             fill_rectangle(image, 0, 150, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
         }
     }
-    
+
     if (keyboard->keys[Key_S].isPressed)
     {
         fill_rectangle(image, 0, 250, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
-    } 
+    }
     else if (keyboard->keys[Key_S].isReleased)
     {
         fill_rectangle(image, 0, 350, 100, 100, V4(0.2f, 0.2f, 0.2f, 1));
     }
-    
+
     if (selector->check1)
     {
         v2u offset = V2U(image->width / 2 + selector->setting2, 0);
@@ -178,8 +178,7 @@ DRAW_IMAGE(draw_image)
         fill_rectangle(image, offset.x, offset.y, dim.x, dim.y, colour);
     }
 #endif
-    
-    selector->prevMouseDown = mouse.mouseDowns;
+
     selector->prevMouseScroll = mouse.scroll;
     if (keyboard->lastInput.size)
     {

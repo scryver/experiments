@@ -1,7 +1,8 @@
 #include "interface.h"
-#include "../libberdip/memory.h"
 #include "../libberdip/suballoc.h"
 DRAW_IMAGE(draw_image);
+
+#define string_vformatter(...)   {}
 
 #define SUBPIXEL_LOCATION 0
 // NOTE(michiel): Make one or none 1, others 0
@@ -35,17 +36,17 @@ STBTT_memset(void *dest, s32 value, umm size)
 #define stbtt_uint32       u32
 #define stbtt_int32        s32
 
-#define STBTT_ifloor(x)    ((s32)floor(x))
-#define STBTT_iceil(x)     ((s32)ceil(x))
+#define STBTT_ifloor(x)    ((s32)floor32(x))
+#define STBTT_iceil(x)     ((s32)ceil32(x))
 #define STBTT_sqrt(x)      square_root(x)
-#define STBTT_pow(x, y)    pow(x, y)
+#define STBTT_pow(x, y)    pow32(x, y)
 #define STBTT_fmod(x, y)   modulus(x, y)
 #define STBTT_cos(x)       cos_pi(x)
 #define STBTT_acos(x)      acos_pi(x)
 #define STBTT_fabs(x)      absolute(x)
 
-#define STBTT_malloc(x, u) sub_alloc((SubAllocator *)u, x)
-#define STBTT_free(x, u)   sub_dealloc((SubAllocator *)u, x)
+#define STBTT_malloc(x, u) sub_alloc(u, x, no_clear_memory_alloc())
+#define STBTT_free(x, u)   sub_dealloc(u, x)
 
 //#define STBTT_assert(x)    i_expect_simple(x)
 #define STBTT_assert(x)
@@ -75,7 +76,7 @@ struct SingleFont
 {
     Buffer  memory;
     stbtt_fontinfo stbFont;
-    
+
     s32 ascender;
     s32 descender;
     s32 lineGap;
@@ -91,7 +92,7 @@ struct DualFont
 struct StbFont
 {
     SubAllocator *allocator;
-    
+
     // NOTE(michiel): Using font 0 -> count to search for glyphs. Only using the next font if the glyph is undefined
     u32 fontCount;
     DualFont fonts[MAX_FALLBACK_FONTS];
@@ -117,11 +118,11 @@ struct StbState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     SubAllocator allocator;
-    
+
     StbFont font;
-    
+
     TextImage textA;
     TextImage textB;
 };
@@ -136,22 +137,24 @@ internal SingleFont
 add_stb_font(StbFont *font, String filename)
 {
     SingleFont result = {};
-    result.memory = read_entire_file(filename);
+    MemoryAllocator tempAlloc = {};
+    initialize_arena_allocator(gMemoryArena, &tempAlloc);
+    result.memory = gFileApi->read_entire_file(&tempAlloc, filename);
     if (result.memory.size)
     {
         s32 numFonts = stbtt_GetNumberOfFonts(result.memory.data);
-        
+
         if (numFonts > 0)
         {
             int offset = stbtt_GetFontOffsetForIndex(result.memory.data, 0);
             if (stbtt_InitFont(&result.stbFont, result.memory.data, offset) != 0)
             {
                 result.stbFont.userdata = font->allocator;
-                
+
                 fprintf(stdout, "Found %d font%s in '%.*s'\n", numFonts, numFonts == 1 ? "" : "s", STR_FMT(filename));
-                
+
                 stbtt_GetFontVMetrics(&result.stbFont, &result.ascender, &result.descender, &result.lineGap);
-#if 0                
+#if 0
                 //result.fontScale = font->pixelHeight / (f32)(ascent - descent);
                 result.fontScale = stbtt_ScaleForPixelHeight(&result.stbFont, font->pixelHeight);
 #endif
@@ -187,13 +190,13 @@ get_font_from_codepoint(StbFont *font, u32 codepoint, b32 useBold = false, u32 *
 {
     i_expect(font->fontCount);
     SingleFont *result = 0;
-    
+
     s32 index = 0;
     for (u32 fontIdx = 0; fontIdx < font->fontCount; ++fontIdx)
     {
         DualFont *dFont = font->fonts + fontIdx;
         SingleFont *test = useBold ? &dFont->bold : &dFont->regular;
-        
+
         index = stbtt_FindGlyphIndex(&test->stbFont, codepoint);
         if (index > 0) {
             if (glyphIndex) {
@@ -203,12 +206,12 @@ get_font_from_codepoint(StbFont *font, u32 codepoint, b32 useBold = false, u32 *
             break;
         }
     }
-    
+
     if (!result) {
         // NOTE(michiel): Use the main font for glyphs that are not found
         result = useBold ? &font->fonts[0].bold : &font->fonts[0].regular;
     }
-    
+
     return result;
 }
 
@@ -216,14 +219,14 @@ internal void
 create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result)
 {
     struct timespec startTime = get_wall_clock();
-    
+
     i_expect(font->fontCount);
     SingleFont *curFont = &font->fonts[0].regular;
-    
+
     result->pixelHeight = pixelHeight;
     result->text = text;
     result->image = {};
-    
+
     // TODO(michiel): Merge two groups somehow, temp memory maybe?
     u8 *scan = text.data;
     b32 useBold = false;
@@ -242,7 +245,7 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                 fprintf(stderr, "Invalid utf character 0x%02X\n", text.data[textIdx]);
                 advance = 1;
             }
-            
+
             u32 glyphIndex = 0;
             if (is_end_of_line(codepoint))
             {
@@ -259,16 +262,16 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                     s32 kerning = stbtt_GetGlyphKernAdvance(&curFont->stbFont, prevGlyph, glyphIndex);
                     width += kerning;
                 }
-                
+
                 curFont = get_font_from_codepoint(font, codepoint, useBold, &glyphIndex);
-                
+
                 s32 stbAdv, stbLsb;
                 stbtt_GetGlyphHMetrics(&curFont->stbFont, glyphIndex, &stbAdv, &stbLsb);
                 width += stbAdv;
             }
-            
+
             prevGlyph = glyphIndex;
-            
+
             scan += advance;
             textIdx += advance;
         }
@@ -279,21 +282,23 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
             ++textIdx;
         }
     }
-    
+
     if (maxWidth < width) {
         maxWidth = width;
     }
-    
+
     curFont = &font->fonts[0].regular;
     f32 fontScale = stbtt_ScaleForPixelHeight(&curFont->stbFont, pixelHeight);
     result->image.width = s32_from_f32_ceil((f32)maxWidth * fontScale);
     result->image.height = s32_from_f32_ceil((f32)height * fontScale);
     result->image.rowStride = result->image.width;
-    
+
     umm pixelSize = result->image.width * result->image.height;
-    result->image.pixels = sub_alloc_array(font->allocator, u8, pixelSize);
+    MemoryAllocator tempAlloc = {};
+    initialize_sub_allocator(font->allocator, &tempAlloc);
+    result->image.pixels = allocate_array(&tempAlloc, u8, pixelSize, default_memory_alloc());
     copy_single(pixelSize, 0, result->image.pixels);
-    
+
     scan = text.data;
     useBold = false;
     prevGlyph = 0;
@@ -310,7 +315,7 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                 fprintf(stderr, "Invalid utf character 0x%02X\n", text.data[textIdx]);
                 advance = 1;
             }
-            
+
             u32 glyphIndex = 0;
             if (is_end_of_line(codepoint))
             {
@@ -320,26 +325,26 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
             else
             {
                 curFont = get_font_from_codepoint(font, codepoint, useBold, &glyphIndex);
-                
+
                 if (glyphIndex && prevGlyph)
                 {
                     s32 kerning = stbtt_GetGlyphKernAdvance(&curFont->stbFont, prevGlyph, glyphIndex);
                     x += kerning;
                 }
-                
+
                 s32 stbAdv, stbLsb;
                 stbtt_GetGlyphHMetrics(&curFont->stbFont, glyphIndex, &stbAdv, &stbLsb);
-                
+
                 f32 atX = (f32)(x + stbLsb) * fontScale;
                 f32 atY = (f32)y * fontScale;
-                
+
                 s32 ix0, ix1, iy0, iy1;
-                
+
 #if SUBPIXEL_LOCATION
                 f32 shiftX = atX - (s32)atX;
                 //f32 shiftY = atY - (f32)(s32)atY;
                 f32 shiftY = 0.0f;
-                
+
                 stbtt_GetGlyphBitmapBoxSubpixel(&curFont->stbFont, glyphIndex, fontScale, fontScale,
                                                 shiftX, shiftY,
                                                 &ix0, &iy0, &ix1, &iy1);
@@ -347,9 +352,9 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                 stbtt_GetGlyphBitmapBox(&curFont->stbFont, glyphIndex, fontScale, fontScale,
                                         &ix0, &iy0, &ix1, &iy1);
 #endif
-                
+
                 atY += (f32)iy0;
-                
+
 #if FONT_POS_ROUNDING
                 s32 modX = s32_from_f32_round(atX);
                 s32 modY = s32_from_f32_round(atY);
@@ -363,11 +368,11 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                 s32 modX = s32_from_f32_truncate(atX);
                 s32 modY = s32_from_f32_truncate(atY);
 #endif
-                
+
                 u8 *start = result->image.pixels + modY * result->image.rowStride + modX;
-                
+
 #if SUBPIXEL_LOCATION
-                stbtt_MakeGlyphBitmapSubpixel(&curFont->stbFont, start, 
+                stbtt_MakeGlyphBitmapSubpixel(&curFont->stbFont, start,
                                               ix1 - ix0 + 10, iy1 - iy0 + 10,
                                               result->image.width,
                                               fontScale, fontScale,
@@ -376,12 +381,12 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
                 stbtt_MakeGlyphBitmap(&curFont->stbFont, start, ix1 - ix0, iy1 - iy0, result->image.width,
                                       fontScale, fontScale, glyphIndex);
 #endif
-                
+
                 x += stbAdv;
             }
-            
+
             prevGlyph = glyphIndex;
-            
+
             scan += advance;
             textIdx += advance;
         }
@@ -392,7 +397,7 @@ create_text_image(StbFont *font, String text, f32 pixelHeight, TextImage *result
             ++textIdx;
         }
     }
-    
+
     struct timespec endTime = get_wall_clock();
     fprintf(stdout, "Generated font text in %f seconds\n", get_seconds_elapsed(startTime, endTime));
 }
@@ -411,21 +416,21 @@ update_text_image(StbFont *font, TextImage *orig, String text, f32 pixelHeight)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(StbState) <= state->memorySize);
-    
+
     //v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     StbState *stbState = (StbState *)state->memory;
     if (!state->initialized)
     {
         // stbState->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         stbState->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         u32 dataSize = megabytes(128);
-        u8 *dataMem = allocate_array(u8, dataSize);
+        u8 *dataMem = arena_allocate_array(gMemoryArena, u8, dataSize, default_memory_alloc());
         b32 success = init_sub_allocator(&stbState->allocator, dataSize, dataMem);
         i_expect(success);
         stbState->font.allocator = &stbState->allocator;
-        
+
         //String regularFont = static_string("/usr/share/fonts/truetype/noto/NotoSerifDisplay-Regular.ttf");
         //String boldFont    = static_string("/usr/share/fonts/truetype/noto/NotoSerifDisplay-Bold.ttf");
         //String regularFont = static_string("/usr/share/fonts/truetype/freefont/FreeSans.ttf");
@@ -434,7 +439,7 @@ DRAW_IMAGE(draw_image)
         //String regularFont = static_string("/usr/share/fonts/truetype/nanum/NanumMyeongjo.ttf");
         //String regularFont = static_string("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf");
         //String regularFont = static_string("/usr/share/fonts/truetype/noto/NotoSans-SemiCondensedBlack.ttf");
-        
+
         String regularFont = static_string("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf");
         String boldFont    = static_string("/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf");
         String regularCJKFont = static_string("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc");
@@ -446,51 +451,50 @@ DRAW_IMAGE(draw_image)
         // TODO(michiel): This font gives a stbtt_assert when setting the font scale to above 32.0f
         String regularDevaFont = static_string("/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf");
         String boldDevaFont    = static_string("/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf");
-        
+
         init_stb_font(&stbState->font);
         add_dual_stb_font(&stbState->font, regularFont, boldFont);
         add_dual_stb_font(&stbState->font, regularCJKFont, boldCJKFont);
         add_dual_stb_font(&stbState->font, regularThaiFont, boldThaiFont);
         //add_dual_stb_font(&stbState->font, regularArabFont, boldArabFont); // NOTE(michiel): Add rtl support
         add_dual_stb_font(&stbState->font, regularDevaFont, boldDevaFont);
-        
+
         String testStrA = static_string(FONT_START_BOLD "Hello, world!" FONT_START_REGULAR " <And greetings... \xCE\x94 \xCF\x80 +=->\n"
                                         "\xEB\xB8\xA0\xEB\xB8\xA1\xEB\xB8\xA2\xEB\xB8\xA3\n"
                                         "And some more text for\nVAWA jij and fij ffi\n"
                                         "\xD0\x81 \xD1\xAA");
-        
+
         s32 sizeA = 28;
         create_text_image(&stbState->font, testStrA, (f32)sizeA, &stbState->textA);
         create_text_image(&stbState->font, static_string("Simple test"), 45.0f, &stbState->textB);
-#if 0        
+#if 0
         create_text_image(&stbState->font, static_string("Test B | T.W.Lewis\nficellé fffffi. VAV.\nتسجّل يتكلّم\nДуо вёжи дёжжэнтиюнт ут\n緳 踥踕\nहालाँकि प्रचलित रूप पूजा"), 45.0f, &stbState->textB);
 #endif
-        
+
         state->initialized = true;
     }
-    
+
     i_expect(stbState->font.fontCount);
     i_expect(stbState->font.fonts[0].regular.memory.size);
     i_expect(stbState->font.fonts[0].bold.memory.size);
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     if (keyboard->keys[Key_C].isPressed) {
         String one = static_string("WWWAAWWAAhoopsiee Doopsiee");
         String other = static_string("Test B | T.W.Lewis\nficellé fffffi. VAV.\nتسجّل يتكلّم\nДуо вёжи дёжжэнтиюнт ут\n緳 踥踕\nहालाँकि प्रचलित रूप पूजा");
         String update = (stbState->textB.text == one) ? other : one;
         update_text_image(&stbState->font, &stbState->textB, update, 60.0f);
-    } 
-    
+    }
+
     if (keyboard->keys[Key_A].isDown) {
         draw_image(image, 0, 0, &stbState->textB.image);
     } else {
         draw_image(image, 20, 20, &stbState->textA.image, V4(1, 1, 0, 1));
     }
-    
+
     sub_coalesce(&stbState->allocator);
-    
-    stbState->prevMouseDown = mouse.mouseDowns;
+
     stbState->seconds += dt;
     ++stbState->ticks;
     if (stbState->seconds > 1.0f)

@@ -54,8 +54,8 @@ internal v2
 fraction(v2 v)
 {
     v2 result;
-    result.x = fraction(v.x);
-    result.y = fraction(v.y);
+    result.x = fraction32(v.x);
+    result.y = fraction32(v.y);
     return result;
 }
 
@@ -130,7 +130,7 @@ sdEllipsoid( v3 p, v3 r ) // approximated
     f32 k0 = length(p/r);
     f32 k1 = length(p/hadamard(r,r));
     return k0*(k0-1.0f)/k1;
-    
+
 }
 
 internal f32
@@ -151,7 +151,7 @@ internal f32
 sdHexPrism( v3 p, v2 h )
 {
     v3 q = absolute(p);
-    
+
     const v3 k = V3(-0.8660254f, 0.5f, 0.57735f);
     p = absolute(p);
     p.xy -= 2.0f*minimum(dot(k.xy, p.xy), 0.0f)*k.xy;
@@ -173,14 +173,14 @@ internal f32
 sdRoundCone( v3 p, f32 r1, f32 r2, f32 h )
 {
     v2 q = V2( length(vec_xz(p)), p.y );
-    
+
     f32 b = (r1-r2)/h;
     f32 a = square_root(1.0f-b*b);
     f32 k = dot(q,V2(-b,a));
-    
+
     if( k < 0.0f ) return length(q) - r1;
     if( k > a*h ) return length(q-V2(0.0f,h)) - r2;
-    
+
     return dot(q, V2(a,b) ) - r1;
 }
 
@@ -193,7 +193,7 @@ sdRoundCone(v3 p, v3 a, v3 b, f32 r1, f32 r2)
     f32 rr = r1 - r2;
     f32 a2 = l2 - rr*rr;
     f32 il2 = 1.0f/l2;
-    
+
     // sampling dependant computations
     v3 pa = p - a;
     f32 y = dot(pa,ba);
@@ -201,7 +201,7 @@ sdRoundCone(v3 p, v3 a, v3 b, f32 r1, f32 r2)
     f32 x2 = length_squared( pa*l2 - ba*y );
     f32 y2 = y*y*l2;
     f32 z2 = z*z*l2;
-    
+
     // single square root!
     f32 k = sign_of(rr)*rr*rr*x2;
     if( sign_of(z)*a2*z2 > k ) return  square_root(x2 + z2)        *il2 - r2;
@@ -242,7 +242,7 @@ sdCylinder(v3 p, v3 a, v3 b, f32 r)
     v3 ba = b - a;
     f32 baba = dot(ba,ba);
     f32 paba = dot(pa,ba);
-    
+
     f32 x = length(pa*baba-ba*paba) - r*baba;
     f32 y = absolute(paba-baba*0.5f)-baba*0.5f;
     f32 x2 = x*x;
@@ -265,7 +265,7 @@ internal f32
 sdCone( v3 p, f32 h, f32 r1, f32 r2 )
 {
     v2 q = V2( length(vec_xz(p)), p.y );
-    
+
     v2 k1 = V2(r2,h);
     v2 k2 = V2(r2-r1,2.0f*h);
     v2 ca = V2(q.x-minimum(q.x,(q.y < 0.0f)?r1:r2), absolute(q.y)-h);
@@ -282,20 +282,20 @@ sdCone(v3 p, v3 a, v3 b, f32 ra, f32 rb)
     f32 baba = dot(b-a,b-a);
     f32 papa = dot(p-a,p-a);
     f32 paba = dot(p-a,b-a)/baba;
-    
+
     f32 x = square_root( papa - paba*paba*baba );
-    
+
     f32 cax = maximum(0.0f,x-((paba<0.5f)?ra:rb));
     f32 cay = absolute(paba-0.5f)-0.5f;
-    
+
     f32 k = rba*rba + baba;
     f32 f = clamp01( (rba*(x-ra)+paba*baba)/k);
-    
+
     f32 cbx = x-ra - f*rba;
     f32 cby = paba - f;
-    
+
     f32 s = (cbx < 0.0f && cay < 0.0f) ? -1.0f : 1.0f;
-    
+
     return s*square_root( minimum(cax*cax + cay*cay*baba,
                                   cbx*cbx + cby*cby*baba) );
 }
@@ -315,14 +315,14 @@ sdOctahedron(v3 p, f32 s)
 {
     p = absolute(p);
     f32 m = p.x + p.y + p.z - s;
-    
+
     // exact distance
 #if 0
     v3 o = min(3.0f*p - m, 0.0f);
     o = max(6.0f*p - m*2.0f - o*3.0f + (o.x+o.y+o.z), 0.0f);
     return length(p - s*o/(o.x+o.y+o.z));
 #endif
-    
+
     // exact distance
 #if 1
     v3 q;
@@ -333,7 +333,7 @@ sdOctahedron(v3 p, f32 s)
     f32 k = clamp(0.0f, 0.5f*(q.z-q.y+s),s);
     return length(V3(q.x,q.y-s+k,q.z-k));
 #endif
-    
+
     // bound, not exact
 #if 0
 	return m*0.57735027f;
@@ -344,7 +344,7 @@ internal f32
 sdPyramid( v3 p, f32 h )
 {
     f32 m2 = h*h + 0.25f;
-    
+
     // symmetry
     p.x = absolute(p.x);
     p.z = absolute(p.z);
@@ -355,18 +355,18 @@ sdPyramid( v3 p, f32 h )
     }
     p.x -= 0.5f;
     p.z -= 0.5f;
-	
+
     // project into face plane (2D)
     v3 q = V3( p.z, h*p.y - 0.5f*p.x, h*p.x + 0.5f*p.y);
-    
+
     f32 s = maximum(-q.x,0.0f);
     f32 t = clamp01( (q.y-0.5f*p.z)/(m2+0.25f));
-    
+
     f32 a = m2*(q.x+s)*(q.x+s) + q.y*q.y;
 	f32 b = m2*(q.x+0.5f*t)*(q.x+0.5f*t) + (q.y-m2*t)*(q.y-m2*t);
-    
+
     f32 d2 = minimum(q.y,-q.x*m2-q.y*0.5f) > 0.0f ? 0.0f : minimum(a,b);
-    
+
     // recover 3D and scale, and add sign
     return square_root( (d2+q.z*q.z)/m2 ) * sign_of(maximum(q.z,-p.y));;
 }
@@ -405,9 +405,9 @@ internal v2
 map( v3 pos )
 {
     ++gMapCalls;
-    
+
     v2 res = V2( 1.0e10f, 0.0f);
-    
+
     if( pos.x>-2.5f && pos.x<0.5f )
     {
         res = opU( res, V2( sdPyramid( 2.5f*(pos-V3(-1.0f,0.15f,-3.0f)), 1.1f )/2.5f, 13.56f ) );
@@ -441,8 +441,8 @@ map( v3 pos )
         res = opU( res, V2( sdRoundCone( pos-V3( 2.0f,0.20f, 0.0f), V3(0.1f,0.0f,0.0f), V3(-0.1f,0.3f,0.1f), 0.15f, 0.05f), 51.7f ) );
         res = opU( res, V2( sdRoundCone( pos-V3( 2.0f,0.20f, 1.0f), 0.2f, 0.1f, 0.3f ), 37.0f ) );
     }
-    
-    
+
+
 	//res = min( res, sdBox(pos-v3(0.5,0.4,-0.5), v3(2.0,0.41,2.0) ) );
     return res;
 }
@@ -466,10 +466,10 @@ internal v2
 castRay( v3 ro, v3 rd )
 {
     v2 res = V2(-1.0f,-1.0f);
-    
+
     f32 tmin = 1.0f;
     f32 tmax = 10.0f;
-    
+
     // raytrace floor plane
     f32 tp1 = (0.0f-ro.y)/rd.y;
     if( tp1>0.0f )
@@ -478,14 +478,14 @@ castRay( v3 ro, v3 rd )
         res = V2( tp1, 1.0f );
     }
     //else return res;
-    
+
     // raymarch primitives
     v2 tb = iBox( ro-V3(0.5f,0.4f,-0.5f), rd, V3(2.0f,0.41f,3.0f) );
     if( tb.x<tb.y && tb.y>0.0f && tb.x<tmax)
     {
         tmin = maximum(tb.x,tmin);
         tmax = minimum(tb.y,tmax);
-        
+
         f32 t = tmin;
         for( int i=0; i<70 && t<tmax; i++ )
         {
@@ -498,7 +498,7 @@ castRay( v3 ro, v3 rd )
             t += h.x;
         }
     }
-    
+
     return res;
 }
 
@@ -510,7 +510,7 @@ calcSoftshadow( v3 ro, v3 rd, f32 mint, f32 tmax )
     // bounding volume
     f32 tp = (maxHei-ro.y)/rd.y;
     if( tp>0.0f ) tmax = minimum( tmax, tp );
-    
+
     f32 res = 1.0f;
     f32 t = mint;
     for( int i=0; i<16; i++ )
@@ -540,9 +540,9 @@ calcNormal( v3 pos )
     v3 ex = 0.5773f*(2.0f*V3(1, 0, 0) - 1.0f);
     v3 ey = 0.5773f*(2.0f*V3(0, 1, 0) - 1.0f);
     v3 ez = 0.5773f*(2.0f*V3(0, 0, 1) - 1.0f);
-    
+
     v3 n = ex*map(pos+0.0005f*ex).x + ey*map(pos+0.0005f*ey).x + ez*map(pos+0.0005f*ez).x;
-    
+
 #endif
     return normalize_or_zero(n);
 }
@@ -587,7 +587,7 @@ render( v3 ro, v3 rd, v3 rdx, v3 rdy )
         v3 pos = ro + t*rd;
         v3 nor = (m<1.5f) ? V3(0.0f,1.0f,0.0f) : calcNormal( pos );
         v3 ref = reflect( rd, nor );
-        
+
         // material
 		col = V3(0.2f, 0.2f, 0.2f) + 0.18f*V3(sin_pi(0.05f)*(m-1.0f),sin_pi(0.08f)*(m-1.0f),sin_pi(0.1f)*(m-1.0f) );
         //col = v3(0.2);
@@ -597,11 +597,11 @@ render( v3 ro, v3 rd, v3 rdx, v3 rdy )
             // project pixel footprint into the plane
             v3 dpdx = ro.y*(rd/rd.y-rdx/rdx.y);
             v3 dpdy = ro.y*(rd/rd.y-rdy/rdy.y);
-            
+
             f32 f = checkersGradBox( 5.0f*vec_xz(pos), 5.0f*vec_xz(dpdx), 5.0f*vec_xz(dpdy) );
             col = V3(0.15f, 0.15f, 0.15f) + f*V3(0.05f, 0.05f, 0.05f);
         }
-        
+
         // lighting
         f32 occ = calcAO( pos, nor );
 		v3  lig = normalize_or_zero( V3(-0.5f, 0.4f, -0.6f) );
@@ -610,15 +610,15 @@ render( v3 ro, v3 rd, v3 rdx, v3 rdy )
         f32 dif = clamp01( dot( nor, lig ) );
         f32 bac = clamp01( dot( nor, normalize_or_zero(V3(-lig.x,0.0f,-lig.z))) )*clamp01( 1.0f-pos.y);
         f32 dom = smoothstep( -0.2f, 0.2f, ref.y );
-        f32 fre = pow( clamp01(1.0f+dot(nor,rd)), 2.0f );
-        
+        f32 fre = pow32( clamp01(1.0f+dot(nor,rd)), 2.0f );
+
         dif *= calcSoftshadow( pos, lig, 0.02f, 2.5f );
         dom *= calcSoftshadow( pos, ref, 0.02f, 2.5f );
-        
-		f32 spe = pow( clamp01( dot( nor, hal ) ),16.0f)*
+
+		f32 spe = pow32( clamp01( dot( nor, hal ) ),16.0f)*
             dif *
-            (0.04f + 0.96f*pow( clamp01(1.0f+dot(hal,rd)), 5.0f ));
-        
+        (0.04f + 0.96f*pow32( clamp01(1.0f+dot(hal,rd)), 5.0f ));
+
 		v3 lin = V3(0, 0, 0);
         lin += 3.80f*dif*V3(1.30f,1.00f,0.70f);
         lin += 0.55f*amb*V3(0.40f,0.60f,1.15f)*occ;
@@ -627,10 +627,10 @@ render( v3 ro, v3 rd, v3 rdx, v3 rdy )
         lin += 0.25f*fre*V3(1.00f,1.00f,1.00f)*occ;
 		col = hadamard(col,lin);
 		col += 7.00f*spe*V3(1.10f,0.90f,0.70f);
-        
-        col = lerp( col, 1.0f-exp( -0.0001f*t*t*t ), V3(0.7f,0.7f,0.9f) );
+
+        col = lerp( col, 1.0f-exp32( -0.0001f*t*t*t ), V3(0.7f,0.7f,0.9f) );
     }
-    
+
 	return clamp01(col);
 }
 
@@ -673,15 +673,15 @@ mainImage(v2 fragCoord, v2 mouse, v2 screenSize, f32 timeAt)
 {
     v2 mo = mouse / screenSize;
 	f32 time = 15.0f + timeAt*1.5f;
-    
+
     // camera
     v3 ta = V3( 0.5f, -0.4f, -0.5f );
     v3 ro = ta + V3( 4.5f*cos_pi(0.1f*time + 6.0f*mo.x), 1.0f + 2.0f*mo.y, 4.5f*sin_pi(0.1f*time + 6.0f*mo.x) );
     // camera-to-world transformation
     Camera ca = setCamera( ro, ta, 0.0f );
-    
+
     f32 oneOverHeight = 1.0f / screenSize.y;
-    
+
     v3 tot = V3(0,0,0);
 #if AA>1
     for( int m=0; m<AA; m++ )
@@ -693,29 +693,29 @@ mainImage(v2 fragCoord, v2 mouse, v2 screenSize, f32 timeAt)
 #else
         v2 p = (2.0f*fragCoord-screenSize) * oneOverHeight;
 #endif
-        
+
         // ray direction
         v3 rd = ca * normalize_or_zero(V3(p, 2.5f));
-        
+
         // ray differentials
         v2 px = (2.0f*(fragCoord+V2(1.0f,0.0f))-screenSize) * oneOverHeight;
         v2 py = (2.0f*(fragCoord+V2(0.0f,1.0f))-screenSize) * oneOverHeight;
         v3 rdx = ca * normalize_or_zero( V3(px,2.5f) );
         v3 rdy = ca * normalize_or_zero( V3(py,2.5f) );
-        
+
         // render
         v3 col = render( ro, rd, rdx, rdy );
-        
+
 		// gamma
         //col = pow( col, V3(0.4545) );
-        
+
         tot += col;
 #if AA>1
     }
     tot /= (f32)(AA*AA);
 #endif
-    
-    
+
+
     return V4( tot, 1.0 );
 }
 
@@ -731,30 +731,30 @@ normalized_screen(v2 screenP, v2 screenSize)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(BasicState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     BasicState *basics = (BasicState *)state->memory;
     if (!state->initialized)
     {
         // basics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         basics->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         state->initialized = true;
     }
-    
+
     gMapCalls = 0;
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     v3 cameraPos = V3(0, 0, -1);
     v3 cameraTarget = V3(0, 0, 0);
     f32 cameraPerspective = 2.0f;
-    
+
     v3 cameraForward = normalize_or_zero(cameraTarget - cameraPos);
     v3 cameraRight = normalize_or_zero(cross(V3(0, 1, 0), cameraForward));
     v3 cameraUp = normalize_or_zero(cross(cameraForward, cameraRight));
-    
+
     u32 *pixels = image->pixels;
     for (u32 y = 0; y < image->height; ++y)
     {
@@ -763,11 +763,11 @@ DRAW_IMAGE(draw_image)
         {
             v2 at = V2((f32)x, (f32)y);
             at.y = size.y-at.y-1.0f;
-            
+
             //v2 uv = normalized_screen(at, size);
             v4 colour = mainImage(at, 0.5f * size /*mouse.pixelPosition*/, size, basics->seconds);
             //v3 rayDir = get_camera_ray_dir(uv, cameraPerspective, cameraForward, cameraRight, cameraUp);
-            
+
             //v3 colour = render(cameraPos, rayDir, basics->seconds);
             //draw_pixel(pixelRow++, sRGB_from_linear(V4(colour, 1.0f)));
             //draw_pixel(pixelRow++, V4(colour, 1.0f));
@@ -775,8 +775,7 @@ DRAW_IMAGE(draw_image)
         }
         pixels += image->rowStride;
     }
-    
-    basics->prevMouseDown = mouse.mouseDowns;
+
     basics->seconds += dt;
     ++basics->ticks;
     if (basics->seconds > 60.0f)

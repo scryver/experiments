@@ -3,7 +3,7 @@ struct Mover
     v2 acceleration;
     v2 velocity;
     v2 position;
-    
+
     f32 mass;
     f32 oneOverMass;
 };
@@ -59,7 +59,7 @@ apply_spring(Mover *mover, v2 anchor, f32 restLength, f32 k = 0.01f)
     v2 spring = mover->position - anchor;
     f32 curLength = length(spring);
     spring = normalize(spring);
-    
+
     f32 stretch = curLength - restLength;
     spring *= -k * stretch;
     apply_force(mover, spring);
@@ -96,12 +96,12 @@ seeking_force(Mover *mover, v2 targetPosition, f32 maxSpeed = 4.0f, f32 maxForce
 }
 
 internal inline v2
-arriving_force(Mover *mover, v2 targetPosition, f32 catchDistance = 100.0f, 
+arriving_force(Mover *mover, v2 targetPosition, f32 catchDistance = 100.0f,
                f32 maxSpeed = 4.0f, f32 maxForce = 0.1f)
 {
     v2 desired = targetPosition - mover->position;
     f32 d2 = length_squared(desired);
-    
+
     if (d2 < (catchDistance * catchDistance))
     {
         float t = square_root(d2) / catchDistance; // TODO(michiel): Optimize
@@ -111,7 +111,7 @@ arriving_force(Mover *mover, v2 targetPosition, f32 catchDistance = 100.0f,
     {
         desired = set_length(desired, maxSpeed);
     }
-    
+
     return steering_force(mover, desired, maxForce);
 }
 
@@ -119,7 +119,7 @@ internal inline v2
 separation_force(Mover *mover, Mover *repeller, f32 radius = 20.0f)
 {
     v2 desired = mover->position - repeller->position;
-    
+
     v2 result = {};
     if (length_squared(desired) < square(radius))
     {
@@ -134,7 +134,7 @@ update(Mover *mover, f32 dt = 1.0f, f32 maxVelocity = 0.0f)
     mover->velocity += mover->acceleration * dt;
     mover->position += mover->velocity * dt;
     if (maxVelocity != 0.0f)
-    { 
+    {
         f32 maxVelSqr = maxVelocity * maxVelocity;
         f32 velMagSqr = length_squared(mover->velocity);
         if (velMagSqr > maxVelSqr)

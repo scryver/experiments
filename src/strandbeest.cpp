@@ -62,7 +62,7 @@ update_bar(Bar *bar, v2 newStart, f32 dt)
 {
     v2 curEnd = get_bar_connection(bar);
     v2 newEnd = curEnd + (newStart - bar->startPos);
-    
+
     if (bar->flags & Bar_LockX)
     {
         if (newEnd.x != curEnd.x)
@@ -93,7 +93,7 @@ update_bar(Bar *bar, v2 newStart, f32 dt)
             newEnd.y = curEnd.y;
         }
     }
-    
+
     bar->startPos = newStart;
     bar->dir = normalize(newEnd - newStart);
 }
@@ -101,16 +101,16 @@ update_bar(Bar *bar, v2 newStart, f32 dt)
 internal void
 draw_wheel(Image *image, Wheel *wheel, v4 colour = V4(1, 1, 1, 1))
 {
-    fill_circle(image, round(wheel->pos.x), round(wheel->pos.y),
-                round(wheel->radius), colour);
+    fill_circle(image, round32(wheel->pos.x), round32(wheel->pos.y),
+                round32(wheel->radius), colour);
 }
 
 internal void
 draw_bar(Image *image, Bar *bar, v4 colour = V4(1, 1, 1, 1))
 {
     v2 end = get_bar_connection(bar);
-    draw_line(image, round(bar->startPos.x), round(bar->startPos.y),
-              round(end.x), round(end.y), colour);
+    draw_line(image, round32(bar->startPos.x), round32(bar->startPos.y),
+              round32(end.x), round32(end.y), colour);
 }
 
 struct BasicState
@@ -124,20 +124,20 @@ struct BasicState
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(BasicState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     BasicState *basics = (BasicState *)state->memory;
     if (!state->initialized)
     {
         basics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         //basics->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         state->initialized = true;
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     f32 a = 38.0f;
     f32 b = 41.5f;
     f32 c = 39.3f;
@@ -161,17 +161,16 @@ DRAW_IMAGE(draw_image)
     unused(i);
     unused(j);
     unused(k);
-    
+
     v2 midPoint = size * 0.5f;
     v2 fixedPoint = midPoint - V2(a, l);
-    
-    outline_circle(image, round(midPoint.x), round(midPoint.y), (u32)m, 1.0f, V4(1, 1, 1, 1));
-    fill_circle(image, round(midPoint.x), round(midPoint.y), 2, V4(1, 0, 0, 1));
-    fill_circle(image, round(fixedPoint.x), round(fixedPoint.y), 2, V4(1, 0, 0, 1));
-    
+
+    outline_circle(image, round32(midPoint.x), round32(midPoint.y), (u32)m, 1.0f, V4(1, 1, 1, 1));
+    fill_circle(image, round32(midPoint.x), round32(midPoint.y), 2, V4(1, 0, 0, 1));
+    fill_circle(image, round32(fixedPoint.x), round32(fixedPoint.y), 2, V4(1, 0, 0, 1));
+
     //draw_line(image, round(midPoint.x), round(midPoint.y), round(midPoint.x - a)
-    
-    basics->prevMouseDown = mouse.mouseDowns;
+
     basics->seconds += dt;
     ++basics->ticks;
     if (basics->seconds > 1.0f)

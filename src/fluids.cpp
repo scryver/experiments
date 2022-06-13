@@ -15,10 +15,10 @@ struct FluidPlane
     s32 size;
     f32 diffusion;
     f32 viscosity;
-    
+
     f32 *s;
     f32 *density;
-    
+
     f32 *velX;
     f32 *velY;
     f32 *velX0;
@@ -30,10 +30,10 @@ struct FluidCube
     s32 size;
     f32 diffusion;
     f32 viscosity;
-    
+
     f32 *s;
     f32 *density;
-    
+
     f32 *velX;
     f32 *velY;
     f32 *velZ;
@@ -49,10 +49,10 @@ struct FluidBase
     u32 ticks;
     u32 prevMouseDown;
     v2  prevMousePos;
-    
+
     f32 t;
     PerlinNoise noise;
-    
+
     FluidPlane plane;
     FluidCube  cube;
 };
@@ -64,12 +64,12 @@ set_bound_plane(s32 bound, f32 *x, s32 N)
         x[IXP(i,     0)] = (bound == 2) ? -x[IXP(i,     1)] : x[IXP(i,     1)];
         x[IXP(i, N - 1)] = (bound == 2) ? -x[IXP(i, N - 2)] : x[IXP(i, N - 2)];
     }
-    
+
     for (s32 j = 1; j < N - 1; ++j) {
         x[IXP(    0, j)] = (bound == 1) ? -x[IXP(    1, j)] : x[IXP(    1, j)];
         x[IXP(N - 1, j)] = (bound == 1) ? -x[IXP(N - 2, j)] : x[IXP(N - 2, j)];
     }
-    
+
     // NOTE(michiel): Handle corners
     x[IXP(  0,   0)] = 0.33f * (x[IXP(  1,   0)] + x[IXP(  0,   1)]);
     x[IXP(  0, N-1)] = 0.33f * (x[IXP(  1, N-1)] + x[IXP(  0, N-2)]);
@@ -114,11 +114,11 @@ project_plane(f32 *velX, f32 *velY, f32 *p, f32 *div, s32 iter, s32 N)
             p[IXP(i, j)] = 0.0f;
         }
     }
-    
+
     set_bound_plane(0, div, N);
     set_bound_plane(0, p, N);
     linear_solve_plane(0, p, div, 1, 6, iter, N);
-    
+
     for (s32 j = 1; j < N - 1; ++j) {
         for (s32 i = 1; i < N - 1; ++i) {
             velX[IXP(i, j)] -= 0.5f * (p[IXP(i+1, j  )] -
@@ -136,17 +136,17 @@ advect_plane(s32 bound, f32 *d, f32 *d0, f32 *velX, f32 *velY, f32 dt, s32 N)
 {
     f32 dtx = dt * (N - 2);
     f32 dty = dt * (N - 2);
-    
+
     f32 NFloat = (f32)N;
     f32 iFloat, jFloat;
     s32 i, j;
-    
+
     for (j = 1, jFloat = 1.0f; j < N - 1; ++j, ++jFloat) {
         for (i = 1, iFloat = 1.0f; i < N - 1; ++i, ++iFloat) {
             s32 index = IXP(i, j);
             f32 x = iFloat - dtx * velX[index];
             f32 y = jFloat - dty * velY[index];
-            
+
             if (x < 0.5f) {
                 x = 0.5f;
             }
@@ -159,22 +159,22 @@ advect_plane(s32 bound, f32 *d, f32 *d0, f32 *velX, f32 *velY, f32 dt, s32 N)
             if (y > NFloat + 0.5f) {
                 y = NFloat + 0.5f;
             }
-            
-            f32 i0 = floor(x);
+
+            f32 i0 = floor32(x);
             f32 i1 = i0 + 1.0f;
-            f32 j0 = floor(y);
+            f32 j0 = floor32(y);
             f32 j1 = j0 + 1.0f;
-            
+
             f32 s1 = x - i0;
             f32 s0 = 1.0f - s1;
             f32 t1 = y - j0;
             f32 t0 = 1.0f - t1;
-            
+
             s32 i0i = clamp(0, s32_from_f32_truncate(i0), N);
             s32 i1i = clamp(0, s32_from_f32_truncate(i1), N);
             s32 j0i = clamp(0, s32_from_f32_truncate(j0), N);
             s32 j1i = clamp(0, s32_from_f32_truncate(j1), N);
-            
+
             d[IXP(i, j)] = (s0 * (t0 * d0[IXP(i0i, j0i)] +
                                   t1 * d0[IXP(i0i, j1i)]) +
                             s1 * (t0 * d0[IXP(i1i, j0i)] +
@@ -205,7 +205,7 @@ set_bound_cube(s32 bound, f32 *x, s32 N)
             x[IXC(N - 1, j, k)] = (bound == 1) ? -x[IXC(N - 2, j, k)] : x[IXC(N - 2, j, k)];
         }
     }
-    
+
     // NOTE(michiel): Handle corners
     x[IXC(  0,   0,   0)] = 0.33f * (x[IXC(  1,   0,   0)] + x[IXC(  0,   1,   0)] + x[IXC(  0,   0,   1)]);
     x[IXC(  0, N-1,   0)] = 0.33f * (x[IXC(  1, N-1,   0)] + x[IXC(  0, N-2,   0)] + x[IXC(  0, N-1,   1)]);
@@ -226,12 +226,12 @@ linear_solve_cube(s32 bound, f32 *x, f32 *x0, f32 mult, f32 div, s32 iter, s32 N
             for (s32 j = 1; j < N - 1; ++j) {
                 for (s32 i = 1; i < N - 1; ++i) {
                     x[IXC(i, j, m)] = (x0[IXC(i, j, m)] + mult * (
-                        x[IXC(i+1, j  , m  )] +
-                        x[IXC(i-1, j  , m  )] +
-                        x[IXC(i  , j+1, m  )] +
-                        x[IXC(i  , j-1, m  )] +
-                        x[IXC(i  , j  , m+1)] +
-                        x[IXC(i  , j  , m-1)])) * c;
+                                                                  x[IXC(i+1, j  , m  )] +
+                                                                  x[IXC(i-1, j  , m  )] +
+                                                                  x[IXC(i  , j+1, m  )] +
+                                                                  x[IXC(i  , j-1, m  )] +
+                                                                  x[IXC(i  , j  , m+1)] +
+                                                                  x[IXC(i  , j  , m-1)])) * c;
                 }
             }
         }
@@ -266,7 +266,7 @@ project_cube(f32 *velX, f32 *velY, f32 *velZ, f32 *p, f32 *div, s32 iter, s32 N)
     set_bound_cube(0, div, N);
     set_bound_cube(0, p, N);
     linear_solve_cube(0, p, div, 1, 6, iter, N);
-    
+
     for (s32 k = 1; k < N - 1; ++k) {
         for (s32 j = 1; j < N - 1; ++j) {
             for (s32 i = 1; i < N - 1; ++i) {
@@ -290,11 +290,11 @@ advect_cube(s32 bound, f32 *d, f32 *d0, f32 *velX, f32 *velY, f32 *velZ, f32 dt,
     f32 dtx = dt * (N - 2);
     f32 dty = dt * (N - 2);
     f32 dtz = dt * (N - 2);
-    
+
     f32 NFloat = (f32)N;
     f32 iFloat, jFloat, kFloat;
     s32 i, j, k;
-    
+
     for (k = 1, kFloat = 1.0f; k < N - 1; ++k, ++kFloat) {
         for (j = 1, jFloat = 1.0f; j < N - 1; ++j, ++jFloat) {
             for (i = 1, iFloat = 1.0f; i < N - 1; ++i, ++iFloat) {
@@ -302,7 +302,7 @@ advect_cube(s32 bound, f32 *d, f32 *d0, f32 *velX, f32 *velY, f32 *velZ, f32 dt,
                 f32 x = iFloat - dtx * velX[index];
                 f32 y = jFloat - dty * velY[index];
                 f32 z = kFloat - dtz * velZ[index];
-                
+
                 if (x < 0.5f) {
                     x = 0.5f;
                 }
@@ -321,28 +321,28 @@ advect_cube(s32 bound, f32 *d, f32 *d0, f32 *velX, f32 *velY, f32 *velZ, f32 dt,
                 if (z > NFloat + 0.5f) {
                     z = NFloat + 0.5f;
                 }
-                
-                f32 i0 = floor(x);
+
+                f32 i0 = floor32(x);
                 f32 i1 = i0 + 1.0f;
-                f32 j0 = floor(y);
+                f32 j0 = floor32(y);
                 f32 j1 = j0 + 1.0f;
-                f32 k0 = floor(z);
+                f32 k0 = floor32(z);
                 f32 k1 = k0 + 1.0f;
-                
+
                 f32 s1 = x - i0;
                 f32 s0 = 1.0f - s1;
                 f32 t1 = y - j0;
                 f32 t0 = 1.0f - t1;
                 f32 u1 = z - k0;
                 f32 u0 = 1.0f - u1;
-                
+
                 s32 i0i = clamp(0, s32_from_f32_truncate(i0), N);
                 s32 i1i = clamp(0, s32_from_f32_truncate(i1), N);
                 s32 j0i = clamp(0, s32_from_f32_truncate(j0), N);
                 s32 j1i = clamp(0, s32_from_f32_truncate(j1), N);
                 s32 k0i = clamp(0, s32_from_f32_truncate(k0), N);
                 s32 k1i = clamp(0, s32_from_f32_truncate(k1), N);
-                
+
                 d[IXC(i, j, k)] = (s0 * (t0 * (u0 * d0[IXC(i0i, j0i, k0i)] +
                                                u1 * d0[IXC(i0i, j0i, k1i)]) +
                                          t1 * (u0 * d0[IXC(i0i, j1i, k0i)] +
@@ -363,14 +363,14 @@ fluid_init(FluidPlane *plane, s32 N, f32 diffusion, f32 viscosity)
     plane->size = N;
     plane->diffusion = diffusion;
     plane->viscosity = viscosity;
-    
-    plane->s = allocate_array(f32, N * N);
-    plane->density = allocate_array(f32, N * N);
-    
-    plane->velX = allocate_array(f32, N * N);
-    plane->velY = allocate_array(f32, N * N);
-    plane->velX0 = allocate_array(f32, N * N);
-    plane->velY0 = allocate_array(f32, N * N);
+
+    plane->s = arena_allocate_array(gMemoryArena, f32, N * N, default_memory_alloc());
+    plane->density = arena_allocate_array(gMemoryArena, f32, N * N, default_memory_alloc());
+
+    plane->velX = arena_allocate_array(gMemoryArena, f32, N * N, default_memory_alloc());
+    plane->velY = arena_allocate_array(gMemoryArena, f32, N * N, default_memory_alloc());
+    plane->velX0 = arena_allocate_array(gMemoryArena, f32, N * N, default_memory_alloc());
+    plane->velY0 = arena_allocate_array(gMemoryArena, f32, N * N, default_memory_alloc());
 }
 
 internal void
@@ -379,16 +379,16 @@ fluid_init(FluidCube *cube, s32 N, f32 diffusion, f32 viscosity)
     cube->size = N;
     cube->diffusion = diffusion;
     cube->viscosity = viscosity;
-    
-    cube->s = allocate_array(f32, N * N * N);
-    cube->density = allocate_array(f32, N * N * N);
-    
-    cube->velX = allocate_array(f32, N * N * N);
-    cube->velY = allocate_array(f32, N * N * N);
-    cube->velZ = allocate_array(f32, N * N * N);
-    cube->velX0 = allocate_array(f32, N * N * N);
-    cube->velY0 = allocate_array(f32, N * N * N);
-    cube->velZ0 = allocate_array(f32, N * N * N);
+
+    cube->s = arena_allocate_array(gMemoryArena, f32, N * N * N, default_memory_alloc());
+    cube->density = arena_allocate_array(gMemoryArena, f32, N * N * N, default_memory_alloc());
+
+    cube->velX = arena_allocate_array(gMemoryArena, f32, N * N * N, default_memory_alloc());
+    cube->velY = arena_allocate_array(gMemoryArena, f32, N * N * N, default_memory_alloc());
+    cube->velZ = arena_allocate_array(gMemoryArena, f32, N * N * N, default_memory_alloc());
+    cube->velX0 = arena_allocate_array(gMemoryArena, f32, N * N * N, default_memory_alloc());
+    cube->velY0 = arena_allocate_array(gMemoryArena, f32, N * N * N, default_memory_alloc());
+    cube->velZ0 = arena_allocate_array(gMemoryArena, f32, N * N * N, default_memory_alloc());
 }
 
 internal void
@@ -410,7 +410,7 @@ fluid_add_velocity(FluidPlane *plane, v2s pos, v2 amount)
 {
     s32 N = plane->size;
     s32 index = IXP(pos.x, pos.y);
-    
+
     plane->velX[index] += amount.x;
     plane->velY[index] += amount.y;
 }
@@ -420,7 +420,7 @@ fluid_add_velocity(FluidCube *cube, v3s pos, v3 amount)
 {
     s32 N = cube->size;
     s32 index = IXC(pos.x, pos.y, pos.z);
-    
+
     cube->velX[index] += amount.x;
     cube->velY[index] += amount.y;
     cube->velZ[index] += amount.z;
@@ -438,17 +438,17 @@ fluid_step(FluidPlane *plane, f32 dt)
     f32 *vY      = plane->velY;
     f32 *vX0     = plane->velX0;
     f32 *vY0     = plane->velY0;
-    
+
     diffuse_plane(1, vX0, vX, visc, dt, 4, N);
     diffuse_plane(2, vY0, vY, visc, dt, 4, N);
-    
+
     project_plane(vX0, vY0, vX, vY, 4, N);
-    
+
     advect_plane(1, vX, vX0, vX0, vY0, dt, N);
     advect_plane(2, vY, vY0, vX0, vY0, dt, N);
-    
+
     project_plane(vX, vY, vX0, vY0, 4, N);
-    
+
     diffuse_plane(0, s, density, diff, dt, 4, N);
     advect_plane(0, density, s, vX, vY, dt, N);
 }
@@ -467,19 +467,19 @@ fluid_step(FluidCube *cube, f32 dt)
     f32 *vX0     = cube->velX0;
     f32 *vY0     = cube->velY0;
     f32 *vZ0     = cube->velZ0;
-    
+
     diffuse_cube(1, vX0, vX, visc, dt, 4, N);
     diffuse_cube(2, vY0, vY, visc, dt, 4, N);
     diffuse_cube(3, vZ0, vZ, visc, dt, 4, N);
-    
+
     project_cube(vX0, vY0, vZ0, vX, vY, 4, N);
-    
+
     advect_cube(1, vX, vX0, vX0, vY0, vZ0, dt, N);
     advect_cube(2, vY, vY0, vX0, vY0, vZ0, dt, N);
     advect_cube(3, vZ, vZ0, vX0, vY0, vZ0, dt, N);
-    
+
     project_cube(vX, vY, vZ, vX0, vY0, 4, N);
-    
+
     diffuse_cube(0, s, density, diff, dt, 4, N);
     advect_cube(0, density, s, vX, vY, vZ, dt, N);
 }
@@ -513,52 +513,51 @@ fluid_render(FluidPlane *plane, Image *image, s32 x, s32 y, s32 scale = 1)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(FluidBase) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
     unused(size);
-    
+
     FluidBase *fluidBase = (FluidBase *)state->memory;
     if (!state->initialized)
     {
         // fluidBase->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         fluidBase->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
         init_perlin_noise(&fluidBase->noise, &fluidBase->randomizer);
-        
+
         fluid_init(&fluidBase->plane, 512, 0.0f, 0.0f);
         //fluid_init(&fluidBase->cube, 64, 1.0f, 2.0f);
-        
+
         state->initialized = true;
     }
-    
+
     s32 scale = 1;
     FluidPlane *fluid = &fluidBase->plane;
-    
+
     if ((10 <= mouse.pixelPosition.x) && (mouse.pixelPosition.x < 10 + fluid->size * scale) &&
         (10 <= mouse.pixelPosition.y) && (mouse.pixelPosition.y < 10 + fluid->size * scale))
     {
-        if (mouse.mouseDowns & Mouse_Left)
+        if (is_down(&mouse, Mouse_Left))
         {
             fluid_add_density(fluid, V2S(mouse.pixelPosition.x - 10, mouse.pixelPosition.y - 10) / scale, 300.0f);
         }
-        
+
     }
-    
+
     v2s center = V2S(fluid->size / 2, fluid->size / 2);
     fluid_add_density(fluid, center,
                       random_unilateral(&fluidBase->randomizer) * 400.0f + 100.0f);
-    
+
     f32 angle = perlin_noise(&fluidBase->noise, fluidBase->t) * F32_PI;
     v2 amount = polar_to_cartesian(10.0f, angle);
     fluid_add_velocity(fluid, center, amount);
     fluidBase->t += 0.05f;
-    
+
     fluid_step(fluid, dt);
     fluid_fade_density(fluid);
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     fluid_render(fluid, image, 10, 10, scale);
-    
-    fluidBase->prevMouseDown = mouse.mouseDowns;
+
     fluidBase->prevMousePos = mouse.pixelPosition;
     fluidBase->seconds += dt;
     ++fluidBase->ticks;

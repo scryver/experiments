@@ -39,7 +39,7 @@ internal v3
 palette(f32 t, v3 a, v3 b, v3 c, v3 d)
 {
     t = clamp01(t);
-    
+
     v3 theta = t * c + d;
     v3 cosTheta = V3(cos_f32(theta.x), cos_f32(theta.y), cos_f32(theta.z));
     return a + hadamard(b, cosTheta);
@@ -52,7 +52,7 @@ shade(f32 dist)
     v3 palCol = palette(clamp(-maxDist, 0.5f - 0.4f * dist, maxDist),
                         V3(0.3f, 0.3f, 0.0f), V3(0.8f, 0.8f, 0.1f), V3(0.9f, 0.7f, 0.0f), V3(0.3f, 0.9f, 0.8f));
     v3 colour = palCol;
-    colour = lerp(colour, 0.4f, colour - exp(-10.0f * absolute(dist)));
+    colour = lerp(colour, 0.4f, colour - exp32(-10.0f * absolute(dist)));
     colour *= 0.8f + 0.2f * cos_pi(150.0f * dist);
     colour = lerp(colour, 1.0f - smoothstep(0.0f, absolute(dist), 0.01f), V3(1, 1, 1));
     return colour;
@@ -151,20 +151,20 @@ world_surface(v2 p)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(BasicState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     BasicState *basics = (BasicState *)state->memory;
     if (!state->initialized)
     {
         // basics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         basics->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         state->initialized = true;
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     u32 *pixels = image->pixels;
     for (u32 y = 0; y < image->height; ++y)
     {
@@ -172,15 +172,14 @@ DRAW_IMAGE(draw_image)
         for (u32 x = 0; x < image->width; ++x)
         {
             v2 at = V2((f32)x, (f32)y);
-            
+
             f32 dist = world_surface(world_from_screen(at, size));
             v3 colour = shade(dist);
             draw_pixel(pixelRow++, V4(colour, 1.0f));
         }
         pixels += image->rowStride;
     }
-    
-    basics->prevMouseDown = mouse.mouseDowns;
+
     basics->seconds += dt;
     ++basics->ticks;
     if (basics->seconds > 1.0f)

@@ -32,7 +32,7 @@ turn_left(Turtle *turtle, f32 angleInDegree)
     f32 radians = deg2rad(angleInDegree);
     // [ cos(t) sin(t)] [dir.x]  = [cos(t)*dir.x + sin(t)*dir.y]
     // [-sin(t) cos(t)] [dir.y]    [-sin(t)*dir.x + cos(t)*dir.y]
-    
+
     v2 sincos = sincos_pi(radians);
     f32 cR = sincos.y;
     f32 sR = sincos.x;
@@ -68,11 +68,11 @@ struct LogoState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     String commandInput;
     Turtle turtle;
     Parser parser;
-    
+
     u32 maxCommandCount;
     u32 commandCount;
     Command *commands;
@@ -88,7 +88,7 @@ parse_number(String number)
         ++number.data;
         --number.size;
     }
-    
+
     while (number.size &&
            (number.data[0] >= '0') &&
            (number.data[0] <= '9'))
@@ -98,7 +98,7 @@ parse_number(String number)
         ++number.data;
         --number.size;
     }
-    
+
     return negative ? -result : result;
 }
 
@@ -111,7 +111,7 @@ get_next_token(Parser *parser)
         while ((parser->index < parser->remaining.size) &&
                is_whitespace(parser->remaining.data[parser->index++]))
         {
-            
+
         }
         result.data = parser->remaining.data + parser->index - 1;
         ++result.size;
@@ -125,7 +125,7 @@ get_next_token(Parser *parser)
             }
         }
     }
-    
+
     return result;
 }
 
@@ -144,9 +144,9 @@ internal u32
 parse_commands(Parser *parser, u32 maxCommands, Command *commands)
 {
     String token = get_next_token(parser);
-    
+
     u32 commandCount = 0;
-    
+
     while (token.size && (commandCount < maxCommands))
     {
         if ((token == forward) ||
@@ -190,10 +190,10 @@ parse_commands(Parser *parser, u32 maxCommands, Command *commands)
             token = get_next_token(parser);
             i_expect(token == bracketClose);
         }
-        
+
         token = get_next_token(parser);
     }
-    
+
     return commandCount;
 }
 
@@ -203,7 +203,7 @@ execute_commands(Image *image, Turtle *turtle, u32 commandCount, Command *comman
     for (u32 cIdx = 0; cIdx < commandCount; ++cIdx)
     {
         Command *command = commands + cIdx;
-        
+
         if (command->name == forward)
         {
             v2 move = move_forward(turtle, command->arg);
@@ -257,44 +257,43 @@ execute_commands(Image *image, Turtle *turtle, u32 commandCount, Command *comman
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(LogoState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     LogoState *logo = (LogoState *)state->memory;
     if (!state->initialized)
     {
         // logo->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         logo->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         logo->commandInput.data = (u8 *)"setpos [400 500] repeat 10 [fd 100 lt 36]"; // "repeat 36 [lt 10 repeat 120 [fd 5 rt 3]]";
         logo->commandInput.size = string_length((char *)logo->commandInput.data);
-        
+
         logo->turtle.pos = 0.5f * size;
         logo->turtle.dir = V2(1, 0);
         logo->turtle.penDown = true;
-        
+
         logo->parser.remaining = logo->commandInput;
         logo->parser.index = 0;
-        
+
         logo->maxCommandCount = 256;
         logo->commandCount = 0;
-        logo->commands = allocate_array(Command, logo->maxCommandCount);
-        
+        logo->commands = arena_allocate_array(gMemoryArena, Command, logo->maxCommandCount, default_memory_alloc());
+
         logo->commandCount = parse_commands(&logo->parser, logo->maxCommandCount, logo->commands);
-        
+
         state->initialized = true;
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     Turtle turtle = {};
     turtle.pos = 0.5f * size;
     turtle.dir = V2(1, 0);
     turtle.penDown = true;
-    
+
     execute_commands(image, &turtle, logo->commandCount, logo->commands);
-    
-    logo->prevMouseDown = mouse.mouseDowns;
+
     logo->seconds += dt;
     ++logo->ticks;
     if (logo->seconds > 1.0f)

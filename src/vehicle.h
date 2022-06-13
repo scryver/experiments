@@ -1,7 +1,7 @@
 struct Vehicle
 {
     Mover mover;
-    
+
     f32 maxForce;
     f32 maxSpeed;
     u32 radius;
@@ -12,7 +12,7 @@ init_vehicle(Vehicle *vehicle, v2 pos, f32 maxSpeed = 4.0f, f32 maxForce = 0.1f)
 {
     vehicle->mover = create_mover(pos);
     vehicle->mover.velocity = V2(0, -2);
-    
+
     vehicle->maxForce = maxForce;
     vehicle->maxSpeed = maxSpeed;
     vehicle->radius = 6;

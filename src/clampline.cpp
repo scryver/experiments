@@ -13,12 +13,12 @@ internal u32
 calculate_point_outside_rect(v2 point, v2 rectMin, v2 rectMax)
 {
     u32 result = Outside_Inside;
-    
+
     if (point.x < rectMin.x) { result |= Outside_Left; }
     if (point.y < rectMin.y) { result |= Outside_Bottom; }
     if (point.x > rectMax.x) { result |= Outside_Right; }
     if (point.y > rectMax.y) { result |= Outside_Top; }
-    
+
     return result;
 }
 
@@ -26,12 +26,12 @@ internal v2
 calculate_intersection(v2 start, v2 end, v2 rectMin, v2 rectMax, u32 flags)
 {
     v2 result = {};
-    
+
     v2 delta = end - start;
-    
+
     f32 slopeX = delta.y / delta.x;
     f32 slopeY = delta.x / delta.y;
-    
+
     if (flags & Outside_Top)
     {
         result.x = start.x + slopeY * (rectMax.y - start.y);
@@ -52,7 +52,7 @@ calculate_intersection(v2 start, v2 end, v2 rectMin, v2 rectMax, u32 flags)
         result.x = rectMin.x;
         result.y = start.y + slopeX * (rectMin.x - start.x);
     }
-    
+
     return result;
 }
 
@@ -61,12 +61,12 @@ clamp_line(v2 start, v2 end, v2 rectSize)
 {
     v2 rectMin = V2(0, 0);
     v2 rectMax = rectSize - V2(1, 1);
-    
+
     u32 startFlag = calculate_point_outside_rect(start, rectMin, rectMax);
     u32 endFlag = calculate_point_outside_rect(end, rectMin, rectMax);
-    
+
     b32 found = false;
-    
+
     while (1)
     {
         if ((startFlag | endFlag) == Outside_Inside)
@@ -75,13 +75,13 @@ clamp_line(v2 start, v2 end, v2 rectSize)
             found = true;
             break;
         }
-        
+
         if ((startFlag & endFlag) != 0)
         {
             // NOTE(michiel): Totally outside
             break;
         }
-        
+
         if (startFlag != Outside_Inside)
         {
             v2 clipped = calculate_intersection(start, end, rectMin, rectMax, startFlag);
@@ -95,7 +95,7 @@ clamp_line(v2 start, v2 end, v2 rectSize)
             endFlag = calculate_point_outside_rect(end, rectMin, rectMax);
         }
     }
-    
+
     v4 result = {};
     if (found)
     {
@@ -110,17 +110,17 @@ internal v4
 clamp_line(v2 start, v2 end, v2 rectSize)
 {
     v4 result = {};
-    
+
     b32 startXless = start.x < 0.0f;
     b32 startYless = start.y < 0.0f;
     b32 startXgreater = start.x >= rectSize.x;
     b32 startYgreater = start.y >= rectSize.y;
-    
+
     b32 endXless = end.x < 0.0f;
     b32 endYless = end.y < 0.0f;
     b32 endXgreater = end.x >= rectSize.x;
     b32 endYgreater = end.y >= rectSize.y;
-    
+
     if ((startXless && endXless) ||
         (startXgreater && endXgreater) ||
         (startYless && endYless) ||
@@ -132,13 +132,13 @@ clamp_line(v2 start, v2 end, v2 rectSize)
     {
         v2 start0 = start;
         v2 end0 = end;
-        
+
         if (startXless && startYless)
         {
-            
+
         }
     }
-    
+
     if (((start.x < 0.0f) && (end.x < 0.0f)) ||
         ((start.x >= rectSize.x) && (end.x >= rectSize.x)) ||
         ((start.y < 0.0f) && (end.y < 0.0f)) ||
@@ -146,7 +146,7 @@ clamp_line(v2 start, v2 end, v2 rectSize)
     {
         return {};
     }
-    
+
     while ((result.x < 0.0f) || (result.y < 0.0f) ||
            (result.z < 0.0f) || (result.w < 0.0f) ||
            (result.x >= rectSize.x) ||
@@ -157,7 +157,7 @@ clamp_line(v2 start, v2 end, v2 rectSize)
         // NOTE(michiel): Clamp line
         f32 slope = (start.y - end.y) / (start.x - end.x);
         f32 oneOverSlope = (start.x - end.x) / (start.y - end.y);
-        
+
         if (result.x < 0.0f)
         {
             result.y -= slope * start.x;
@@ -186,7 +186,7 @@ clamp_line(v2 start, v2 end, v2 rectSize)
             end = result.zw;
             fprintf(stdout, "Clipped W<0: %f,%f\n", result.z, result.w);
         }
-        
+
         if (result.x >= rectSize.x)
         {
             result.x = rectSize.x - 1.0f;
@@ -216,7 +216,7 @@ clamp_line(v2 start, v2 end, v2 rectSize)
             fprintf(stdout, "Clipped W>N: %f,%f\n", result.z, result.w);
         }
     }
-    
+
     return result;
 }
 #endif
@@ -227,7 +227,7 @@ int main(int argc, char **argv)
     v2 endLine;
     v2 rectSize;
     v4 clamped;
-    
+
     startLine = V2(-10, -20);
     endLine = V2(20, 20);
     rectSize = V2(40, 40);
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, 20);
     endLine = V2(-20, -10);
     rectSize = V2(40, 40);
@@ -245,7 +245,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, 20);
     endLine = V2(50, 10);
     rectSize = V2(40, 40);
@@ -254,7 +254,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, 20);
     endLine = V2(10, 50);
     rectSize = V2(40, 40);
@@ -263,7 +263,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, 20);
     endLine = V2(50, 50);
     rectSize = V2(40, 40);
@@ -272,7 +272,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(-20, -20);
     endLine = V2(50, 50);
     rectSize = V2(40, 40);
@@ -281,7 +281,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(-10, -20);
     endLine = V2(20, 20);
     rectSize = V2(40, 40);
@@ -290,7 +290,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(-20, -10);
     endLine = V2(20, 20);
     rectSize = V2(40, 40);
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, 20);
     endLine = V2(-20, -10);
     rectSize = V2(40, 40);
@@ -308,7 +308,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, 20);
     endLine = V2(-10, -20);
     rectSize = V2(40, 40);
@@ -317,7 +317,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, -10);
     endLine = V2(20, 20);
     rectSize = V2(40, 40);
@@ -326,7 +326,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(-10, 20);
     endLine = V2(20, 20);
     rectSize = V2(40, 40);
@@ -335,7 +335,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, 20);
     endLine = V2(-10, 20);
     rectSize = V2(40, 40);
@@ -344,7 +344,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(20, 20);
     endLine = V2(20, -10);
     rectSize = V2(40, 40);
@@ -353,7 +353,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
+
     startLine = V2(745.726501, -110.792328);
     endLine = V2(745.897461, -110.809471);
     rectSize = V2(1440, 960);
@@ -362,8 +362,8 @@ int main(int argc, char **argv)
     fprintf(stdout, "Clamped (%f,%f) -> (%f,%f) to (%f,%f) -> (%f,%f)\n",
             startLine.x, startLine.y, endLine.x, endLine.y,
             clamped.x, clamped.y, clamped.z, clamped.w);
-    
-#if 0    
+
+#if 0
     rectSize = V2(40, 40);
     startLine = V2(20, 20);
     for (u32 y = 0; y < 400; ++y)
@@ -416,6 +416,6 @@ int main(int argc, char **argv)
         }
     }
 #endif
-    
+
     return 0;
 }

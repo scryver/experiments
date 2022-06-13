@@ -11,7 +11,7 @@ struct Particle
     v2 pos;
     v2 vel;
     v2 acc;
-    
+
     s32 lifeSpan;
 };
 
@@ -19,7 +19,7 @@ struct ParticleSystem
 {
     RandomSeriesPCG *randomizer;
     v2 origin;
-    
+
     u32 maxParticles;
     u32 particleCount;
     Particle *particles;
@@ -48,7 +48,7 @@ update_particle(Particle *particle)
     particle->vel += particle->acc;
     particle->pos += particle->vel;
     particle->acc = V2(0, 0);
-    
+
     particle->lifeSpan -= 1;
 }
 
@@ -67,7 +67,7 @@ apply_force(Particle *particle, v2 force)
 internal inline void
 render_particle(Image *image, Particle *particle, u32 maxLife = 100)
 {
-    fill_circle(image, round(particle->pos.x), round(particle->pos.y),
+    fill_circle(image, round32(particle->pos.x), round32(particle->pos.y),
                 5, V4(0.5f, 0.5f, 0.5f, (1.0f / (f32)maxLife) * particle->lifeSpan));
 }
 
@@ -77,10 +77,10 @@ init_particle_system(ParticleSystem *system, u32 particleCount, v2 origin,
 {
     system->randomizer = randomizer;
     system->origin = origin;
-    
+
     system->maxParticles = particleCount;
     system->particleCount = 0;
-    system->particles = allocate_array(Particle, particleCount);
+    system->particles = arena_allocate_array(gMemoryArena, Particle, particleCount, default_memory_alloc());
 }
 
 internal inline Particle *
@@ -125,7 +125,7 @@ sort_particles(ParticleSystem *system, s32 startIndex, s32 endIndex)
         Particle temp = *pivot;
         *pivot = system->particles[index];
         system->particles[index] = temp;
-        
+
         sort_particles(system, startIndex, index - 1);
         sort_particles(system, index + 1, endIndex);
     }
@@ -174,48 +174,48 @@ struct ParticleState
     RandomSeriesPCG randomizer;
     u32 ticks;
     f32 secondsCount;
-    
+
     ParticleSystem system;
 };
 
 DRAW_IMAGE(draw_image)
 {
     v2 center = V2((f32)image->width * 0.5f, (f32)image->height * 0.5f);
-    
+
     i_expect(sizeof(ParticleState) <= state->memorySize);
     ParticleState *particleState = (ParticleState *)state->memory;
     ParticleSystem *system = &particleState->system;
-    
+
     if (!state->initialized)
     {
         particleState->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
-        
+
         init_particle_system(system, 8192, V2(center.x, 200), &particleState->randomizer);
-        
+
         state->initialized = true;
     }
-    
+
     particleState->secondsCount += dt;
-    
+
     sort_particles(system, 0, system->particleCount - 1);
-    
+
     s32 removeCount = system->maxParticles - system->particleCount;
     removeCount = maximum(0, 60 - removeCount);
     system->particleCount -= removeCount;
-    
+
     for (u32 i = 0; i < 60; ++i)
     {
         add_particle(system);
     }
-    
+
     v2 gravity = V2(0, 0.07f);
     apply_force(system, gravity);
-    
+
     update_particles(system);
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     render_particles(image, system);
-    
+
     if (particleState->secondsCount >= 1.0f)
     {
         fprintf(stdout, "Frames: %d (%5.2fms)\n", particleState->ticks,
@@ -223,6 +223,6 @@ DRAW_IMAGE(draw_image)
         particleState->ticks = 0;
         particleState->secondsCount -= 1.0f;
     }
-    
+
     ++particleState->ticks;
 }

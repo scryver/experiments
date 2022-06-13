@@ -11,13 +11,13 @@ struct LSystemState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
-    
+
     u32 maxBufferSize;
     u8 buffer[2][4096];
     u32 currentBuffer;
-    
+
     u32 currentY;
-    
+
     u32 prevMouseDown;
 };
 
@@ -36,19 +36,19 @@ draw_circle(Image *image, f32 x, f32 y, f32 r)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(LSystemState) <= state->memorySize);
-    
+
     LSystemState *lSystem = (LSystemState *)state->memory;
     if (!state->initialized)
     {
         lSystem->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         lSystem->maxBufferSize = 4096;
         lSystem->currentBuffer = 0;
         lSystem->currentY = 0;
-        
+
         state->initialized = true;
     }
-    
+
     if (lSystem->currentY < image->height)
     {
         u32 nextBuffer = (lSystem->currentBuffer + 1) & 1;
@@ -62,7 +62,7 @@ DRAW_IMAGE(draw_image)
             for (u32 i = 0; i < lSystem->maxBufferSize / 4; ++i)
             {
                 u8 s = lSystem->buffer[lSystem->currentBuffer][i];
-                
+
                 if (s == 'A')
                 {
                     *d++ = 'A';
@@ -82,7 +82,7 @@ DRAW_IMAGE(draw_image)
             }
         }
         lSystem->currentBuffer = nextBuffer;
-        
+
         u8 *s = lSystem->buffer[lSystem->currentBuffer];
         for (u32 x = 0; x < image->width; ++x)
         {
@@ -104,7 +104,6 @@ DRAW_IMAGE(draw_image)
         }
         ++lSystem->currentY;
     }
-    
-    lSystem->prevMouseDown = mouse.mouseDowns;
+
     ++lSystem->ticks;
 }

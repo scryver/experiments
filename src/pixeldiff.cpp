@@ -11,13 +11,13 @@ struct BasicState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     Image a;
     Image b;
-    
+
     u32 rectangleCount;
     Rectangle2u rectangles[1024];
-    
+
     f32 tickAt;
     u32 atY;
 };
@@ -27,26 +27,26 @@ find_diff_rectangles(Image *a, Image *b, u32 maxRectCount, Rectangle2u *rectangl
 {
     // NOTE(michiel): This function will return the amount of difference rectangles found.
     // The rectangles array will be filled accordingly (up till maxRectCount).
-    
+
     // NOTE(michiel): We first cut the row in diff lines and at the end of the row merge the overlapping line pieces
     // The vector is just keeping the min and max value together, x == minX, y == maxX.
     i_expect(a->width <= 480);
     i_expect(a->width == b->width);
     i_expect(a->height == b->height);
-    
+
     u32 diffRowCount = 0;
     v2u diffRowLines[480]; // NOTE(michiel): Can't ever need 480 lines, that would mean every pixel needs a rect.
-    
+
     u32 *aPixels = a->pixels;
     u32 *bPixels = b->pixels;
-    
+
     u32 result = 0;
-    
+
     for (u32 y = 0; y < a->height; ++y)
     {
         u32 *aRow = aPixels;
         u32 *bRow = bPixels;
-        
+
         diffRowCount = 0;
         v2u *diffRange = 0;
         for (u32 x = 0; x < a->width; ++x)
@@ -67,15 +67,15 @@ find_diff_rectangles(Image *a, Image *b, u32 maxRectCount, Rectangle2u *rectangl
                 diffRange = 0;
             }
         }
-        
+
         aPixels += a->rowStride;
         bPixels += a->rowStride;
-        
+
         // NOTE(michiel): Try to find a previous rectangle that touches a found line diff range.
         for (u32 lineIdx = 0; lineIdx < diffRowCount; ++lineIdx)
         {
             v2u line = diffRowLines[lineIdx];
-            
+
             b32 mergedLine = false;
             for (u32 rectIdx = 0; rectIdx < result; ++rectIdx)
             {
@@ -94,7 +94,7 @@ find_diff_rectangles(Image *a, Image *b, u32 maxRectCount, Rectangle2u *rectangl
                     }
                 }
             }
-            
+
             if (!mergedLine)
             {
                 // TODO(michiel): Make it so that the result can be greater than maxRectCount??
@@ -106,7 +106,7 @@ find_diff_rectangles(Image *a, Image *b, u32 maxRectCount, Rectangle2u *rectangl
             }
         }
     }
-    
+
     // NOTE(michiel): Merge rectangles
     for (s32 rectIdx = result - 1; rectIdx >= 0; --rectIdx)
     {
@@ -129,22 +129,22 @@ find_diff_rectangles(Image *a, Image *b, u32 maxRectCount, Rectangle2u *rectangl
             }
         }
     }
-    
+
     return result;
 }
 
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(BasicState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     BasicState *basics = (BasicState *)state->memory;
     if (!state->initialized)
     {
         // basics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         basics->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         basics->a.width = 480;
         basics->a.height = 320;
         basics->a.rowStride = basics->a.width;
@@ -152,27 +152,27 @@ DRAW_IMAGE(draw_image)
         basics->b.height = 320;
         basics->b.rowStride = basics->b.width;
         u32 arrayCount = 320 * 480;
-        basics->a.pixels = allocate_array(u32, arrayCount);
-        basics->b.pixels = allocate_array(u32, arrayCount);
-        
+        basics->a.pixels = arena_allocate_array(gMemoryArena, u32, arrayCount, default_memory_alloc());
+        basics->b.pixels = arena_allocate_array(gMemoryArena, u32, arrayCount, default_memory_alloc());
+
         fill_rectangle(&basics->a, 0, 0, basics->a.width, basics->a.height, V4(0, 0, 0, 1));
         fill_rectangle(&basics->b, 0, 0, basics->a.width, basics->a.height, V4(0, 0, 0, 1));
-        
+
         fill_circle(&basics->b, 20.0f, 20.0f, 15.0f, V4(1, 0, 0, 1));
         fill_circle(&basics->b, 40.0f, 30.0f, 20.0f, V4(1, 0, 0, 1));
         fill_circle(&basics->b, 220.0f, 20.0f, 15.0f, V4(1, 0, 0, 1));
         fill_circle(&basics->b, 20.0f, 220.0f, 15.0f, V4(1, 0, 0, 1));
         fill_circle(&basics->b, 220.0f, 220.0f, 15.0f, V4(1, 0, 0, 1));
-        
+
         state->initialized = true;
     }
-    
+
     u32 diffRowCount = 0;
     v2u diffRowLines[480]; // NOTE(michiel): Can't ever need 480 lines, that would mean every pixel needs a rect.
-    
+
     u32 *aPixels = basics->a.pixels + basics->atY * basics->a.rowStride;
     u32 *bPixels = basics->b.pixels + basics->atY * basics->b.rowStride;
-    
+
     //basics->rectangleCount = 0;
     v2u *diffAt = 0;
     for (u32 x = 0; x < basics->a.width; ++x)
@@ -192,12 +192,12 @@ DRAW_IMAGE(draw_image)
             diffAt = 0;
         }
     }
-    
+
     u32 pixelBorder = 3;
     for (u32 lineIdx = 0; lineIdx < diffRowCount; ++lineIdx)
     {
         v2u line = diffRowLines[lineIdx];
-        
+
         b32 mergedLine = false;
         for (u32 rectIdx = 0; rectIdx < basics->rectangleCount; ++rectIdx)
         {
@@ -216,7 +216,7 @@ DRAW_IMAGE(draw_image)
                 }
             }
         }
-        
+
         if (!mergedLine)
         {
             i_expect(basics->rectangleCount < array_count(basics->rectangles));
@@ -227,7 +227,7 @@ DRAW_IMAGE(draw_image)
             rect->max.y += 1;
         }
     }
-    
+
     // NOTE(michiel): Merge rectangles
     for (s32 rectIdx = basics->rectangleCount - 1; rectIdx >= 0; --rectIdx)
     {
@@ -245,7 +245,7 @@ DRAW_IMAGE(draw_image)
             }
         }
     }
-    
+
     clear(&basics->a);
     for (u32 rectIdx = 0; rectIdx < basics->rectangleCount; ++rectIdx)
     {
@@ -258,14 +258,13 @@ DRAW_IMAGE(draw_image)
         v2u *line = diffRowLines + lineIdx;
         draw_line(&basics->a, (s32)line->x, (s32)basics->atY, (s32)line->y, (s32)basics->atY, V4(1, 1, 0, 1));
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
     draw_image(image, 0, 0, &basics->b);
     draw_image(image, 0, 0, &basics->a);
-    
+
     fill_rectangle(&basics->a, 0, 0, basics->a.width, basics->a.height, V4(0, 0, 0, 1));
-    
-    basics->prevMouseDown = mouse.mouseDowns;
+
     basics->seconds += dt;
     ++basics->ticks;
     if (basics->seconds > 1.0f)
@@ -275,7 +274,7 @@ DRAW_IMAGE(draw_image)
                 1000.0f / (f32)basics->ticks);
         basics->ticks = 0;
     }
-    
+
     f32 maxTick = 0.25f;
     basics->tickAt += dt;
     if (basics->tickAt > maxTick)

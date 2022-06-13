@@ -48,7 +48,7 @@ internal v3
 palette(f32 t, v3 a, v3 b, v3 c, v3 d)
 {
     t = clamp01(t);
-    
+
     v3 theta = t * c + d;
     v3 cosTheta = V3(cos_f32(theta.x), cos_f32(theta.y), cos_f32(theta.z));
     return a + hadamard(b, cosTheta);
@@ -61,7 +61,7 @@ shade(f32 dist)
     v3 palCol = palette(clamp(-maxDist, 0.5f - 0.4f * dist, maxDist),
                         V3(0.3f, 0.3f, 0.0f), V3(0.8f, 0.8f, 0.1f), V3(0.9f, 0.7f, 0.0f), V3(0.3f, 0.9f, 0.8f));
     v3 colour = palCol;
-    colour = lerp(colour, 0.4f, colour - exp(-10.0f * absolute(dist)));
+    colour = lerp(colour, 0.4f, colour - exp32(-10.0f * absolute(dist)));
     colour *= 0.8f + 0.2f * cos_pi(150.0f * dist);
     colour = lerp(colour, 1.0f - smoothstep(0.0f, absolute(dist), 0.01f), V3(1, 1, 1));
     return colour;
@@ -225,7 +225,7 @@ get_camera_ray_dir(v2 uv, v3 cameraP, v3 cameraTarget)
     v3 cameraForward = normalize(cameraTarget - cameraP);
     v3 cameraRight = normalize(cross(V3(0, 1, 0), cameraForward));
     v3 cameraUp = normalize(cross(cameraForward, cameraRight));
-    
+
     v3 result = get_camera_ray_dir(uv, cameraForward, cameraRight, cameraUp);
     return result;
 }
@@ -235,12 +235,12 @@ get_camera_ray_dir(v2 uv, v3 cameraP, v3 cameraTarget)
 internal f32
 checkers_texture(v2 p)
 {
-    v2 f = V2(fraction(0.5f * p.x), fraction(0.5f * p.y)) - 0.5f;
-    
+    v2 f = V2(fraction32(0.5f * p.x), fraction32(0.5f * p.y)) - 0.5f;
+
     v2 s;
     s.x = sign_of(f.x);
     s.y = sign_of(f.y);
-    
+
     f32 result = 0.5f - 0.5f * s.x * s.y;
     return result;
 }
@@ -254,10 +254,10 @@ cast_ray(v3 origin, v3 direction)
     ImplicitGeometry result;
     result.dist = -F32_MAX;
     result.mat = -1.0f;
-    
+
     f32 t = 0.0f;
     f32 tMax = 250.0f;
-    
+
     for (u32 tryIdx = 0; tryIdx < 256; ++tryIdx)
     {
         ImplicitGeometry d = world_surface(origin + t * direction);
@@ -275,12 +275,12 @@ cast_ray(v3 origin, v3 direction)
         t += d.dist;
         result.mat = d.mat;
     }
-    
+
     if (result.dist == -F32_MAX)
     {
         result.dist = t;
     }
-    
+
     return result;
 }
 
@@ -288,7 +288,7 @@ internal v3
 calculate_normal(v3 p)
 {
     f32 eps = 0.001f;
-    
+
     ImplicitGeometry geom = world_surface(p);
     f32 c = geom.dist;
     v3 result = normalize_or_zero(V3(world_surface(p + V3(eps, 0, 0)).dist,
@@ -301,14 +301,14 @@ internal v3
 render(v3 origin, v3 direction, f32 timeAt)
 {
     v3 result = V3(0.3f, 0.36f, 0.6f) - 0.4f * direction.y;
-    
+
     ImplicitGeometry tRay = cast_ray(origin, direction);
     v3 l = normalize_or_zero(V3(sin_f32(0.2f * timeAt), cos_f32(0.1f*timeAt) + 0.5f, -0.5f));
-    
+
     if (tRay.mat > -1.0f)
     {
         v3 pos = origin + tRay.dist * direction;
-        
+
         if (tRay.mat > 0.0f)
         {
             f32 grid = tRay.mat * (checkers_texture(0.4f * V2(pos.x, pos.z)) * 0.03f + 0.1f);
@@ -317,50 +317,50 @@ render(v3 origin, v3 direction, f32 timeAt)
         else
         {
             v3 surfaceNormal = calculate_normal(pos);
-            
+
             v3 surfaceColour = V3(0.4f, 0.8f, 0.1f);
             f32 NoL = maximum(dot(surfaceNormal, l), 0.0f);
             v3 lightDirect = V3(1.8f, 1.27f, 0.99f) * NoL;
             v3 lightAmbient = V3(0.03f, 0.04f, 0.1f);
-            
+
             v3 diffuse = hadamard(surfaceColour, lightDirect + lightAmbient);
             result = diffuse;
-            
+
             v3 shadowOrigin = pos + 0.01f * surfaceNormal;
             v3 shadowDir = l;
             ImplicitGeometry tShadow = cast_ray(shadowOrigin, shadowDir);
             result = (tShadow.dist >= -1.0f) ? 0.2f * result : result;
         }
     }
-    
+
     return result;
 }
 
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(BasicState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     BasicState *basics = (BasicState *)state->memory;
     if (!state->initialized)
     {
         // basics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         basics->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         state->initialized = true;
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     v3 cameraPos = V3(0, 0, -1);
     v3 cameraTarget = V3(0, 0, 0);
     f32 cameraPerspective = 2.0f;
-    
+
     v3 cameraForward = normalize_or_zero(cameraTarget - cameraPos);
     v3 cameraRight = normalize_or_zero(cross(V3(0, 1, 0), cameraForward));
     v3 cameraUp = normalize_or_zero(cross(cameraForward, cameraRight));
-    
+
     u32 *pixels = image->pixels;
     for (u32 y = 0; y < image->height; ++y)
     {
@@ -368,18 +368,17 @@ DRAW_IMAGE(draw_image)
         for (u32 x = 0; x < image->width; ++x)
         {
             v2 at = V2((f32)x, (f32)y);
-            
+
             v2 uv = normalized_screen(at, size);
             v3 rayDir = get_camera_ray_dir(uv, cameraPerspective, cameraForward, cameraRight, cameraUp);
-            
+
             v3 colour = render(cameraPos, rayDir, basics->seconds);
             draw_pixel(pixelRow++, sRGB_from_linear(V4(colour, 1.0f)));
             //draw_pixel(pixelRow++, V4(colour, 1.0f));
         }
         pixels += image->rowStride;
     }
-    
-    basics->prevMouseDown = mouse.mouseDowns;
+
     basics->seconds += dt;
     ++basics->ticks;
     if (basics->seconds > 10.0f)

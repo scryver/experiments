@@ -1,3 +1,6 @@
+
+#include "../libberdip/linux_memory.h"
+
 #ifndef MAIN_WINDOW_WIDTH
 #define MAIN_WINDOW_WIDTH 800
 #endif
@@ -5,6 +8,8 @@
 #ifndef MAIN_WINDOW_HEIGHT
 #define MAIN_WINDOW_HEIGHT 600
 #endif
+
+#define THREAD_STACK_SIZE      megabytes(8)
 
 #include <errno.h>
 #include <sys/stat.h>     // stat
@@ -16,6 +21,8 @@
 #include <semaphore.h>
 //#include <pthread.h>
 #include <sched.h>
+#include <fcntl.h>
+#include <dirent.h>
 
 #include <stdio.h>        // fprintf
 #include <stdlib.h>
@@ -28,6 +35,18 @@
 // NOTE(michiel): OpenGL and OpenGL for X11
 #include <GL/gl.h>
 #include <GL/glx.h>
+
+global MemoryAPI gMemoryApi_;
+global MemoryAPI *gMemoryApi = &gMemoryApi_;
+global MemoryArena gMemoryArena_;
+global MemoryArena *gMemoryArena = &gMemoryArena_;
+
+global FileAPI gFileApi_;
+global FileAPI *gFileApi = &gFileApi_;
+
+#include "../libberdip/memory.cpp"
+#include "../libberdip/linux_memory.cpp"
+#include "../libberdip/linux_file.c"
 
 #define KEYCODE_ESCAPE 9
 
@@ -179,12 +198,12 @@ struct PlatformWorkQueue
 {
     u32 volatile        completionGoal;
     u32 volatile        completionCount;
-    
+
     u32 volatile        nextEntryToWrite;
     u32 volatile        nextEntryToRead;
     //s32 volatile        semaphore;
     sem_t               semaphoreHandle;
-    
+
     PlatformWorkQueueEntry entries[MAX_WORK_QUEUE_ENTRIES];
 };
 
@@ -198,9 +217,9 @@ platform_add_entry(PlatformWorkQueue *queue, PlatformWorkQueueCallback *callback
     entry->callback = callback;
     entry->data = data;
     ++queue->completionGoal;
-    
+
     asm volatile("" ::: "memory");
-    
+
     queue->nextEntryToWrite = newNextEntryToWrite;
     sem_post(&queue->semaphoreHandle);
     //__sync_fetch_and_add(&queue->semaphore, 1);
@@ -213,7 +232,7 @@ internal b32
 do_next_work_queue_entry(PlatformWorkQueue *queue)
 {
     b32 weShouldSleep = false;
-    
+
     u32 origNextEntryToRead = queue->nextEntryToRead;
     u32 newNextEntryToRead = (queue->nextEntryToRead + 1) % MAX_WORK_QUEUE_ENTRIES;
     if (origNextEntryToRead != queue->nextEntryToWrite)
@@ -232,7 +251,7 @@ do_next_work_queue_entry(PlatformWorkQueue *queue)
     {
         weShouldSleep = true;
     }
-    
+
     return weShouldSleep;
 }
 
@@ -243,7 +262,7 @@ platform_complete_all_work(PlatformWorkQueue *queue)
     {
         do_next_work_queue_entry(queue);
     }
-    
+
     queue->completionGoal = 0;
     queue->completionCount = 0;
 }
@@ -252,7 +271,7 @@ int
 thread_process(void *parameter)
 {
     PlatformWorkQueue *queue = (PlatformWorkQueue *)parameter;
-    
+
     for (;;)
     {
         if (do_next_work_queue_entry(queue))
@@ -264,7 +283,7 @@ thread_process(void *parameter)
             //}
             while (sem_wait(&queue->semaphoreHandle) == EINTR)
             {
-                
+
             }
         }
     }
@@ -275,20 +294,20 @@ init_work_queue(PlatformWorkQueue *queue, u32 threadCount)
 {
     queue->completionGoal = 0;
     queue->completionCount = 0;
-    
+
     queue->nextEntryToWrite = 0;
     queue->nextEntryToRead = 0;
-    
+
     s32 initialCount = -1;
     sem_init(&queue->semaphoreHandle, 0, initialCount);
-    
+
     char name[16] = "Thread nr ";
     for (u32 threadIndex = 0; threadIndex < threadCount; ++threadIndex)
     {
         name[10] = '0' + threadIndex;
         name[11] = '\0';
-        
-        u8 *threadStack = (u8 *)allocate_size(THREAD_STACK_SIZE);
+
+        u8 *threadStack = (u8 *)arena_allocate_size(gMemoryArena, THREAD_STACK_SIZE, default_memory_alloc());
         int threadId = clone(thread_process, threadStack + THREAD_STACK_SIZE,
                              CLONE_THREAD|CLONE_SIGHAND|CLONE_FS|CLONE_VM|CLONE_FILES|CLONE_PTRACE,
                              queue);
@@ -485,12 +504,12 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
 {
     persist char keyBuffer[1024];
     keyBuffer[0] = 0;
-    
+
     KeySym sym;
-    
+
     if (event && keyboard)
     {
-        
+
         s32 count = XLookupString((XKeyEvent *)event, keyBuffer, array_count(keyBuffer),
                                   &sym, NULL);
         keyBuffer[count] = 0;
@@ -502,11 +521,11 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
                 copy(string_length(tmp), tmp, keyBuffer);
             }
         }
-        
+
         keyboard->lastInput = string_fmt(array_count(keyboard->lastInputData),
                                          keyboard->lastInputData, "%.*s%s",
                                          STR_FMT(keyboard->lastInput), keyBuffer);
-        
+
         b32 isPressed = event->type == KeyPress;
         switch (event->xkey.keycode)
         {
@@ -518,7 +537,7 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
             case 24: { process_key(keyboard, Key_GameLeftUp, isPressed); } break;
             case 26: { process_key(keyboard, Key_GameRightUp, isPressed); } break;
         }
-        
+
         switch (sym)
         {
             // NOTE(michiel): Interpreted by X11, don't know if I like doing it like this...
@@ -536,7 +555,7 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
                     keyboard->modifiers &= ~KeyMod_RightShift;
                 }
             } break;
-            
+
             case XK_Control_L: {
                 if (isPressed) {
                     keyboard->modifiers |= KeyMod_LeftCtrl;
@@ -551,7 +570,7 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
                     keyboard->modifiers &= ~KeyMod_RightCtrl;
                 }
             } break;
-            
+
             case XK_Alt_L: {
                 if (isPressed) {
                     keyboard->modifiers |= KeyMod_LeftAlt;
@@ -566,7 +585,7 @@ process_keyboard(Keyboard *keyboard, XEvent *event)
                     keyboard->modifiers &= ~KeyMod_RightAlt;
                 }
             } break;
-            
+
             default: {
                 Keys key = gX11toKeys[sym];
                 if (key != Key_None) {
@@ -583,39 +602,42 @@ int main(int argc, char **argv)
 {
     int windowWidth = MAIN_WINDOW_WIDTH;
     int windowHeight = MAIN_WINDOW_HEIGHT;
-    
+
+    linux_memory_api(gMemoryApi);
+    linux_file_api(gFileApi);
+
     Display *display;
     Window window;
-    
+
     XInitThreads();
-    
+
     display = XOpenDisplay(":0.0");
     if (!display)
     {
         print_error("Can't open display");
         return 1;
     }
-    
+
     XSetErrorHandler(xlib_error_callback);
-    
+
     GET_GL_FUNCTION(glXCreateContextAttribsARB);
     GET_GL_FUNCTION(glXSwapIntervalEXT);
-    
+
     GET_GL_FUNCTION(glGenBuffers);
     GET_GL_FUNCTION(glBindBuffer);
     GET_GL_FUNCTION(glBufferData);
     GET_GL_FUNCTION(glDrawBuffers);
-    
+
     GET_GL_FUNCTION(glGenVertexArrays);
     GET_GL_FUNCTION(glBindVertexArray);
-    
+
     GET_GL_FUNCTION(glCreateShader);
     GET_GL_FUNCTION(glShaderSource);
     GET_GL_FUNCTION(glCompileShader);
     GET_GL_FUNCTION(glAttachShader);
     GET_GL_FUNCTION(glGetShaderInfoLog);
     GET_GL_FUNCTION(glDeleteShader);
-    
+
     GET_GL_FUNCTION(glCreateProgram);
     GET_GL_FUNCTION(glLinkProgram);
     GET_GL_FUNCTION(glValidateProgram);
@@ -623,15 +645,15 @@ int main(int argc, char **argv)
     GET_GL_FUNCTION(glGetProgramInfoLog);
     GET_GL_FUNCTION(glUseProgram);
     GET_GL_FUNCTION(glDeleteProgram);
-    
+
     GET_GL_FUNCTION(glGetAttribLocation);
     GET_GL_FUNCTION(glEnableVertexAttribArray);
     GET_GL_FUNCTION(glVertexAttribPointer);
     GET_GL_FUNCTION(glDisableVertexAttribArray);
-    
+
     GET_GL_FUNCTION(glGetUniformLocation);
     GET_GL_FUNCTION(glUniform1i);
-    
+
     int visualAttribs[] =
     {
         GLX_X_RENDERABLE, True,
@@ -647,7 +669,7 @@ int main(int argc, char **argv)
         GLX_DOUBLEBUFFER, True,
         None
     };
-    
+
     int fbCount;
     GLXFBConfig *fbc = glXChooseFBConfig(display, DefaultScreen(display), visualAttribs, &fbCount);
     if (fbCount < 1)
@@ -655,9 +677,9 @@ int main(int argc, char **argv)
         print_error("Failed to get some frame buffer configs");
         return -1;
     }
-    
+
     GLXFBConfig framebufferConfig = fbc[0];
-    
+
     XFree(fbc);
     XVisualInfo *pvi = glXGetVisualFromFBConfig(display, framebufferConfig);
     if (!pvi)
@@ -665,18 +687,18 @@ int main(int argc, char **argv)
         print_error("Failed to choose a valid visual");
         return -1;
     }
-    
+
     pvi->screen = DefaultScreen(display);
-    
+
     XSetWindowAttributes attr = {};
     Window rootWindow = RootWindow(display, pvi->screen);
     attr.colormap = XCreateColormap(display, rootWindow, pvi->visual, AllocNone);
     attr.border_pixel = 0;
-    
+
     attr.event_mask = (StructureNotifyMask | PropertyChangeMask |
                        PointerMotionMask | ButtonPressMask | ButtonReleaseMask |
                        KeyPressMask | KeyReleaseMask);
-    
+
     window = XCreateWindow(display, rootWindow,
                            0, 0, windowWidth, windowHeight,
                            0, pvi->depth, InputOutput, pvi->visual,
@@ -686,13 +708,13 @@ int main(int argc, char **argv)
         print_error("GL Window creation failed");
         return -1;
     }
-    
+
     Atom wmDeleteWindow = XInternAtom(display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(display, window, &wmDeleteWindow, 1);
-    
+
     // NOTE(michiel): And display the window on the screen
     XMapRaised(display, window);
-    
+
     int openGLAttribs[] =
     {
         GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
@@ -701,7 +723,7 @@ int main(int argc, char **argv)
         GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
         0,
     };
-    
+
     GLXContext openGLContext =
         glXCreateContextAttribsARB(display, framebufferConfig, 0, true, openGLAttribs);
     if (!openGLContext)
@@ -709,36 +731,36 @@ int main(int argc, char **argv)
         print_error("No modern OpenGL support");
         return -1;
     }
-    
+
     if (!glXMakeCurrent(display, window, openGLContext))
     {
         print_error("Couldn't set the OpenGL context as the current context");
         return -1;
     }
-    
-    Image *imageA = allocate_struct(Image);
-    Image *imageB = allocate_struct(Image);
+
+    Image *imageA = arena_allocate_struct(gMemoryArena, Image, default_memory_alloc());
+    //Image *imageB = allocate_struct(Image);
     imageA->width = windowWidth;
     imageA->height = windowHeight;
     imageA->rowStride = windowWidth;
-    imageA->pixels = allocate_array(u32, windowWidth * windowHeight);
-    imageB->width = windowWidth;
-    imageB->height = windowHeight;
-    imageB->rowStride = windowWidth;
-    imageB->pixels = allocate_array(u32, windowWidth * windowHeight);
-    
+    imageA->pixels = arena_allocate_array(gMemoryArena, u32, windowWidth * windowHeight, default_memory_alloc());
+    //imageB->width = windowWidth;
+    //imageB->height = windowHeight;
+    //imageB->rowStride = windowWidth;
+    //imageB->pixels = allocate_array(u32, windowWidth * windowHeight);
+
     Image *renderImage = imageA;
-    
-    State *state = allocate_struct(State);
+
+    State *state = arena_allocate_struct(gMemoryArena, State, default_memory_alloc());
     state->initialized = false;
     state->closeProgram = false;
     state->memorySize = 64 * 1024 * 1024;
     state->memory = (u8 *)mmap(0, state->memorySize, PROT_READ|PROT_WRITE,
                                MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
-    
-    state->workQueue = allocate_struct(PlatformWorkQueue);
+
+    state->workQueue = arena_allocate_struct(gMemoryArena, PlatformWorkQueue, default_memory_alloc());
     init_work_queue(state->workQueue, 4);
-    
+
     Mouse mouse = {};
     Keyboard keyboard = {};
     {
@@ -755,7 +777,7 @@ int main(int argc, char **argv)
             mouse.pixelPosition.y = winY;
         }
     }
-    
+
     Vertex vertices[4] =
     {
         // X      Y       U     V
@@ -765,19 +787,19 @@ int main(int argc, char **argv)
         {{-1.0f,  1.0f}, {0.0f, 0.0f}},
     };
     u8 indices[6] = {0, 1, 2, 0, 2, 3};
-    
+
     GLuint screenVBO;
     glGenBuffers(1, &screenVBO);
     glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    
+
     GLuint textureBuf;
     glGenTextures(1, &textureBuf);
-    
+
     GLuint vertexArray;
     glGenVertexArrays(1, &vertexArray);
     glBindVertexArray(vertexArray);
-    
+
     GLuint programID;
     GLuint vertexP;
     GLuint vertexUV;
@@ -787,28 +809,28 @@ int main(int argc, char **argv)
         GLchar *vertexShaderCode = R"DOO(#version 330
                 in vec2 vertP;
                 in vec2 vertUV;
-                
+
                 smooth out vec2 fragUV;
-                
+
                 void main(void)
                 {
                      gl_Position = vec4(vertP, 0.0, 1.0);
-                     
+
                      fragUV = vertUV;
         }
                 )DOO";
         glShaderSource(vertexShaderID, 1, &vertexShaderCode, 0);
         glCompileShader(vertexShaderID);
-        
+
         GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
         GLchar *fragmentShaderCode = R"DOO(#version 330
                 //todo: uniform float brightness
                 uniform sampler2D textureSampler;
-                
+
                 smooth in vec2 fragUV;
-                
+
                 out vec4 pixelColour;
-                
+
                 void main(void)
                 {
                 vec4 textureColour = texture(textureSampler, fragUV);
@@ -817,19 +839,19 @@ int main(int argc, char **argv)
                 )DOO";
         glShaderSource(fragmentShaderID, 1, &fragmentShaderCode, 0);
         glCompileShader(fragmentShaderID);
-        
+
         programID = glCreateProgram();
         glAttachShader(programID, vertexShaderID);
         glAttachShader(programID, fragmentShaderID);
         glLinkProgram(programID);
-        
+
         glValidateProgram(programID);
         GLint linked = false;
         glGetProgramiv(programID, GL_LINK_STATUS, &linked);
         if (!linked)
         {
             fprintf(stderr, "Error in linking shader code\n");
-            
+
             GLsizei ignored;
             char vertexErrors[4096];
             char fragmentErrors[4096];
@@ -840,41 +862,47 @@ int main(int argc, char **argv)
             glGetShaderInfoLog(vertexShaderID, sizeof(vertexErrors), &ignored, vertexErrors);
             glGetShaderInfoLog(fragmentShaderID, sizeof(fragmentErrors), &ignored, fragmentErrors);
             glGetProgramInfoLog(programID, sizeof(programErrors), &ignored, programErrors);
-            
+
             fprintf(stderr, "VERTEX:\n%s\n\n", vertexErrors);
             fprintf(stderr, "FRAGMENT:\n%s\n\n", fragmentErrors);
             fprintf(stderr, "PROGRAM:\n%s\n\n", programErrors);
             print_error("Shader validation failed");
             return 1;
         }
-        
+
         glDeleteShader(vertexShaderID);
         glDeleteShader(fragmentShaderID);
-        
+
         vertexP = glGetAttribLocation(programID, "vertP");
         vertexUV = glGetAttribLocation(programID, "vertUV");
         sampler = glGetUniformLocation(programID, "textureSampler");
     }
-    
+
     glUseProgram(programID);
-    
+
     struct timespec lastTime = get_wall_clock();
-    
+
     if (glXSwapIntervalEXT)
     {
         glXSwapIntervalEXT(display, window, 1);
     }
-    
+
     bool isRunning = true;
     while (isRunning)
     {
         reset_keyboard_state(&keyboard);
-        
+
+        for (u32 buttonIdx = Mouse_Left; buttonIdx < MouseButtonCount; ++buttonIdx) {
+            mouse.buttons[buttonIdx].isPressed = false;
+            mouse.buttons[buttonIdx].isReleased = false;
+            mouse.buttons[buttonIdx].edgeCount = 0;
+        }
+
         while (XPending(display))
         {
             XEvent event;
             XNextEvent(display, &event);
-            
+
             // NOTE(michiel): Skip the auto repeat key
             if ((event.type == ButtonRelease) &&
                 (XEventsQueued(display, QueuedAfterReading)))
@@ -888,7 +916,7 @@ int main(int argc, char **argv)
                     continue;
                 }
             }
-            
+
             switch (event.type)
             {
                 case ConfigureNotify:
@@ -898,12 +926,12 @@ int main(int argc, char **argv)
                     mouse.relativePosition.x = (f32)mouse.pixelPosition.x / (f32)windowWidth;
                     mouse.relativePosition.y = (f32)mouse.pixelPosition.y / (f32)windowHeight;
                 } break;
-                
+
                 case DestroyNotify:
                 {
                     isRunning = false;
                 } break;
-                
+
                 case ClientMessage:
                 {
                     if ((Atom)event.xclient.data.l[0] == wmDeleteWindow)
@@ -911,7 +939,7 @@ int main(int argc, char **argv)
                         isRunning = false;
                     }
                 } break;
-                
+
                 case MotionNotify:
                 {
                     // NOTE(michiel): Mouse update event.xmotion.x/y
@@ -920,7 +948,7 @@ int main(int argc, char **argv)
                     mouse.relativePosition.x = (f32)mouse.pixelPosition.x / (f32)windowWidth;
                     mouse.relativePosition.y = (f32)mouse.pixelPosition.y / (f32)windowHeight;
                 } break;
-                
+
                 case ButtonPress:
                 case ButtonRelease:
                 {
@@ -928,15 +956,24 @@ int main(int argc, char **argv)
                     {
                         if (event.xbutton.button == 1)
                         {
-                            mouse.mouseDowns |= Mouse_Left;
+                            mouse.buttons[Mouse_Left].isDown = true;
+                            mouse.buttons[Mouse_Left].isPressed = true;
+                            mouse.buttons[Mouse_Left].isReleased = false;
+                            mouse.buttons[Mouse_Left].edgeCount = 1;
                         }
                         else if (event.xbutton.button == 2) // TODO(michiel): Fix mouse: 2)
                         {
-                            mouse.mouseDowns |= Mouse_Middle;
+                            mouse.buttons[Mouse_Middle].isDown = true;
+                            mouse.buttons[Mouse_Middle].isPressed = true;
+                            mouse.buttons[Mouse_Middle].isReleased = false;
+                            mouse.buttons[Mouse_Middle].edgeCount = 1;
                         }
                         else if (event.xbutton.button == 3)
                         {
-                            mouse.mouseDowns |= Mouse_Right;
+                            mouse.buttons[Mouse_Right].isDown = true;
+                            mouse.buttons[Mouse_Right].isPressed = true;
+                            mouse.buttons[Mouse_Right].isReleased = false;
+                            mouse.buttons[Mouse_Right].edgeCount = 1;
                         }
                         else if (event.xbutton.button == 4)
                         {
@@ -948,89 +985,110 @@ int main(int argc, char **argv)
                         }
                         else if (event.xbutton.button == 8)
                         {
-                            mouse.mouseDowns |= Mouse_Extended1;
+                            mouse.buttons[Mouse_Extended1].isDown = true;
+                            mouse.buttons[Mouse_Extended1].isPressed = true;
+                            mouse.buttons[Mouse_Extended1].isReleased = false;
+                            mouse.buttons[Mouse_Extended1].edgeCount = 1;
                         }
                         else if (event.xbutton.button == 9)
                         {
-                            mouse.mouseDowns |= Mouse_Extended2;
+                            mouse.buttons[Mouse_Extended2].isDown = true;
+                            mouse.buttons[Mouse_Extended2].isPressed = true;
+                            mouse.buttons[Mouse_Extended2].isReleased = false;
+                            mouse.buttons[Mouse_Extended2].edgeCount = 1;
                         }
                     }
                     else
                     {
                         if (event.xbutton.button == 1)
                         {
-                            mouse.mouseDowns &= ~Mouse_Left;
+                            mouse.buttons[Mouse_Left].isDown = false;
+                            mouse.buttons[Mouse_Left].isPressed = false;
+                            mouse.buttons[Mouse_Left].isReleased = true;
+                            mouse.buttons[Mouse_Left].edgeCount = 1;
                         }
                         else if (event.xbutton.button == 2)
                         {
-                            mouse.mouseDowns &= ~Mouse_Middle;
+                            mouse.buttons[Mouse_Middle].isDown = false;
+                            mouse.buttons[Mouse_Middle].isPressed = false;
+                            mouse.buttons[Mouse_Middle].isReleased = true;
+                            mouse.buttons[Mouse_Middle].edgeCount = 1;
                         }
                         else if (event.xbutton.button == 3)
                         {
-                            mouse.mouseDowns &= ~Mouse_Right;
+                            mouse.buttons[Mouse_Right].isDown = false;
+                            mouse.buttons[Mouse_Right].isPressed = false;
+                            mouse.buttons[Mouse_Right].isReleased = true;
+                            mouse.buttons[Mouse_Right].edgeCount = 1;
                         }
                         else if (event.xbutton.button == 8)
                         {
-                            mouse.mouseDowns &= ~Mouse_Extended1;
+                            mouse.buttons[Mouse_Extended1].isDown = false;
+                            mouse.buttons[Mouse_Extended1].isPressed = false;
+                            mouse.buttons[Mouse_Extended1].isReleased = true;
+                            mouse.buttons[Mouse_Extended1].edgeCount = 1;
                         }
                         else if (event.xbutton.button == 9)
                         {
-                            mouse.mouseDowns &= ~Mouse_Extended2;
+                            mouse.buttons[Mouse_Extended2].isDown = false;
+                            mouse.buttons[Mouse_Extended2].isPressed = false;
+                            mouse.buttons[Mouse_Extended2].isReleased = true;
+                            mouse.buttons[Mouse_Extended2].edgeCount = 1;
                         }
                     }
                     // NOTE(michiel): Mouse press/release event.xbutton.button
                 } break;
-                
+
                 case KeyPress:
                 case KeyRelease:
                 {
                     // NOTE(michiel): Key press/release event.xkey.keycode
                     process_keyboard(&keyboard, &event);
                 } break;
-                
+
                 default: break;
             }
         }
-        
+
         struct timespec now = get_wall_clock();
         f32 secondsElapsed = get_seconds_elapsed(lastTime, now);
         lastTime = now;
-        
+
         draw_image(state, renderImage, mouse, &keyboard, secondsElapsed);
         isRunning = !state->closeProgram;
-        
+
         glViewport(0, 0, windowWidth, windowHeight);
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        
+
         glUseProgram(programID);
         glEnableVertexAttribArray(vertexP);
         glVertexAttribPointer(vertexP, 2, GL_FLOAT, false, sizeof(Vertex), (void *)0);
         glEnableVertexAttribArray(vertexUV);
         glVertexAttribPointer(vertexUV, 2, GL_FLOAT, false, sizeof(Vertex), (void *)(2 * sizeof(f32)));
         glUniform1i(sampler, 0);
-        
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textureBuf);
-        
+
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, renderImage->width, renderImage->height, 0,
                      GL_BGRA, GL_UNSIGNED_BYTE, (void *)renderImage->pixels);
-        
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        
+
         glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, indices);
         glXSwapBuffers(display, window);
-        
-        if (renderImage == imageA) {
-            renderImage = imageB;
-        } else {
-            renderImage = imageA;
-        }
+
+        //if (renderImage == imageA) {
+        //renderImage = imageB;
+        //} else {
+        //renderImage = imageA;
+        //}
     }
-    
+
     return 0;
 }

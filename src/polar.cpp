@@ -9,7 +9,7 @@ struct PolarState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
-    
+
     f32 angle;
     f32 radius;
     f32 angleVel;
@@ -23,22 +23,22 @@ DRAW_IMAGE(draw_image)
     if (!state->initialized)
     {
         polar->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
-        
+
         polar->radius = 150.0f;
         polar->angleAcc = 0.001f;
-        
+
         state->initialized = true;
     }
-    
+
     v2 center = V2((f32)image->width * 0.5f, (f32)image->height * 0.5f);
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     v2 xy = polar_to_cartesian(polar->radius, polar->angle) + center;
-    draw_line(image, round(center.x), round(center.y), round(xy.x), round(xy.y),
+    draw_line(image, round32(center.x), round32(center.y), round32(xy.x), round32(xy.y),
               V4(1, 1, 1, 1));
-    fill_circle(image, round(xy.x), round(xy.y), 20.0f, V4(1, 1, 1, 1));
-    
+    fill_circle(image, round32(xy.x), round32(xy.y), 20.0f, V4(1, 1, 1, 1));
+
     polar->angle += polar->angleVel;
     if (polar->angle > F32_TAU)
     {
@@ -61,6 +61,6 @@ DRAW_IMAGE(draw_image)
     {
         polar->radius = 150.0f;
     }
-    
+
     ++polar->ticks;
 }

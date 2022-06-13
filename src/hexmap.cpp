@@ -96,7 +96,7 @@ hex_distance(HexCell a, HexCell b)
     return result;
 }
 
-global HexCell hexDirections[6] = 
+global HexCell hexDirections[6] =
 {
     hex_cell( 1, 0, -1), hex_cell( 1, -1, 0), hex_cell(0, -1,  1),
     hex_cell(-1, 0,  1), hex_cell(-1,  1, 0), hex_cell(0,  1, -1),
@@ -107,7 +107,7 @@ hex_direction(s32 direction)
 {
     i_expect(-6 < direction);
     i_expect(direction < 6);
-    
+
     return hexDirections[((6 + direction) % 6)];
 }
 
@@ -126,7 +126,7 @@ struct Orientation
 
 internal inline Orientation
 init_orientation(f32 f0, f32 f1, f32 f2, f32 f3,
-                 f32 b0, f32 b1, f32 b2, f32 b3, 
+                 f32 b0, f32 b1, f32 b2, f32 b3,
                  f32 angle)
 {
     Orientation result = {};
@@ -142,13 +142,13 @@ init_orientation(f32 f0, f32 f1, f32 f2, f32 f3,
     return result;
 }
 
-global Orientation pointyLayout = init_orientation(square_root(3.0f), square_root(3.0f) / 2.0f, 
+global Orientation pointyLayout = init_orientation(square_root(3.0f), square_root(3.0f) / 2.0f,
                                                    0.0f, 3.0f / 2.0f,
-                                                   square_root(3.0f) / 3.0f, -1.0f / 3.0f, 
+                                                   square_root(3.0f) / 3.0f, -1.0f / 3.0f,
                                                    0.0f, 2.0f / 3.0f,
                                                    0.5f);
 
-global Orientation flatLayout = init_orientation(3.0f / 2.0f, 0.0f, 
+global Orientation flatLayout = init_orientation(3.0f / 2.0f, 0.0f,
                                                  square_root(3.0f) / 2.0f, square_root(3.0f),
                                                  2.0f / 3.0f, 0.0f,
                                                  -1.0f / 3.0f, square_root(3.0f) / 3.0f,
@@ -175,7 +175,7 @@ internal v2
 hex_to_pixel(Layout *layout, HexCell c)
 {
     v2 result = {};
-    
+
     Orientation *m = &layout->orientation;
     result.x = (m->forward[0] * c.v.x + m->forward[1] * c.v.y) * layout->size.x;
     result.y = (m->forward[2] * c.v.x + m->forward[3] * c.v.y) * layout->size.y;
@@ -187,25 +187,25 @@ internal FractionalHexCell
 pixel_to_hex(Layout *layout, v2 p)
 {
     FractionalHexCell result = {};
-    
+
     Orientation *m = &layout->orientation;
     v2 pt = p - layout->origin;
     pt.x /= layout->size.x;
     pt.y /= layout->size.y;
-    
+
     result.q = m->backward[0] * pt.x + m->backward[1] * pt.y;
     result.r = m->backward[2] * pt.x + m->backward[3] * pt.y;
     result.s = -result.q - result.r;
-    
+
     return result;
 }
 
 internal HexCell
 hex_round(FractionalHexCell f)
 {
-    s32 q = round(f.q);
-    s32 r = round(f.r);
-    s32 s = round(f.s);
+    s32 q = round32(f.q);
+    s32 r = round32(f.r);
+    s32 s = round32(f.s);
     f32 dq = absolute((f32)q - f.q);
     f32 dr = absolute((f32)r - f.r);
     f32 ds = absolute((f32)s - f.s);
@@ -229,11 +229,11 @@ hex_corner_offset(Layout *layout, s32 corner)
 {
     v2 result = layout->size;
     f32 angle = F32_TAU * (layout->orientation.startAngle + (f32)corner) / 6.0f;
-    
-    v2 sincos = sincos_pi(angle);
+
+    v2 sincos = sincos_pi(-angle);
     result.x *= sincos.y;
     result.y *= sincos.x;
-    
+
     return result;
 }
 
@@ -274,23 +274,23 @@ get_hex_line(HexCell a, HexCell b, u32 maxLen, HexCell *line)
 {
     s32 N = hex_distance(a, b);
     i_expect(N < maxLen);
-    
+
     FractionalHexCell aNudge;
     aNudge.q = a.v.x + 1e-6f;
     aNudge.r = a.v.y + 1e-6f;
     aNudge.s = get_s(a) - 2e-6f;
-    
+
     FractionalHexCell bNudge;
     bNudge.q = b.v.x + 1e-6f;
     bNudge.r = b.v.y + 1e-6f;
     bNudge.s = get_s(b) - 2e-6f;
-    
+
     f32 step = 1.0f / maximum((f32)N, 1.0f);
     for (s32 i = 0; i <= N; ++i)
     {
         line[i] = hex_round(hex_lerp(step * (f32)i, aNudge, bNudge));
     }
-    
+
     return N + 1;
 }
 
@@ -300,7 +300,7 @@ create_hexagrid(u32 maxCount, HexCell *cells, s32 radius)
     //  * *
     // * * *
     //  * *
-    
+
     u32 count = 0;
     for (s32 s = -radius + 1; s < radius; ++s)
     {
@@ -326,7 +326,7 @@ create_trianglegrid(u32 maxCount, HexCell *cells, s32 size, b32 upsideDown = fal
     //   * *  |  * *
     //  * * * |   *
     s32 halfSize = (size + 1) / 2;
-    
+
     u32 count = 0;
     for (s32 r = 0; r <= size; ++r)
     {
@@ -347,7 +347,7 @@ create_trianglegrid(u32 maxCount, HexCell *cells, s32 size, b32 upsideDown = fal
             }
         }
     }
-    
+
     return count;
 }
 
@@ -357,7 +357,7 @@ create_rectangulargrid(u32 maxCount, HexCell *cells, s32 width, s32 height)
     //  * * *
     //   * * *
     //  * * *
-    
+
     u32 count = 0;
     for (s32 r = 0; r < height; ++r)
     {
@@ -368,60 +368,62 @@ create_rectangulargrid(u32 maxCount, HexCell *cells, s32 width, s32 height)
             cells[count++] = hex_cell(q, r, -q-r);
         }
     }
-    
+
     return count;
 }
 
 struct HexState
 {
-    Arena memory;
-    
+    MemoryArena memory;
+
     RandomSeriesPCG randomizer;
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     u32 maxCellCount;
     u32 hexCellCount;
     HexCell *cells;
-    
+
     HexCell startCell;
     HexCell *line;
-    
+
     RandomList randList;
-    
+
     Layout layout;
 };
 
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(HexState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     HexState *hexer = (HexState *)state->memory;
     if (!state->initialized)
     {
         // hexer->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         hexer->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         hexer->layout.orientation = pointyLayout;
         hexer->layout.size = V2(20.0f, 20.0f);
         hexer->layout.origin = 0.1f * size;
-        
+
         s32 roundSize = 15;
         hexer->maxCellCount = roundSize * roundSize;
-        hexer->cells = arena_allocate_array(&hexer->memory, HexCell, hexer->maxCellCount);
-        hexer->line = arena_allocate_array(&hexer->memory, HexCell, hexer->maxCellCount);
+        hexer->cells = arena_allocate_array(&hexer->memory, HexCell, hexer->maxCellCount, default_memory_alloc());
+        hexer->line = arena_allocate_array(&hexer->memory, HexCell, hexer->maxCellCount, default_memory_alloc());
         //hexer->hexCellCount = create_hexagrid(hexer->maxCellCount, hexer->cells, roundSize);
         //hexer->hexCellCount = create_trianglegrid(hexer->maxCellCount, hexer->cells, roundSize);
         hexer->hexCellCount = create_rectangulargrid(hexer->maxCellCount, hexer->cells, roundSize, roundSize);
-        
+
         // TODO(michiel): Arena variant
-        hexer->randList = allocate_rand_list(hexer->maxCellCount);
+        MemoryAllocator tempAlloc = {};
+        initialize_arena_allocator(gMemoryArena, &tempAlloc);
+        hexer->randList = allocate_rand_list(&tempAlloc, hexer->maxCellCount);
         //hexer->randList.series = &hexer->randomizer;
-        
-        v2 mouses[3] = 
+
+        v2 mouses[3] =
         {
             V2(309.0f, 140.0f),
             V2(320.0f, 148.0f),
@@ -437,37 +439,35 @@ DRAW_IMAGE(draw_image)
                     fract.q, fract.r, fract.s,
                     rounded.v.x, rounded.v.y, get_s(rounded));
         }
-        /* 
+        /*
  Mouse: (309.000000, 140.000000) | Tile: (-2, -4, 6)
 Mouse: (320.000000, 148.000000) | Tile: (-2, -4, 6)
 Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
 */
-        
-        TempMemory temp = temporary_memory(&hexer->memory);
-        f32 *randWeights = arena_allocate_array(&hexer->memory, f32, hexer->hexCellCount);
+
+        TempArenaMemory temp = begin_temporary_memory(&hexer->memory);
+        f32 *randWeights = arena_allocate_array(&hexer->memory, f32, hexer->hexCellCount, default_memory_alloc());
         for (u32 hexIndex = 0; hexIndex < hexer->hexCellCount; ++hexIndex)
         {
             randWeights[hexIndex] = random_unilateral(&hexer->randomizer);
         }
         init_rand_list(&hexer->randomizer, &hexer->randList, randWeights, hexer->cells);
-        
-        destroy_temporary(temp);
-        
+
+        end_temporary_memory(temp);
+
         state->initialized = true;
     }
-    
+
     HexCell mouseHover = hex_round(pixel_to_hex(&hexer->layout, mouse.pixelPosition));
-    
-    if ((mouse.mouseDowns & Mouse_Right) &&
-        !(hexer->prevMouseDown & Mouse_Right))
+
+    if (is_pressed(&mouse, Mouse_Right))
     {
         fprintf(stdout, "Mouse: (%f, %f) | Tile: (%d, %d, %d)\n",
                 (f32)mouse.pixelPosition.x, (f32)mouse.pixelPosition.y,
                 mouseHover.v.x, mouseHover.v.y, get_s(mouseHover));
     }
-    
-    if ((mouse.mouseDowns & Mouse_Left) &&
-        !(hexer->prevMouseDown & Mouse_Left))
+
+    if (is_pressed(&mouse, Mouse_Left))
     {
         for (u32 cellIdx = 0; cellIdx < hexer->hexCellCount; ++cellIdx)
         {
@@ -478,9 +478,8 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
             }
         }
     }
-    
-    if ((mouse.mouseDowns & Mouse_Extended2) &&
-        !(hexer->prevMouseDown & Mouse_Extended2))
+
+    if (is_pressed(&mouse, Mouse_Extended2))
     {
         RandomListEntry choice = random_entry(&hexer->randList);
         if (choice.data)
@@ -489,30 +488,30 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
             hexer->startCell = *cell;
         }
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     for (u32 hexIndex = 0; hexIndex < hexer->hexCellCount; ++hexIndex)
     {
         HexCell *cell = hexer->cells + hexIndex;
         v2 corners[6];
         v4 colour = V4(1, 1, 1, 1);
-        
+
         if (*cell == hexer->startCell)
         {
             colour = V4(0, 1, 0, 1);
         }
-        
-        if (mouse.mouseDowns & Mouse_Extended1)
+
+        if (is_down(&mouse, Mouse_Extended1))
         {
             get_polygon_corners(&hexer->layout, *cell, corners);
             for (u32 i = 0; i < 6; ++i)
             {
                 u32 n = (i + 1) % 6;
-                
+
                 v2 a = corners[i];
                 v2 b = corners[n];
-                draw_line(image, round(a.x), round(a.y), round(b.x), round(b.y),
+                draw_line(image, round32(a.x), round32(a.y), round32(b.x), round32(b.y),
                           colour);
             }
         }
@@ -524,68 +523,66 @@ Mouse: (369.000000, 114.000000) | Tile: (-2, -4, 6)
                 v2 offset = hex_corner_offset(&hexer->layout, i);
                 corners[i] = center + offset * 0.9f;
             }
-            
-            fill_triangle(image, 
-                          V2S(round(corners[0].x), round(corners[0].y)),
-                          V2S(round(corners[1].x), round(corners[1].y)),
-                          V2S(round(corners[2].x), round(corners[2].y)),
+
+            fill_triangle(image,
+                          V2S(round32(corners[0].x), round32(corners[0].y)),
+                          V2S(round32(corners[1].x), round32(corners[1].y)),
+                          V2S(round32(corners[2].x), round32(corners[2].y)),
                           colour);
-            fill_triangle(image, 
-                          V2S(round(corners[0].x), round(corners[0].y)),
-                          V2S(round(corners[2].x), round(corners[2].y)),
-                          V2S(round(corners[3].x), round(corners[3].y)),
+            fill_triangle(image,
+                          V2S(round32(corners[0].x), round32(corners[0].y)),
+                          V2S(round32(corners[2].x), round32(corners[2].y)),
+                          V2S(round32(corners[3].x), round32(corners[3].y)),
                           colour);
-            fill_triangle(image, 
-                          V2S(round(corners[0].x), round(corners[0].y)),
-                          V2S(round(corners[3].x), round(corners[3].y)),
-                          V2S(round(corners[5].x), round(corners[5].y)),
+            fill_triangle(image,
+                          V2S(round32(corners[0].x), round32(corners[0].y)),
+                          V2S(round32(corners[3].x), round32(corners[3].y)),
+                          V2S(round32(corners[5].x), round32(corners[5].y)),
                           colour);
-            fill_triangle(image, 
-                          V2S(round(corners[3].x), round(corners[3].y)),
-                          V2S(round(corners[4].x), round(corners[4].y)),
-                          V2S(round(corners[5].x), round(corners[5].y)),
+            fill_triangle(image,
+                          V2S(round32(corners[3].x), round32(corners[3].y)),
+                          V2S(round32(corners[4].x), round32(corners[4].y)),
+                          V2S(round32(corners[5].x), round32(corners[5].y)),
                           colour);
         }
     }
-    
+
     s32 lineCount = get_hex_line(mouseHover, hexer->startCell, hexer->maxCellCount, hexer->line);
     for (u32 lineHex = 0; lineHex < lineCount; ++lineHex)
     {
         HexCell cell = hexer->line[lineHex];
         v2 corners[6];
         v4 colour = V4(0.5f, 0.5f, 0.9f, 1);
-        
+
         v2 center = hex_to_pixel(&hexer->layout, cell);
         for (u32 i = 0; i < 6; ++i)
         {
             v2 offset = hex_corner_offset(&hexer->layout, i);
             corners[i] = center + offset * 0.5f;
         }
-        
-        fill_triangle(image, 
-                      V2S(round(corners[0].x), round(corners[0].y)),
-                      V2S(round(corners[1].x), round(corners[1].y)),
-                      V2S(round(corners[2].x), round(corners[2].y)),
+
+        fill_triangle(image,
+                      V2S(round32(corners[0].x), round32(corners[0].y)),
+                      V2S(round32(corners[1].x), round32(corners[1].y)),
+                      V2S(round32(corners[2].x), round32(corners[2].y)),
                       colour);
-        fill_triangle(image, 
-                      V2S(round(corners[0].x), round(corners[0].y)),
-                      V2S(round(corners[2].x), round(corners[2].y)),
-                      V2S(round(corners[3].x), round(corners[3].y)),
+        fill_triangle(image,
+                      V2S(round32(corners[0].x), round32(corners[0].y)),
+                      V2S(round32(corners[2].x), round32(corners[2].y)),
+                      V2S(round32(corners[3].x), round32(corners[3].y)),
                       colour);
-        fill_triangle(image, 
-                      V2S(round(corners[0].x), round(corners[0].y)),
-                      V2S(round(corners[3].x), round(corners[3].y)),
-                      V2S(round(corners[5].x), round(corners[5].y)),
+        fill_triangle(image,
+                      V2S(round32(corners[0].x), round32(corners[0].y)),
+                      V2S(round32(corners[3].x), round32(corners[3].y)),
+                      V2S(round32(corners[5].x), round32(corners[5].y)),
                       colour);
-        fill_triangle(image, 
-                      V2S(round(corners[3].x), round(corners[3].y)),
-                      V2S(round(corners[4].x), round(corners[4].y)),
-                      V2S(round(corners[5].x), round(corners[5].y)),
+        fill_triangle(image,
+                      V2S(round32(corners[3].x), round32(corners[3].y)),
+                      V2S(round32(corners[4].x), round32(corners[4].y)),
+                      V2S(round32(corners[5].x), round32(corners[5].y)),
                       colour);
     }
-    
-    
-    hexer->prevMouseDown = mouse.mouseDowns;
+
     hexer->seconds += dt;
     ++hexer->ticks;
     if (hexer->seconds > 1.0f)

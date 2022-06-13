@@ -38,8 +38,8 @@ init_boundary(v2 start, v2 end)
 internal void
 draw_boundary(Image *image, Boundary boundary, v4 colour = V4(1, 1, 1, 1))
 {
-    draw_line(image, round(boundary.start.x), round(boundary.start.y),
-              round(boundary.end.x), round(boundary.end.y), colour);
+    draw_line(image, round32(boundary.start.x), round32(boundary.start.y),
+              round32(boundary.end.x), round32(boundary.end.y), colour);
 }
 
 internal Ray
@@ -54,8 +54,8 @@ init_ray(v2 pos)
 internal void
 draw_ray(Image *image, Ray ray, v4 colour = V4(1, 1, 1, 1))
 {
-    draw_line(image, round(ray.pos.x), round(ray.pos.y),
-              round(ray.pos.x + ray.dir.x * 20.0f), round(ray.pos.y + ray.dir.y * 20.0f), colour);
+    draw_line(image, round32(ray.pos.x), round32(ray.pos.y),
+              round32(ray.pos.x + ray.dir.x * 20.0f), round32(ray.pos.y + ray.dir.y * 20.0f), colour);
 }
 
 internal RayBundle
@@ -66,8 +66,8 @@ init_ray_bundle(v2 pos, f32 angleOfView, u32 rayCount)
     result.heading = 0;
     result.angleOfView = angleOfView;
     result.rayCount = rayCount;
-    result.rays = allocate_array(Ray, rayCount);
-    
+    result.rays = arena_allocate_array(gMemoryArena, Ray, rayCount, default_memory_alloc());
+
     f32 angleStep = angleOfView / (f32)rayCount;
     f32 angle = 0.0f;
     for (u32 rayIdx = 0; rayIdx < rayCount; ++rayIdx) {
@@ -92,7 +92,7 @@ rotate_ray_bundle(RayBundle *bundle, f32 angle)
 internal void
 draw_ray_bundle(Image *image, RayBundle bundle, v4 colour = V4(1, 1, 1, 1))
 {
-    fill_circle(image, round(bundle.pos.x), round(bundle.pos.y), 3, colour);
+    fill_circle(image, round32(bundle.pos.x), round32(bundle.pos.y), 3, colour);
     for (u32 rayIdx = 0; rayIdx < bundle.rayCount; ++rayIdx) {
         draw_ray(image, bundle.rays[rayIdx], colour);
     }
@@ -108,30 +108,30 @@ internal RayIntersection
 ray_intersects_wall(Ray ray, Boundary wall)
 {
     RayIntersection result = {};
-    
+
     f32 x1 = wall.start.x;
     f32 y1 = wall.start.y;
     f32 x2 = wall.end.x;
     f32 y2 = wall.end.y;
-    
+
     f32 x3 = ray.pos.x;
     f32 y3 = ray.pos.y;
     f32 x4 = x3 + ray.dir.x;
     f32 y4 = y3 + ray.dir.y;
-    
+
     f32 den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
     if ((den > 0.00001f) || (den < -0.00001f)) {
         f32 oneOverDen = 1.0f / den;
         f32 t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) * oneOverDen;
         f32 u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) * oneOverDen;
-        
+
         if ((0.0f < t) && (t < 1.0f) && (0.0f < u)) {
             result.intersects = true;
             result.at.x = lerp(x1, t, x2);
             result.at.y = lerp(y1, t, y2);
         }
     }
-    
+
     return result;
 }
 
@@ -153,8 +153,8 @@ ray_bundle_intersects_walls(Image *image, RayBundle bundle, u32 wallCount, Bound
             }
         }
         if (closestLenSq != F32_MAX) {
-            draw_line(image, round(bundle.pos.x), round(bundle.pos.y),
-                      round(closestRay.x), round(closestRay.y), V4(1, 1, 1, 0.5f));
+            draw_line(image, round32(bundle.pos.x), round32(bundle.pos.y),
+                      round32(closestRay.x), round32(closestRay.y), V4(1, 1, 1, 0.5f));
         }
         distSqsResult[rayIdx] = closestLenSq;
     }
@@ -166,11 +166,11 @@ struct BasicState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     u32 wallCount;
     Boundary *walls;
     RayBundle bundle;
-    
+
     u32 strokeCount;
     f32 *strokeDistSq;
 };
@@ -178,23 +178,23 @@ struct BasicState
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(BasicState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     BasicState *basics = (BasicState *)state->memory;
     if (!state->initialized)
     {
         // basics->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         basics->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         basics->wallCount = 5 + 4;
-        basics->walls = allocate_array(Boundary, basics->wallCount);
-        
+        basics->walls = arena_allocate_array(gMemoryArena, Boundary, basics->wallCount, default_memory_alloc());
+
         basics->walls[0] = init_boundary(V2(0, 0), V2(size.x, 0));
         basics->walls[1] = init_boundary(V2(size.x, 0), V2(size.x, size.y * 0.5f));
         basics->walls[2] = init_boundary(V2(0, size.y * 0.5f), V2(size.x, size.y * 0.5f));
         basics->walls[3] = init_boundary(V2(0, 0), V2(0, size.y * 0.5f));
-        
+
         for (u32 wallIdx = 4; wallIdx < basics->wallCount; ++wallIdx) {
             Boundary *wall = basics->walls + wallIdx;
             wall->start.x = random_unilateral(&basics->randomizer) * size.x;
@@ -202,36 +202,36 @@ DRAW_IMAGE(draw_image)
             wall->end.x = random_unilateral(&basics->randomizer) * size.x;
             wall->end.y = random_unilateral(&basics->randomizer) * size.y * 0.5f;
         }
-        
+
         basics->bundle = init_ray_bundle(V2(200, 200), deg2rad(120.0f), 200);
-        
+
         basics->strokeCount = basics->bundle.rayCount;
-        basics->strokeDistSq = allocate_array(f32, basics->strokeCount);
-        
+        basics->strokeDistSq = arena_allocate_array(gMemoryArena, f32, basics->strokeCount, default_memory_alloc());
+
         state->initialized = true;
     }
-    
+
     basics->bundle.pos = hadamard(mouse.relativePosition, size);
     for (u32 rayIdx = 0; rayIdx < basics->bundle.rayCount; ++rayIdx) {
         Ray *ray = basics->bundle.rays + rayIdx;
         ray->pos = basics->bundle.pos;
     }
-    
+
     if (keyboard->keys[Key_A].isDown) {
         rotate_ray_bundle(&basics->bundle, -0.01f);
     } else if (keyboard->keys[Key_D].isDown) {
         rotate_ray_bundle(&basics->bundle, 0.01f);
     }
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     for (u32 wallIdx = 0; wallIdx < basics->wallCount; ++wallIdx) {
         draw_boundary(image, basics->walls[wallIdx]);
     }
     draw_ray_bundle(image, basics->bundle);
-    
+
     ray_bundle_intersects_walls(image, basics->bundle, basics->wallCount, basics->walls, basics->strokeDistSq);
-    
+
     f32 w = size.x / (f32)basics->strokeCount;
     for (u32 strokeIdx = 0; strokeIdx < basics->strokeCount; ++strokeIdx) {
         f32 distSq = basics->strokeDistSq[strokeIdx];
@@ -240,7 +240,7 @@ DRAW_IMAGE(draw_image)
             f32 fill = map(distSq, 0.0f, size.x * size.y, 1.0f, 0.0f);
             f32 h = map(dist, 0.0f, square_root(size.x * size.x + size.y * size.y), size.y * 0.5f, 0.0f);
             f32 hOffset = (size.y * 0.5f - h) * 0.5f + size.y * 0.5f;
-            fill_rectangle(image, round(w * strokeIdx), hOffset, w, h, V4(fill, fill, fill, fill));
+            fill_rectangle(image, round32(w * strokeIdx), hOffset, w, h, V4(fill, fill, fill, fill));
         }
     }
 #if 0
@@ -251,12 +251,11 @@ DRAW_IMAGE(draw_image)
     } else {
         draw_ray(image, basics->ray, V4(1, 0, 0, 1));
     }
-    
+
     //basics->ray.dir = rotate(basics->ray.dir, polar_to_cartesian(1.0, 0.2f * dt * F32_TAU));
     basics->ray.dir = direction_unit(basics->ray.pos, hadamard(mouse.relativePosition, size));
 #endif
-    
-    basics->prevMouseDown = mouse.mouseDowns;
+
     basics->seconds += dt;
     ++basics->ticks;
     if (basics->seconds > 1.0f)
@@ -266,7 +265,7 @@ DRAW_IMAGE(draw_image)
                 1000.0f / (f32)basics->ticks);
         basics->ticks = 0;
     }
-    
+
     if (keyboard->keys[Key_Escape].isDown) {
         state->closeProgram = true;
     }

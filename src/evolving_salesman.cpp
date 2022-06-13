@@ -13,7 +13,7 @@ struct City
 struct RandomSwap
 {
     u32 *current;
-    
+
     u32 *bestEver;
     f32 bestDistanceSqr;
 };
@@ -21,10 +21,10 @@ struct RandomSwap
 struct BruteForce
 {
     u32 *current;
-    
+
     u32 *bestEver;
     f32 bestDistanceSqr;
-    
+
     b32 doneSearching;
 };
 
@@ -34,7 +34,7 @@ struct Evolve
     u32 **population;
     f32 *fitness;
     u32 **nextGeneration;
-    
+
     u32 *bestEver;
     f32 bestDistanceSqr;
     u32 *currentBest;
@@ -44,12 +44,12 @@ struct SalesmanState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
-    
+
     b32 doneSearching;
-    
+
     u32 cityCount;
     City *cities;
-    
+
     RandomSwap randomSwap;
     BruteForce bruter;
     Evolve evolver;
@@ -151,7 +151,7 @@ calc_fitness(SalesmanState *state)
         }
         state->evolver.fitness[populationIndex] = 1.0f / (square_root(distSqr) + 1.0f);
     }
-    
+
     if (state->evolver.bestDistanceSqr > bestDistSqr)
     {
         state->evolver.bestDistanceSqr = bestDistSqr;
@@ -175,7 +175,7 @@ normalize_fitness(SalesmanState *state)
 }
 
 internal void
-cross_over(RandomSeriesPCG *random, u32 cityCount, u32 *parentA, u32 *parentB, 
+cross_over(RandomSeriesPCG *random, u32 cityCount, u32 *parentA, u32 *parentB,
            u32 *children)
 {
     u32 startIndex = random_choice(random, cityCount / 2);
@@ -184,15 +184,15 @@ cross_over(RandomSeriesPCG *random, u32 cityCount, u32 *parentA, u32 *parentB,
     {
         endIndex = cityCount - startIndex;
     }
-    
+
     u32 childIndex = 0;
     for (u32 i = startIndex; i < endIndex; ++i)
     {
         children[childIndex++] = parentA[i];
     }
-    
+
     u32 firstHalf = childIndex;
-    
+
     for (u32 i = 0; i < cityCount; ++i)
     {
         u32 parentN = parentB[i];
@@ -205,7 +205,7 @@ cross_over(RandomSeriesPCG *random, u32 cityCount, u32 *parentA, u32 *parentB,
                 break;
             }
         }
-        
+
         if (!found)
         {
             children[childIndex++] = parentN;
@@ -243,9 +243,9 @@ internal s32
 pick_one(SalesmanState *state)
 {
     s32 index = 0;
-    
+
     f32 r = random_unilateral(&state->randomizer);
-    
+
     while ((r > 0.0f) && (index < state->evolver.populationCount))
     {
         r = r - state->evolver.fitness[index];
@@ -263,16 +263,16 @@ next_generation(SalesmanState *state)
         s32 nextGenIndexB = pick_one(state);
         if ((nextGenIndexA >= 0) && (nextGenIndexB >= 0))
         {
-            cross_over(&state->randomizer, state->cityCount, 
+            cross_over(&state->randomizer, state->cityCount,
                        state->evolver.population[nextGenIndexA],
                        state->evolver.population[nextGenIndexB],
                        state->evolver.nextGeneration[popIndex]);
-            
+
             mutate(&state->randomizer, state->cityCount,
                    state->evolver.nextGeneration[popIndex], 0.01f, 0.001f);
         }
     }
-    
+
     u32 **tempAddr = state->evolver.population;
     state->evolver.population = state->evolver.nextGeneration;
     state->evolver.nextGeneration = tempAddr;
@@ -285,80 +285,80 @@ DRAW_IMAGE(draw_image)
     {
         salesmanState->randomizer = random_seed_pcg(time(0), 1357984324984344247ULL);
         //salesmanState->randomizer = random_seed_pcg(132049210274214ULL, 1357984324984344247ULL);
-        
+
         salesmanState->cityCount = 20;
-        salesmanState->cities = allocate_array(City, salesmanState->cityCount);
-        
+        salesmanState->cities = arena_allocate_array(gMemoryArena, City, salesmanState->cityCount, default_memory_alloc());
+
         for (u32 cityIndex = 0; cityIndex < salesmanState->cityCount; ++cityIndex)
         {
             City *city = salesmanState->cities + cityIndex;
             city->position.x = random_unilateral(&salesmanState->randomizer) * (image->width / 2 - 1);
             city->position.y = random_unilateral(&salesmanState->randomizer) * (image->height / 2 - 1);
         }
-        
+
         //
         // NOTE(michiel): Random changes
         //
-        salesmanState->randomSwap.current = allocate_array(u32, salesmanState->cityCount);
-        salesmanState->randomSwap.bestEver = allocate_array(u32, salesmanState->cityCount);
-        
+        salesmanState->randomSwap.current = arena_allocate_array(gMemoryArena, u32, salesmanState->cityCount, default_memory_alloc());
+        salesmanState->randomSwap.bestEver = arena_allocate_array(gMemoryArena, u32, salesmanState->cityCount, default_memory_alloc());
+
         for (u32 cityIndex = 0; cityIndex < salesmanState->cityCount; ++cityIndex)
         {
             salesmanState->randomSwap.current[cityIndex] = cityIndex;
             salesmanState->randomSwap.bestEver[cityIndex] = cityIndex;
         }
-        salesmanState->randomSwap.bestDistanceSqr = 
+        salesmanState->randomSwap.bestDistanceSqr =
             calc_distance_sqr(salesmanState->cityCount, salesmanState->cities,
                               salesmanState->randomSwap.bestEver);
-        
+
         //
         // NOTE(michiel): Brute-force changes
         //
-        salesmanState->bruter.current = allocate_array(u32, salesmanState->cityCount);
-        salesmanState->bruter.bestEver = allocate_array(u32, salesmanState->cityCount);
-        
+        salesmanState->bruter.current = arena_allocate_array(gMemoryArena, u32, salesmanState->cityCount, default_memory_alloc());
+        salesmanState->bruter.bestEver = arena_allocate_array(gMemoryArena, u32, salesmanState->cityCount, default_memory_alloc());
+
         for (u32 cityIndex = 0; cityIndex < salesmanState->cityCount; ++cityIndex)
         {
             salesmanState->bruter.current[cityIndex] = cityIndex;
             salesmanState->bruter.bestEver[cityIndex] = cityIndex;
         }
-        salesmanState->bruter.bestDistanceSqr = 
+        salesmanState->bruter.bestDistanceSqr =
             calc_distance_sqr(salesmanState->cityCount, salesmanState->cities,
                               salesmanState->bruter.bestEver);
-        
+
         //
         // NOTE(michiel): Evolve changes
         //
-        salesmanState->evolver.bestEver = allocate_array(u32, salesmanState->cityCount);
-        
+        salesmanState->evolver.bestEver = arena_allocate_array(gMemoryArena, u32, salesmanState->cityCount, default_memory_alloc());
+
         salesmanState->evolver.populationCount = 500;
-        salesmanState->evolver.population = allocate_array(u32 *, salesmanState->evolver.populationCount);
-        salesmanState->evolver.fitness = allocate_array(f32, salesmanState->evolver.populationCount);
-        salesmanState->evolver.nextGeneration = allocate_array(u32 *, salesmanState->evolver.populationCount);
-        
+        salesmanState->evolver.population = arena_allocate_array(gMemoryArena, u32 *, salesmanState->evolver.populationCount, default_memory_alloc());
+        salesmanState->evolver.fitness = arena_allocate_array(gMemoryArena, f32, salesmanState->evolver.populationCount, default_memory_alloc());
+        salesmanState->evolver.nextGeneration = arena_allocate_array(gMemoryArena, u32 *, salesmanState->evolver.populationCount, default_memory_alloc());
+
         for (u32 populationIndex = 0;
              populationIndex < salesmanState->evolver.populationCount;
              ++populationIndex)
         {
             salesmanState->evolver.nextGeneration[populationIndex] =
-                allocate_array(u32, salesmanState->cityCount);
-            
+                arena_allocate_array(gMemoryArena, u32, salesmanState->cityCount, default_memory_alloc());
+
             u32 *population = salesmanState->evolver.population[populationIndex] =
-                allocate_array(u32, salesmanState->cityCount);
-            
+                arena_allocate_array(gMemoryArena, u32, salesmanState->cityCount, default_memory_alloc());
+
             for (u32 cityIndex = 0; cityIndex < salesmanState->cityCount; ++cityIndex)
             {
                 population[cityIndex] = cityIndex;
             }
-            shuffle(&salesmanState->randomizer, salesmanState->cityCount, 
+            shuffle(&salesmanState->randomizer, salesmanState->cityCount,
                     population, 100);
         }
-        
+
         salesmanState->evolver.bestDistanceSqr = F32_INF;
-        
+
         state->initialized = true;
     }
-    
+
     //
     // NOTE(michiel): Update
     //
@@ -371,7 +371,7 @@ DRAW_IMAGE(draw_image)
             u32 randomA = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
             u32 randomB = random_choice(&salesmanState->randomizer, salesmanState->cityCount);
             swap(salesmanState->cityCount, salesmanState->randomSwap.current, randomA, randomB);
-            
+
             f32 distSqr = calc_distance_sqr(salesmanState->cityCount, salesmanState->cities,
                                             salesmanState->randomSwap.current);
             if (salesmanState->randomSwap.bestDistanceSqr > distSqr)
@@ -381,7 +381,7 @@ DRAW_IMAGE(draw_image)
                 salesmanState->randomSwap.bestDistanceSqr = distSqr;
             }
         }
-        
+
         //
         // NOTE(michiel): Brute-force changes
         //
@@ -390,7 +390,7 @@ DRAW_IMAGE(draw_image)
             {
                 u32 largestX = 0;
                 u32 largestXIndex = U32_MAX;
-                
+
                 for (u32 i = 0; i < salesmanState->cityCount - 1; ++i)
                 {
                     if (salesmanState->bruter.current[i] < salesmanState->bruter.current[i + 1])
@@ -399,7 +399,7 @@ DRAW_IMAGE(draw_image)
                         largestXIndex = i;
                     }
                 }
-                
+
                 if (largestXIndex == U32_MAX)
                 {
                     salesmanState->bruter.doneSearching = true;
@@ -408,7 +408,7 @@ DRAW_IMAGE(draw_image)
                 {
                     u32 largestY = 0;
                     u32 largestYIndex = U32_MAX;
-                    
+
                     for (u32 i = largestXIndex; i < salesmanState->cityCount; ++i)
                     {
                         if (largestX < salesmanState->bruter.current[i])
@@ -417,14 +417,14 @@ DRAW_IMAGE(draw_image)
                             largestYIndex = i;
                         }
                     }
-                    
+
                     i_expect(largestYIndex != U32_MAX);
                     salesmanState->bruter.current[largestXIndex] = largestY;
                     salesmanState->bruter.current[largestYIndex] = largestX;
-                    
+
                     u32 minRev = largestXIndex + 1;
                     u32 maxRev = minRev + (salesmanState->cityCount - minRev) / 2;
-                    
+
                     for (u32 rev = minRev; rev < maxRev; ++rev)
                     {
                         u32 offset = salesmanState->cityCount - 1;
@@ -435,7 +435,7 @@ DRAW_IMAGE(draw_image)
                     }
                 }
             }
-            
+
             f32 distSqr = calc_distance_sqr(salesmanState->cityCount, salesmanState->cities,
                                             salesmanState->bruter.current);
             if (salesmanState->bruter.bestDistanceSqr > distSqr)
@@ -445,7 +445,7 @@ DRAW_IMAGE(draw_image)
                 salesmanState->bruter.bestDistanceSqr = distSqr;
             }
         }
-        
+
         //
         // NOTE(michiel): Evolve changes
         //
@@ -453,13 +453,13 @@ DRAW_IMAGE(draw_image)
         normalize_fitness(salesmanState);
         next_generation(salesmanState);
     }
-    
+
     //
     // NOTE(michiel): Render
     //
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
 #if 0
     v4 colours[] {
         {1, 0, 0, 1},
@@ -478,7 +478,7 @@ DRAW_IMAGE(draw_image)
         {0.5f, 0.5f, 0.5f, 1},
         {1, 1, 1, 1},
     };
-    
+
     for (u32 populationIndex = 0; populationIndex < salesmanState->populationCount; ++populationIndex)
     {
         City *prevCity = 0;
@@ -486,13 +486,13 @@ DRAW_IMAGE(draw_image)
         {
             u32 cityIndex = salesmanState->population[populationIndex][pathIndex];
             City *city = salesmanState->cities + cityIndex;
-            
+
             v4 baseColour = colours[populationIndex % array_count(colours)];
-            
+
             fill_circle(image, city->position.x, city->position.y, 4, baseColour);
             if (prevCity)
             {
-                draw_line(image, prevCity->position.x, prevCity->position.y, 
+                draw_line(image, prevCity->position.x, prevCity->position.y,
                           city->position.x, city->position.y,
                           baseColour * 0.7f);
             }
@@ -500,10 +500,10 @@ DRAW_IMAGE(draw_image)
         }
     }
 #endif
-    
+
     u32 halfWidth = image->width / 2;
     u32 halfHeight = image->height / 2;
-    
+
     if (salesmanState->randomSwap.bestEver)
     {
         City *prevCity = 0;
@@ -511,21 +511,21 @@ DRAW_IMAGE(draw_image)
         {
             u32 cityIndex = salesmanState->randomSwap.current[pathIndex];
             City *city = salesmanState->cities + cityIndex;
-            
+
             v4 baseColour = V4(0.7f, 0, 0, 1);
-            
+
             fill_circle(image, city->position.x, city->position.y + halfHeight,
                         4, baseColour);
             if (prevCity)
             {
-                draw_line(image, prevCity->position.x, prevCity->position.y + halfHeight, 
+                draw_line(image, prevCity->position.x, prevCity->position.y + halfHeight,
                           city->position.x, city->position.y + halfHeight,
                           baseColour * 0.7f);
             }
             prevCity = city;
         }
     }
-    
+
     if (salesmanState->bruter.bestEver)
     {
         City *prevCity = 0;
@@ -533,21 +533,21 @@ DRAW_IMAGE(draw_image)
         {
             u32 cityIndex = salesmanState->bruter.current[pathIndex];
             City *city = salesmanState->cities + cityIndex;
-            
+
             v4 baseColour = V4(0, 0.7f, 0, 1);
-            
+
             fill_circle(image, city->position.x + halfWidth, city->position.y + halfHeight,
                         4, baseColour);
             if (prevCity)
             {
-                draw_line(image, prevCity->position.x + halfWidth, prevCity->position.y + halfHeight, 
+                draw_line(image, prevCity->position.x + halfWidth, prevCity->position.y + halfHeight,
                           city->position.x + halfWidth, city->position.y + halfHeight,
                           baseColour * 0.7f);
             }
             prevCity = city;
         }
     }
-    
+
     if (salesmanState->evolver.currentBest)
     {
         City *prevCity = 0;
@@ -555,48 +555,48 @@ DRAW_IMAGE(draw_image)
         {
             u32 cityIndex = salesmanState->evolver.currentBest[pathIndex];
             City *city = salesmanState->cities + cityIndex;
-            
+
             v4 baseColour = V4(0.7f, 0.7f, 0.7f, 1);
-            
+
             fill_circle(image, city->position.x + halfWidth, city->position.y, 4, baseColour);
             if (prevCity)
             {
-                draw_line(image, prevCity->position.x + halfWidth, prevCity->position.y, 
+                draw_line(image, prevCity->position.x + halfWidth, prevCity->position.y,
                           city->position.x + halfWidth, city->position.y,
                           baseColour * 0.7f);
             }
             prevCity = city;
         }
     }
-    
-    if ((salesmanState->randomSwap.bestEver) && 
-        (salesmanState->bruter.bestEver) && 
+
+    if ((salesmanState->randomSwap.bestEver) &&
+        (salesmanState->bruter.bestEver) &&
         (salesmanState->evolver.bestEver))
     {
         u32 *bestEver = 0;
         v4 colour = {};
-        
+
         if ((salesmanState->randomSwap.bestDistanceSqr < salesmanState->bruter.bestDistanceSqr) &&
             (salesmanState->randomSwap.bestDistanceSqr < salesmanState->evolver.bestDistanceSqr))
         {
             bestEver = salesmanState->randomSwap.bestEver;
             colour = V4(0.7f, 0, 0, 1);
         }
-        
+
         if ((salesmanState->bruter.bestDistanceSqr < salesmanState->randomSwap.bestDistanceSqr) &&
             (salesmanState->bruter.bestDistanceSqr < salesmanState->evolver.bestDistanceSqr))
         {
             bestEver = salesmanState->bruter.bestEver;
             colour = V4(0, 0.7f, 0, 1);
         }
-        
+
         if ((salesmanState->evolver.bestDistanceSqr < salesmanState->randomSwap.bestDistanceSqr) &&
             (salesmanState->evolver.bestDistanceSqr < salesmanState->bruter.bestDistanceSqr))
         {
             bestEver = salesmanState->evolver.bestEver;
             colour = V4(0, 0, 0.7f, 1);
         }
-        
+
         if (bestEver)
         {
             City *prevBestCity = 0;
@@ -604,16 +604,16 @@ DRAW_IMAGE(draw_image)
             {
                 u32 cityIndex = salesmanState->evolver.bestEver[bestIndex];
                 City *bestCity = salesmanState->cities + cityIndex;
-                
+
                 if (prevBestCity)
                 {
-                    draw_line(image, prevBestCity->position.x, prevBestCity->position.y, 
+                    draw_line(image, prevBestCity->position.x, prevBestCity->position.y,
                               bestCity->position.x, bestCity->position.y, colour);
                 }
                 prevBestCity = bestCity;
             }
         }
     }
-    
+
     ++salesmanState->ticks;
 }

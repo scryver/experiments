@@ -27,10 +27,10 @@ struct v2fp
 struct DrawMandelbrotWork
 {
     Image *image;
-    
+
     v2s minDraw;
     v2s maxDraw;
-    
+
 #if COMPLEX_UFP
     v2fp min;
     v2fp max;
@@ -43,7 +43,7 @@ struct DrawMandelbrotWork
 #else
 #error "No known way to make the mandelbrot without a type"
 #endif
-    
+
     u32 paletteCount;
     v4 *palette;
 };
@@ -52,10 +52,10 @@ struct FractalState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
-    
+
     u32 paletteCount;
     v4 *palette;
-    
+
 #if COMPLEX_UFP
     v2fp minDraw;
     v2fp maxDraw;
@@ -66,12 +66,12 @@ struct FractalState
     v2 minDraw;
     v2 maxDraw;
 #endif
-    
+
     Image mandelbrot;
-    
+
     v2 mouseSelectStart;
     v2 mouseDragStart;
-    
+
     u32 prevMouseDown;
 };
 
@@ -114,7 +114,7 @@ get_mandelbrot(ComplexUFP c0, u32 paletteCount, v4 *palette, u32 maxIteration = 
     {
         colour = palette[iteration % paletteCount];
     }
-    
+
     return colour;
 }
 
@@ -136,7 +136,7 @@ get_mandelbrot(Complex64 c0, u32 paletteCount, v4 *palette, u32 maxIteration = 1
     {
         colour = palette[iteration % paletteCount];
     }
-    
+
     return colour;
 }
 
@@ -158,7 +158,7 @@ get_mandelbrot(Complex32 c0, u32 paletteCount, v4 *palette, u32 maxIteration = 1
     {
         colour = palette[iteration % paletteCount];
     }
-    
+
     return colour;
 }
 
@@ -188,7 +188,7 @@ draw_mandelbrot(DrawMandelbrotWork *work)
             point.imag = map((f32)y, work->minDraw.y, work->maxDraw.y,
                              work->min.y, work->max.y);
 #endif
-            v4 colour = get_mandelbrot(point, work->paletteCount, work->palette, 
+            v4 colour = get_mandelbrot(point, work->paletteCount, work->palette,
                                        work->paletteCount);
             draw_pixel(work->image, x, y, colour);
         }
@@ -199,7 +199,7 @@ internal
 PLATFORM_WORK_QUEUE_CALLBACK(draw_mandelbrot_work)
 {
     DrawMandelbrotWork *work = (DrawMandelbrotWork *)data;
-    
+
     draw_mandelbrot(work);
 }
 
@@ -209,7 +209,7 @@ align_min_max(v2 minScreen, v2 maxScreen, v2 *min, v2 *max)
     v2 size = *max - *min;
     f32 width = (maxScreen.x - minScreen.x);
     f32 height = (maxScreen.y - minScreen.y);
-    
+
     f32 mX = height * size.x;
     f32 mY = width * size.y;
     if (mX < mY)
@@ -227,7 +227,7 @@ align_min_max(v2 minScreen, v2 maxScreen, v2 *min, v2 *max)
 }
 
 internal void
-draw_mandelbrot(PlatformWorkQueue *queue, Image *image, 
+draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
                 v2 min, v2 max, u32 paletteCount, v4 *palette)
 {
 #if 0
@@ -242,18 +242,18 @@ draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
     work->palette = palette;
     draw_mandelbrot(work);
 #else
-    Arena tempArena = {0};
-    
+    MemoryArena tempArena = {0};
+
     u32 tileSize = 50;
     u32 workerEntries = (image->width / tileSize) * (image->height / tileSize);
     i_expect(workerEntries <= MAX_WORK_QUEUE_ENTRIES);
-    
+
     f32 xStep = (max.x - min.x) * (f32)tileSize / (f32)image->width;
     f32 yStep = (max.y - min.y) * (f32)tileSize / (f32)image->height;
-    
-    DrawMandelbrotWork *workers = arena_allocate_array(&tempArena, DrawMandelbrotWork, workerEntries);
+
+    DrawMandelbrotWork *workers = arena_allocate_array(&tempArena, DrawMandelbrotWork, workerEntries, default_memory_alloc());
     u32 workerIndex = 0;
-    
+
     f32 yAxis = min.y;
     for (u32 y = 0; y < image->height; y += tileSize)
     {
@@ -268,16 +268,16 @@ draw_mandelbrot(PlatformWorkQueue *queue, Image *image,
             work->max = V2(xAxis + xStep, yAxis + yStep);
             work->paletteCount = paletteCount;
             work->palette = palette;
-            
+
             platform_add_entry(queue, draw_mandelbrot_work, work);
             xAxis += xStep;
         }
         yAxis += yStep;
     }
-    
+
     platform_complete_all_work(queue);
-    
-    arena_free(&tempArena);
+
+    arena_deallocate_all(&tempArena);
 #endif
 }
 
@@ -289,7 +289,7 @@ draw_mandelbrot(Image *image, v2 min, v2 max, u32 paletteCount, v4 *palette)
     f32 maxY = (f32)image->height;
     f32 xOffset = 0.0f;
     f32 yOffset = 0.0f;
-    
+
     v2 size = max - min;
     f32 mX = maxX * size.y;
     f32 mY = maxY * size.x;
@@ -305,7 +305,7 @@ draw_mandelbrot(Image *image, v2 min, v2 max, u32 paletteCount, v4 *palette)
         yOffset = 0.5f * (maxY - newMaxY);
         maxY = newMaxY;
     }
-    
+
     for (s32 y = 0; y < image->height; ++y)
     {
         for (s32 x = 0; x < image->width; ++x)
@@ -313,7 +313,7 @@ draw_mandelbrot(Image *image, v2 min, v2 max, u32 paletteCount, v4 *palette)
             Complex32 point;
             point.real = map((f32)x - xOffset, 0.0f, maxX, min.x, max.x);
             point.imag = map((f32)y - yOffset, 0.0f, maxY, min.y, max.y);
-            
+
             v4 colour = get_mandelbrot(point, paletteCount, palette, paletteCount);
             draw_pixel(image, x, y, colour);
         }
@@ -328,7 +328,7 @@ draw_mandelbrot(Image *image, f64 minX, f64 minY, f64 maxX, f64 maxY,
     f64 maxHeight = (f64)image->height;
     f64 xOffset = 0.0;
     f64 yOffset = 0.0;
-    
+
     f64 sizeX = maxX - minX;
     f64 sizeY = maxY - minY;
     f64 mX = maxWidth * sizeY;
@@ -345,7 +345,7 @@ draw_mandelbrot(Image *image, f64 minX, f64 minY, f64 maxX, f64 maxY,
         yOffset = 0.5 * (maxHeight - newMaxY);
         maxHeight = newMaxY;
     }
-    
+
     for (s32 y = 0; y < image->height; ++y)
     {
         for (s32 x = 0; x < image->width; ++x)
@@ -353,7 +353,7 @@ draw_mandelbrot(Image *image, f64 minX, f64 minY, f64 maxX, f64 maxY,
             Complex64 point;
             point.real = map((f64)x - xOffset, 0.0, maxWidth, minX, maxX);
             point.imag = map((f64)y - yOffset, 0.0, maxHeight, minY, maxY);
-            
+
             v4 colour = get_mandelbrot(point, paletteCount, palette, paletteCount);
             draw_pixel(image, x, y, colour);
         }
@@ -364,11 +364,11 @@ draw_mandelbrot(Image *image, f64 minX, f64 minY, f64 maxX, f64 maxY,
 internal inline void
 draw_mandelbrot(PlatformWorkQueue *queue, FractalState *state)
 {
-    align_min_max(V2(0, 0), V2((f32)state->mandelbrot.width, (f32)state->mandelbrot.height), 
+    align_min_max(V2(0, 0), V2((f32)state->mandelbrot.width, (f32)state->mandelbrot.height),
                   &state->minDraw, &state->maxDraw);
     draw_mandelbrot(queue, &state->mandelbrot, state->minDraw, state->maxDraw,
                     state->paletteCount, state->palette);
-    
+
     f64 zoomLevel = (state->maxDraw.x - state->minDraw.x) / 3.5;
     fprintf(stdout, "Zoom level: %10.9f | Magnify: %8.1f\n", zoomLevel, 1.0 / zoomLevel);
 }
@@ -377,20 +377,20 @@ DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(FractalState) <= state->memorySize);
     //v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     FractalState *fractalState = (FractalState *)state->memory;
     if (!state->initialized)
     {
         fractalState->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         fractalState->paletteCount = 1000;
-        fractalState->palette = allocate_array(v4, fractalState->paletteCount);
-        
+        fractalState->palette = arena_allocate_array(gMemoryArena, v4, fractalState->paletteCount, default_memory_alloc());
+
         fractalState->mandelbrot.width = image->width;
         fractalState->mandelbrot.height = image->height;
         fractalState->mandelbrot.rowStride = image->width;
-        fractalState->mandelbrot.pixels = allocate_array(u32, image->width * image->height);
-        
+        fractalState->mandelbrot.pixels = arena_allocate_array(gMemoryArena, u32, image->width * image->height, default_memory_alloc());
+
         v4 lastColour = V4(0, 0, 0, 1);
         u32 redGreenBlue = 0;
         f32 colourStep = 3.0f / (f32)fractalState->paletteCount;
@@ -427,24 +427,23 @@ DRAW_IMAGE(draw_image)
                 }
             }
         }
-        
+
         fractalState->minDraw = V2(-2.5f, -1.0f);
         fractalState->maxDraw = V2( 1.0f,  1.0f);
-        
+
         draw_mandelbrot(state->workQueue, fractalState);
-        
+
         state->initialized = true;
     }
-    
+
     draw_image(image, 0, 0, &fractalState->mandelbrot);
-    
-    if ((mouse.mouseDowns & Mouse_Left) &&
-        !(fractalState->prevMouseDown & Mouse_Left))
+
+    if (is_pressed(&mouse, Mouse_Left))
     {
         fractalState->mouseSelectStart = mouse.relativePosition;
     }
-    
-    if (mouse.mouseDowns & Mouse_Left)
+
+    if (is_down(&mouse, Mouse_Left))
     {
         v2 min = fractalState->mouseSelectStart;
         v2 max = fractalState->mouseSelectStart;
@@ -456,7 +455,7 @@ DRAW_IMAGE(draw_image)
         {
             max.x = (f32)mouse.relativePosition.x;
         }
-        
+
         if (min.y > (f32)mouse.relativePosition.y)
         {
             min.y = (f32)mouse.relativePosition.y;
@@ -465,18 +464,17 @@ DRAW_IMAGE(draw_image)
         {
             max.y = (f32)mouse.relativePosition.y;
         }
-        
+
         min.x *= image->width;
         max.x *= image->width;
         min.y *= image->height;
         max.y *= image->height;
-        
+
         fill_rectangle(image, min.x, min.y, max.x - min.x, max.y - min.y,
                        V4(0, 0, 0.5f, 0.7f));
     }
-    
-    if (!(mouse.mouseDowns & Mouse_Left) &&
-        (fractalState->prevMouseDown & Mouse_Left))
+
+    if (is_released(&mouse, Mouse_Left))
     {
         v2 mouseMin = fractalState->mouseSelectStart;
         v2 mouseMax = fractalState->mouseSelectStart;
@@ -488,7 +486,7 @@ DRAW_IMAGE(draw_image)
         {
             mouseMax.x = (f32)mouse.relativePosition.x;
         }
-        
+
         if (mouseMin.y > (f32)mouse.relativePosition.y)
         {
             mouseMin.y = (f32)mouse.relativePosition.y;
@@ -497,73 +495,70 @@ DRAW_IMAGE(draw_image)
         {
             mouseMax.y = (f32)mouse.relativePosition.y;
         }
-        
+
         // NOTE(michiel): 32 bit floats
         v2 min = map(mouseMin, V2(0, 0), V2(1, 1), fractalState->minDraw, fractalState->maxDraw);
         v2 max = map(mouseMax, V2(0, 0), V2(1, 1), fractalState->minDraw, fractalState->maxDraw);
         fractalState->minDraw = min;
         fractalState->maxDraw = max;
-        
+
         draw_mandelbrot(state->workQueue, fractalState);
-        
+
 #if 0
         // NOTE(michiel): 64 bit floats, better zoom level
         f64 minX = map((f64)mouseMin.x, 0.0, (f64)image->width,  fractalState->minX, fractalState->maxX);
         f64 maxX = map((f64)mouseMax.x, 0.0, (f64)image->width,  fractalState->minX, fractalState->maxX);
         f64 minY = map((f64)mouseMin.y, 0.0, (f64)image->height, fractalState->minY, fractalState->maxY);
         f64 maxY = map((f64)mouseMax.y, 0.0, (f64)image->height, fractalState->minY, fractalState->maxY);
-        
+
         fractalState->minX = minX;
         fractalState->maxX = maxX;
         fractalState->minY = minY;
         fractalState->maxY = maxY;
-        
+
         align_min_max(V2(0, 0), size, &fractalState->minDraw, &fractalState->maxDraw);
         draw_mandelbrot(state->workQueue, &fractalState->mandelbrot,
-                        fractalState->minX, fractalState->minY, 
+                        fractalState->minX, fractalState->minY,
                         fractalState->maxX, fractalState->maxY,
                         fractalState->paletteCount, fractalState->palette);
 #endif
     }
-    
-    if ((mouse.mouseDowns & Mouse_Right) &&
-        !(fractalState->prevMouseDown & Mouse_Right))
+
+    if (is_pressed(&mouse, Mouse_Right))
     {
         fractalState->mouseDragStart = mouse.relativePosition;
     }
-    
-    if (mouse.mouseDowns & Mouse_Right)
+
+    if (is_down(&mouse, Mouse_Right))
     {
         v2 mouseS = map(fractalState->mouseDragStart, V2(0, 0), V2(1, 1), fractalState->minDraw, fractalState->maxDraw);
         v2 mouseP = map(mouse.relativePosition, V2(0, 0), V2(1, 1), fractalState->minDraw, fractalState->maxDraw);
         v2 diff = mouseS - mouseP;
-        
+
         fractalState->mouseDragStart = mouse.relativePosition;
-        
+
         // NOTE(michiel): 32 bit floats
         fractalState->minDraw += diff;
         fractalState->maxDraw += diff;
-        
+
         draw_mandelbrot(state->workQueue, fractalState);
-        
+
 #if 0
         // NOTE(michiel): 64 bit floats, better zoom level
         draw_mandelbrot(state->workQueue, &fractalState->mandelbrot,
-                        fractalState->minX, fractalState->minY, 
+                        fractalState->minX, fractalState->minY,
                         fractalState->maxX, fractalState->maxY,
                         fractalState->paletteCount, fractalState->palette);
 #endif
     }
-    
-    if ((mouse.mouseDowns & Mouse_Extended1) &&
-        !(fractalState->prevMouseDown & Mouse_Extended1))
+
+    if (is_pressed(&mouse, Mouse_Extended1))
     {
         fractalState->minDraw = V2(-2.5f, -1.0f);
         fractalState->maxDraw = V2( 1.0f,  1.0f);
-        
+
         draw_mandelbrot(state->workQueue, fractalState);
     }
-    
-    fractalState->prevMouseDown = mouse.mouseDowns;
+
     ++fractalState->ticks;
 }

@@ -15,9 +15,9 @@ struct ColourState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
-    
+
     Neural brain;
-    
+
     u32 inputCount;
     f32 *inputs;
 };
@@ -26,7 +26,7 @@ internal void
 print_network(Neural *network)
 {
     fprintf(stdout, "Network  : %p\n", (void *)network);
-    
+
     fprintf(stdout, "  inputs : %d\n", network->inputCount);
     fprintf(stdout, "  layers : %d\n", network->layerCount);
     fprintf(stdout, "           [");
@@ -43,9 +43,9 @@ print_network(Neural *network)
         }
     }
     fprintf(stdout, "  outputs: %d\n", network->outputCount);
-    
+
     fprintf(stdout, "  internals:\n");
-    
+
     u32 rows = network->inputCount;
     f32 *hidden = network->hidden;
     f32 *h2hWeight = network->weights;
@@ -53,7 +53,7 @@ print_network(Neural *network)
     for (u32 layerIndex = 0; layerIndex < network->layerCount - 1; ++layerIndex)
     {
         u32 count;
-        
+
         if (layerIndex < network->layerCount - 1)
         {
             count = network->layerSizes[layerIndex];
@@ -70,7 +70,7 @@ print_network(Neural *network)
                     fprintf(stdout, ", ");
                 }
             }
-            
+
             fprintf(stdout, "    hiddenWeight[%d]:\n", layerIndex + 1);
             for (u32 row = 0; row < count; ++row)
             {
@@ -88,9 +88,9 @@ print_network(Neural *network)
                     }
                 }
             }
-            
+
             h2hWeight += count * rows;
-            
+
             fprintf(stdout, "    hiddenBias[%d]: [", layerIndex + 1);
             for (u32 index = 0; index < count; ++index)
             {
@@ -130,7 +130,7 @@ print_network(Neural *network)
         hidden += count;
         hiddenBias += count;
     }
-    
+
     fprintf(stdout, "    outputs: [");
     for (u32 index = 0; index < network->outputCount; ++index)
     {
@@ -144,7 +144,7 @@ print_network(Neural *network)
             fprintf(stdout, ", ");
         }
     }
-    
+
     fprintf(stdout, "    outputBias: [");
     for (u32 index = 0; index < network->outputCount; ++index)
     {
@@ -163,42 +163,42 @@ print_network(Neural *network)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(ColourState) <= state->memorySize);
-    
+
     ColourState *colourState = (ColourState *)state->memory;
     if (!state->initialized)
     {
         //colourState->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         colourState->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         colourState->inputCount = 2;
-        colourState->inputs = allocate_array(f32, colourState->inputCount);
-        
+        colourState->inputs = arena_allocate_array(gMemoryArena, f32, colourState->inputCount, default_memory_alloc());
+
         u32 hiddenCounts[10] = {100, 100, 100, 10, 10, 10, 10, 10, 10, 10};
         init_neural_network(&colourState->brain, colourState->inputCount, 3, hiddenCounts, 1);
         randomize_weights(&colourState->randomizer, &colourState->brain);
-        
+
         // print_network(&colourState->brain);
-        
+
         state->initialized = true;
     }
-    
-    f32 trainigData[4][3] = 
+
+    f32 trainigData[4][3] =
     {
         {0, 0, 0},
         {0, 1, 1},
         {1, 0, 1},
         {1, 1, 0},
     };
-    
+
 #if 1
     for (u32 t = 0; t < 100; ++t)
     {
         u32 randomIndex = random_choice(&colourState->randomizer, 4);
-        train(&colourState->brain, 2, &trainigData[randomIndex][0], 
+        train(&colourState->brain, 2, &trainigData[randomIndex][0],
               1, &trainigData[randomIndex][2], 0.1f);
     }
 #endif
-    
+
     if ((colourState->ticks % 100) == 0)
     {
         u32 iteration = colourState->ticks * 100;
@@ -216,7 +216,7 @@ DRAW_IMAGE(draw_image)
         fprintf(stdout, "\n");
         // print_network(&colourState->brain);
     }
-    
+
     u32 resolution = 10;
     u32 rows = image->height / resolution;
     u32 columns = image->width / resolution;
@@ -236,6 +236,6 @@ DRAW_IMAGE(draw_image)
         }
     }
     //fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     ++colourState->ticks;
 }

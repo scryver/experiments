@@ -13,7 +13,7 @@ enum VariableKind
     Var_Float,
     Var_String,
     Var_CString,
-    
+
     Var_Constant = 0x100,
 };
 struct Variable
@@ -148,19 +148,19 @@ map01(Variable val, Variable max)
             s32 value = *(s32 *)val.var;
             result = (((f32)value / (f32)max.i) + 1.0f) / 2.0f;
         } break;
-        
+
         case Var_Unsigned:
         {
             u32 value = *(u32 *)val.var;
             result = (f32)value / (f32)max.u;
         } break;
-        
+
         case Var_Float:
         {
             f32 value = *(f32 *)val.var;
             result = value / max.f;
         } break;
-        
+
         INVALID_DEFAULT_CASE;
     }
     return clamp01(result);
@@ -178,17 +178,17 @@ unmap01(f32 val01, Variable *val, Variable max)
         {
             *(s32 *)val->var = (s32)((val01 * 2.0f - 1.0f) * (f32)max.i);
         } break;
-        
+
         case Var_Unsigned:
         {
             *(u32 *)val->var = (u32)(val01 * (f32)max.u);
         } break;
-        
+
         case Var_Float:
         {
             *(f32 *)val->var = val01 * max.f;
         } break;
-        
+
         INVALID_DEFAULT_CASE;
     }
 }
@@ -230,12 +230,12 @@ enum LayoutKind
 struct UILayout
 {
     LayoutKind kind;
-    
+
     v2u origin;
     v2u maxSize;
-    
+
     u32 padding;
-    
+
     f32 itemWeight;
     u32 itemCount;
     UIItem *firstItem;
@@ -256,7 +256,7 @@ struct UIItem
     UIItemKind kind;
     UIItem    *next;
     f32 weight;
-    
+
     union
     {
         UILayout layout;
@@ -269,18 +269,18 @@ struct UIItem
 
 struct UIState
 {
-    Arena uiMem;
+    MemoryArena uiMem;
     b32 layedOut;
-    
+
     Image *screen;
     BitmapFont font;
     v2 mouse;
     s32 mouseScroll;
     b32 clicked;
-    
+
     UIID activeItem;
     UIID hotItem;
-    
+
     u32 maxItemCount;
     u32 itemCount;
     UIItem *items;
@@ -317,16 +317,16 @@ ui_match_id(UIState *state, UIID id, Rectangle2u rect)
         result = true;
         state->hotItem = id;
     }
-    else if (state->hotItem == id) 
+    else if (state->hotItem == id)
     {
         state->hotItem = gNullUIID;
     }
-    
+
     if ((state->activeItem == gNullUIID) && result && state->clicked)
     {
         state->activeItem = id;
     }
-    
+
     return result;
 }
 
@@ -334,14 +334,16 @@ internal void
 init_ui(UIState *state, Image *screen, u32 maxItems, String fontFilename)
 {
     state->screen = screen;
-    
-    Buffer fontFile = read_entire_file(fontFilename);
+
+    MemoryAllocator tempAlloc = {};
+    initialize_arena_allocator(gMemoryArena, &tempAlloc);
+    Buffer fontFile = gFileApi->read_entire_file(&tempAlloc, fontFilename);
     i_expect(fontFile.size);
-    unpack_font(fontFile.data, &state->font);
-    
+    unpack_font(&tempAlloc, fontFile.data, &state->font);
+
     state->maxItemCount = maxItems;
     state->itemCount = 0;
-    state->items = arena_allocate_array(&state->uiMem, UIItem, maxItems);
+    state->items = arena_allocate_array(&state->uiMem, UIItem, maxItems, default_memory_alloc());
 }
 
 internal void
@@ -349,14 +351,14 @@ ui_layout_button(UIState *state, UIButton *button, Rectangle2u rect,
                  v4 background = {1, 1, 1, 1}, v4 textColour = {0, 0, 0, 1})
 {
     ui_match_id(state, button->id, rect);
-    
+
     if (state->hotItem == button->id)
     {
         background.r *= 1.2f;
         background.g *= 1.2f;
         background.b *= 1.2f;
     }
-    
+
     if (state->activeItem == button->id)
     {
         rect.min.x += 2;
@@ -367,11 +369,11 @@ ui_layout_button(UIState *state, UIButton *button, Rectangle2u rect,
         background.g *= 1.3f;
         background.b *= 1.1f;
     }
-    
+
     v2u dim = get_dim(rect);
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
     //outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
-    draw_text(&state->font, state->screen, rect.min.x + 8, rect.min.y + 3, 
+    draw_text(&state->font, state->screen, rect.min.x + 8, rect.min.y + 3,
               button->label, textColour);
 }
 
@@ -380,14 +382,14 @@ ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2u rect,
                    v4 background = {1, 1, 1, 1}, v4 checkColour = {0, 0, 0, 1})
 {
     ui_match_id(state, checkbox->id, rect);
-    
+
     if (state->hotItem == checkbox->id)
     {
         background.r *= 1.2f;
         background.g *= 1.2f;
         background.b *= 1.2f;
     }
-    
+
     if (state->activeItem == checkbox->id)
     {
         rect.min.x += 2;
@@ -398,13 +400,13 @@ ui_layout_checkbox(UIState *state, UICheckbox *checkbox, Rectangle2u rect,
         background.g *= 1.3f;
         background.b *= 1.1f;
     }
-    
+
     v2u dim = get_dim(rect);
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
     //outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 1));
     if (checkbox->checked)
     {
-        fill_rectangle(state->screen, rect.min.x + 5, rect.min.y + 5, 
+        fill_rectangle(state->screen, rect.min.x + 5, rect.min.y + 5,
                        dim.x - 10, dim.y - 10, checkColour);
     }
 }
@@ -414,7 +416,7 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind 
                  v4 colour = {1, 1, 1, 1})
 {
     ui_match_id(state, slider->id, rect);
-    
+
     b32 hot = false;
     if (state->hotItem == slider->id)
     {
@@ -423,7 +425,7 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind 
         colour.g *= 1.2f;
         colour.b *= 1.2f;
     }
-    
+
     b32 active = false;
     if (state->activeItem == slider->id)
     {
@@ -432,29 +434,29 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind 
         colour.g *= 1.3f;
         colour.b *= 1.1f;
     }
-    
+
     v2u dim = get_dim(rect);
-    
+
     b32 horizontal = dir == Layout_Horizontal;
     f32 handleSize = (f32)(horizontal ? dim.y : dim.x) * 0.5f;
     v2u handle = V2U((u32)handleSize, (u32)handleSize);
-    
+
     f32 trackLength = (f32)(horizontal ? dim.x : dim.y) - (f32)(horizontal ? dim.y : dim.x);
-    
+
     f32 value01 = map01(slider->value, slider->maxValue);
     u32 dimModVal = (u32)(value01 * trackLength);
     v2u dimMod = (horizontal ? V2U(rect.min.x + dimModVal, rect.min.y)
                   : V2U(rect.min.x, rect.min.y + (trackLength - dimModVal)));
     dimMod += handle.x / 2;
-    
+
     v4 backColour = clamp01(colour - V4(0.3f, 0.3f, 0.3f, 0.0f));
     v4 trackColour = clamp01(colour - V4(0.5f, 0.5f, 0.5f, 0.0f));
-    
+
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, backColour);
     fill_rectangle(state->screen, rect.min.x + handle.x / 2, rect.min.y + handle.y / 2,
                    dim.x - handle.x, dim.y - handle.y, trackColour);
     fill_rectangle(state->screen, dimMod.x, dimMod.y, (u32)handleSize, (u32)handleSize, colour);
-    
+
     if (active)
     {
         if (horizontal)
@@ -471,7 +473,7 @@ ui_layout_slider(UIState *state, UISlider *slider, Rectangle2u rect, LayoutKind 
         value01 += (f32)state->mouseScroll * 0.01f;
     }
     value01 = clamp01(value01);
-    
+
     unmap01(value01, &slider->value, slider->maxValue);
 }
 
@@ -480,14 +482,14 @@ ui_layout_text(UIState *state, UIText *text, Rectangle2u rect,
                v4 background = {1, 1, 1, 1}, v4 textColour = {0, 0, 0, 1})
 {
     ui_match_id(state, text->id, rect);
-    
+
     if (state->hotItem == text->id)
     {
         background.r *= 1.2f;
         background.g *= 1.2f;
         background.b *= 1.2f;
     }
-    
+
     if (state->activeItem == text->id)
     {
         rect.min.x += 2;
@@ -498,11 +500,11 @@ ui_layout_text(UIState *state, UIText *text, Rectangle2u rect,
         background.g *= 1.3f;
         background.b *= 1.1f;
     }
-    
+
     v2u dim = get_dim(rect);
     fill_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, background);
     outline_rectangle(state->screen, rect.min.x, rect.min.y, dim.x, dim.y, V4(0, 0, 0, 0.5f));
-    draw_text(&state->font, state->screen, rect.min.x + 8, rect.min.y + 3, 
+    draw_text(&state->font, state->screen, rect.min.x + 8, rect.min.y + 3,
               text->text, textColour);
 }
 
@@ -526,21 +528,21 @@ ui_layout_layout(UIState *state, UILayout *layout)
         s32 xOffset = layout->origin.x + layout->padding;
         s32 yOffset = layout->origin.y + layout->padding;
 #endif
-        
+
         // TODO(michiel): Make everything more rect based (get_dim is redundant for now)
         Rectangle2u rect = {};
         rect.min.x = layout->origin.x;
         rect.min.y = layout->origin.y;
         rect.max.x = layout->origin.x + layout->maxSize.x;
         rect.max.y = layout->origin.y + layout->maxSize.y;
-        
+
         //Rectangle2u rect = rect_from_dim(xOffset, yOffset, itemXSize, itemYSize);
         //v2s rectDim = get_dim(rect);
-        
+
         fill_rectangle(state->screen, layout->origin.x, layout->origin.y, layout->maxSize.x, layout->maxSize.y, V4(0.1f, 0.1f, 0.1f, 0.5f));
-        
+
         //fprintf(stdout, "Layout: (%d, %d) %dx%d\n", rect.min.x, rect.min.y, rect.max.x - rect.min.x, rect.max.y - rect.min.y);
-        
+
         f32 oneOverWeight = 1.0f / layout->itemWeight;
         for (UIItem *item = layout->firstItem; item; item = item->next)
         {
@@ -553,14 +555,14 @@ ui_layout_layout(UIState *state, UILayout *layout)
             {
                 rect.max.y = rect.min.y + s32_from_f32_round(ratio * (f32)layout->maxSize.y);
             }
-            
+
             switch (item->kind)
             {
                 case UIItem_Layout:
                 {
                     UILayout *innerLayout = &item->layout;
                     v2u rectDim = get_dim(rect);
-                    
+
                     if ((innerLayout->maxSize.x > rectDim.x) ||
                         (innerLayout->maxSize.x < 0)) {
                         innerLayout->maxSize.x = rectDim.x;
@@ -572,19 +574,19 @@ ui_layout_layout(UIState *state, UILayout *layout)
                     innerLayout->origin.y = rect.min.y;
                     ui_layout_layout(state, innerLayout);
                 } break;
-                
+
                 case UIItem_Button:
                 {
                     //fprintf(stdout, "Button: (%d, %d) %dx%d\n", rect.min.x, rect.min.y, rect.max.x - rect.min.x, rect.max.y - rect.min.y);
                     ui_layout_button(state, &item->button, rect, V4(0.5f, 0.5f, 0.1f, 1));
                 } break;
-                
+
                 case UIItem_Checkbox:
                 {
                     //fprintf(stdout, "Checkbox: (%d, %d) %dx%d\n", rect.min.x, rect.min.y, rect.max.x - rect.min.x, rect.max.y - rect.min.y);
                     ui_layout_checkbox(state, &item->checkbox, rect, V4(0.5f, 0.5f, 0.1f, 1));
                 } break;
-                
+
                 case UIItem_Slider:
                 {
                     //fprintf(stdout, "Slider: (%d, %d) %dx%d\n", rect.min.x, rect.min.y, rect.max.x - rect.min.x, rect.max.y - rect.min.y);
@@ -593,16 +595,16 @@ ui_layout_layout(UIState *state, UILayout *layout)
                                      Layout_Vertical : Layout_Horizontal,
                                      V4(0.5f, 0.5f, 0.1f, 1));
                 } break;
-                
+
                 case UIItem_Text:
                 {
                     //fprintf(stdout, "Text: (%d, %d) %dx%d\n", rect.min.x, rect.min.y, rect.max.x - rect.min.x, rect.max.y - rect.min.y);
                     ui_layout_text(state, &item->text, rect, V4(0.5f, 0.5f, 0.1f, 1));
                 } break;
-                
+
                 INVALID_DEFAULT_CASE;
             }
-            
+
             if (layout->kind == Layout_Horizontal) {
                 rect.min.x = rect.max.x;
             } else {
@@ -635,12 +637,12 @@ ui_begin(UIState *state, LayoutKind kind, u32 x, u32 y, u32 width, u32 height,
 {
     state->itemCount = 0;
     state->layedOut = false;
-    
+
     UIItem *baseLayout = get_next_item(state, UIItem_Layout);
     baseLayout->next = 0;
-    
+
     UILayout *layout = &baseLayout->layout;
-    
+
     layout->kind = kind;
     layout->origin.x = x;
     layout->origin.y = y;
@@ -651,7 +653,7 @@ ui_begin(UIState *state, LayoutKind kind, u32 x, u32 y, u32 width, u32 height,
     layout->itemCount = 0;
     layout->firstItem = 0;
     layout->lastItem = 0;
-    
+
     return layout;
 }
 
@@ -660,13 +662,13 @@ ui_end(UIState *state)
 {
     UIItem *baseLayout = state->items;
     i_expect(baseLayout->kind == UIItem_Layout);
-    
+
     if (!state->clicked)
     {
         state->activeItem = gNullUIID;
     }
-    
-    if (!state->layedOut) 
+
+    if (!state->layedOut)
     {
         ui_layout_layout(state, &baseLayout->layout);
         state->layedOut = true;
@@ -862,19 +864,19 @@ textfield(UIState *state, s32 id, v2 pos, v2 dim, char *text, v4 colour = V4(0.1
             dim.y = get_text_height(state->font, text);
         }
     }
-    
+
     state->font->baseP = V3(pos, state->font->baseP.z);
     state->font->baseP.x -= 0.5f * dim.x - state->font->scale * 5.0f;
     state->font->baseP.y += 0.5f * dim.y - 0.667f * state->font->scale * get_line_advance_for(state->font->info);
     state->font->offsetAt = state->font->baseP;
-    
+
     u32 length = string_length(text);
     b32 changed = false;
-    
+
     mouse_selection(state, id, rect_center_dim(pos, dim + V2(8, 8)));
     keyboard_selection(state, id, pos, dim);
     sync_keyboard_and_mouse_selection(state, id);
-    
+
     if (state->kbItem == id)
     {
         if (select_next(state))
@@ -927,18 +929,18 @@ textfield(UIState *state, s32 id, v2 pos, v2 dim, char *text, v4 colour = V4(0.1
             }
         }
     }
-    
+
     draw_shadow(state, pos, dim);
-    
+
     v3 position = V3(pos, -10.0f);
     v4 drawColour = ui_state_colour(state, id, colour);
     drawColour.a = 0.5f;
     push_rect(state->renderer, state->transform, position, dim, drawColour);
-    
+
     {
         TransientClipRect t = TransientClipRect(state->renderer, get_clip_rect(state->renderer, state->transform, position, dim));
         draw_text(state->renderer, state->transform, state->font, text);
-        
+
         if ((state->kbItem == id) && ((u32)(state->now * 4.0f) & 0x1))
         {
             f32 advance = 0.0f;
@@ -947,14 +949,14 @@ textfield(UIState *state, s32 id, v2 pos, v2 dim, char *text, v4 colour = V4(0.1
                 advance = state->font->scale * get_horizontal_advance_for_pair(state->font->info, state->font->font,
                                                                                (u32)text[length - 1], (u32)'_');
             }
-            
+
             state->font->offsetAt.x += advance;
             draw_text(state->renderer, state->transform, state->font, "_");
         }
     }
-    
+
     state->lastWidget = id;
-    
+
     return changed;
 }
 

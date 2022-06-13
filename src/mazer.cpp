@@ -31,12 +31,12 @@ struct MazeState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
-    
+
     u32 cellCount;
     Grid grid;
-    
+
     Cell *current;
-    
+
     u32 stackCount;
     Cell **visitedStack;
 };
@@ -60,7 +60,7 @@ next_cell(RandomSeriesPCG *randomizer, Grid *grid, Cell *current)
 {
     u32 neighbourCount = 0;
     Cell *neighbours[4] = {};
-    
+
     if (current->y > 0)
     {
         // NOTE(michiel): Top neighbour
@@ -97,14 +97,14 @@ next_cell(RandomSeriesPCG *randomizer, Grid *grid, Cell *current)
             ++neighbourCount;
         }
     }
-    
+
     Cell *result = 0;
     if (neighbourCount)
     {
         u32 randomNeighbour = random_choice(randomizer, neighbourCount);
         result = neighbours[randomNeighbour];
     }
-    
+
     return result;
 }
 
@@ -122,7 +122,7 @@ remove_walls(Cell *a, Cell *b)
         a->walls &= ~Wall_Right;
         b->walls &= ~Wall_Left;
     }
-    
+
     s32 y = a->y - b->y;
     if (y == 1)
     {
@@ -145,8 +145,8 @@ DRAW_IMAGE(draw_image)
         Grid *grid = &mazeState->grid;
         grid->columns = image->width / width;
         grid->rows = image->height / width;
-        grid->cells = allocate_array(Cell, grid->columns * grid->rows);
-        
+        grid->cells = arena_allocate_array(gMemoryArena, Cell, grid->columns * grid->rows, default_memory_alloc());
+
         mazeState->cellCount = 0;
         for (u32 row = 0; row < grid->rows; ++row)
         {
@@ -159,19 +159,19 @@ DRAW_IMAGE(draw_image)
                 cell->visited = false;
             }
         }
-        
+
         mazeState->current = mazeState->grid.cells;
-        
+
         mazeState->stackCount = 0;
-        mazeState->visitedStack = allocate_array(Cell *, mazeState->cellCount);
-        
+        mazeState->visitedStack = arena_allocate_array(gMemoryArena, Cell *, mazeState->cellCount, default_memory_alloc());
+
         state->initialized = true;
     }
-    
+
     Grid *grid = &mazeState->grid;
     Cell *current = mazeState->current;
     current->visited = true;
-    
+
     if (1) // (mazeState->ticks % 16) == 0)
     {
         Cell *next = next_cell(&mazeState->randomizer, grid, current);
@@ -190,16 +190,16 @@ DRAW_IMAGE(draw_image)
     //
     // NOTE(michiel): Draw cells
     //
-    
+
     for (u32 cellIndex = 0; cellIndex < mazeState->cellCount; ++cellIndex)
     {
         Cell *cell = grid->cells + cellIndex;
-        
+
         u32 minX = cell->x * width;
         u32 minY = cell->y * width;
         u32 maxX = (cell->x + 1) * width;
         u32 maxY = (cell->y + 1) * width;
-        
+
         if (cell->walls & Wall_Left)
         {
             minX += 1;
@@ -216,7 +216,7 @@ DRAW_IMAGE(draw_image)
         {
             maxY -= 1;
         }
-        
+
         for (u32 y = minY; (y < maxY) && (y < image->height); ++y)
         {
             for (u32 x = minX; (x < maxX) && (x < image->width); ++x)
@@ -230,11 +230,11 @@ DRAW_IMAGE(draw_image)
                 {
                     colour = 0xFFFF0000;
                 }
-                
+
                 image->pixels[y * image->rowStride + x] = colour;
             }
         }
     }
-    
+
     ++mazeState->ticks;
 }

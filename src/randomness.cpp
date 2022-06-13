@@ -8,7 +8,7 @@ DRAW_IMAGE(draw_image)
     if (!state->initialized)
     {
         RandomSeriesPCG randomize = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
-        
+
         for (u32 pixelIndex = 0; pixelIndex < (image->width * image->height); ++pixelIndex)
         {
             // u32 grayScale = random_choice(&randomize, 256) & 0xFF;

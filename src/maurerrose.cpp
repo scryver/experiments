@@ -11,7 +11,7 @@ struct MaurerRose
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     f32 d;
     f32 n;
 };
@@ -19,20 +19,20 @@ struct MaurerRose
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(MaurerRose) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     MaurerRose *maurer = (MaurerRose *)state->memory;
     if (!state->initialized)
     {
         // maurer->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         maurer->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         state->initialized = true;
     }
-    
+
     f32 step = F32_PI / 10.0f; //1.0f / 11.0f;
-    
+
 #if 1
     maurer->d = clamp(1.0f, maurer->d, 361.0f);
     maurer->n = clamp(1.0f, maurer->n, 21.0f);
@@ -40,9 +40,9 @@ DRAW_IMAGE(draw_image)
     maurer->d = 29.0f;
     maurer->n = 2.0f;
 #endif
-    
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     v2 linePoints[361];
     v2 center = 0.5f * size;
     for (u32 i = 0; i < array_count(linePoints); ++i)
@@ -52,14 +52,13 @@ DRAW_IMAGE(draw_image)
         linePoints[i] = polar_to_cartesian(200.0f * l, deg2rad(k)) + center;
     }
     draw_lines(image, array_count(linePoints), linePoints, V4(1, 1, 1, 1));
-    
-    maurer->prevMouseDown = mouse.mouseDowns;
+
     maurer->seconds += dt;
     ++maurer->ticks;
     //if (maurer->ticks)
     {
         //fprintf(stdout, "D: %2.0f, N: %2.0f\n", maurer->d, maurer->n);
-        
+
         maurer->d += step;
         if (maurer->d > 360.0f)
         {

@@ -167,7 +167,7 @@ internal void \
 test_##name(void) \
 { \
     fprintf(stderr, "Starting test " #name "... ");
-    
+
 #define END_TEST() \
     fprintf(stderr, "DONE\n"); \
 }
@@ -182,7 +182,7 @@ START_TEST(matrix_add_scalar)
     u32 rows = 4;
     u32 columns = 4;
     matrix_add_scalar(rows, columns, matrix, 5.0f);
-    
+
     i_expect(float_almost_equal(matrix[0], 6.0f));
     i_expect(float_almost_equal(matrix[1], 7.0f));
     i_expect(float_almost_equal(matrix[2], 8.0f));
@@ -204,7 +204,7 @@ START_TEST(matrix_multiply_scalar)
     u32 columns = 4;
     matrix_multiply_scalar(rows, columns, matrix, 5.0f);
     i_expect(float_almost_equal(matrix[0], 5.0f));
-    
+
     i_expect(float_almost_equal(matrix[0], 5.0f));
     i_expect(float_almost_equal(matrix[1], 10.0f));
     i_expect(float_almost_equal(matrix[2], 15.0f));
@@ -230,7 +230,7 @@ START_TEST(matrix_add_matrix)
     u32 rows = 4;
     u32 columns = 4;
     matrix_add_matrix(rows, columns, matrixA, matrixB);
-    
+
     // NOTE(michiel): A didn't change so we expect the floats to be truely equal
     i_expect(matrixA[0] == 1.0f);
     i_expect(matrixA[1] == 2.0f);
@@ -267,7 +267,7 @@ START_TEST(matrix_sub_matrix)
     u32 rows = 4;
     u32 columns = 4;
     matrix_sub_matrix(rows, columns, matrixA, matrixB);
-    
+
     // NOTE(michiel): A didn't change so we expect the floats to be truely equal
     i_expect(matrixA[0] == 1.0f);
     i_expect(matrixA[1] == 2.0f);
@@ -305,7 +305,7 @@ START_TEST(matrix_hadamard_matrix)
     u32 columns = 4;
     // (u32 rows, u32 columns, f32 *factor, f32 *dest)
     matrix_hadamard_matrix(rows, columns, matrixA, matrixB);
-    
+
     // NOTE(michiel): A didn't change so we expect the floats to be truely equal
     i_expect(matrixA[0] == 1.0f);
     i_expect(matrixA[1] == 2.0f);
@@ -331,9 +331,9 @@ START_TEST(matrix_multiply_matrix)
 {
     f32 matrixA[12] = {}; // NOTE(michiel): 3rx4c
     f32 matrixB[8] = {};  // NOTE(michiel): 4rx2c
-    
+
     f32 result[6] = {};   // NOTE(michiel): 3rx2c
-    
+
     matrixA[0] = 1.0f;
     matrixA[1] = 2.0f;
     matrixA[2] = 3.0f;
@@ -354,15 +354,15 @@ START_TEST(matrix_multiply_matrix)
     matrixB[5] = 6.0f;
     matrixB[6] = 4.0f;
     matrixB[7] = 8.0f;
-    
+
     u32 rowsA = 3;
     u32 columnsA = 4;
     u32 columnsB = 2;
     // (u32 aRows, u32 aCols_bRows, u32 bColumns, f32 *a, f32 *b, f32 *result)
 matrix_multiply_matrix(rowsA, columnsA, columnsB, matrixA, matrixB, result);
-    
+
     // NOTE(michiel): A and B didn't change so we expect the floats to be truely equal
-    
+
     i_expect(matrixA[0] == 1.0f);
     i_expect(matrixA[1] == 2.0f);
     i_expect(matrixA[2] == 3.0f);
@@ -402,7 +402,7 @@ START_TEST(matrix_copy)
 {
     f32 matrixA[8] = {}; // NOTE(michiel): 2rx4c
     f32 matrixB[8] = {};  // NOTE(michiel): 2rx4c
-    
+
     matrixA[0] = 1.0f;
     matrixA[1] = 2.0f;
     matrixA[2] = 3.0f;
@@ -425,7 +425,7 @@ START_TEST(matrix_transpose)
 {
     f32 matrixA[8] = {}; // NOTE(michiel): 2rx4c
     f32 matrixB[8] = {};  // NOTE(michiel): 4rx2c
-    
+
     matrixA[0] = 1.0f;
     matrixA[1] = 2.0f;
     matrixA[2] = 3.0f;

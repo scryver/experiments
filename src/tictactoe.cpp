@@ -28,13 +28,13 @@ struct GameState
     f32 seconds;
     u32 ticks;
     u32 prevMouseDown;
-    
+
     TicTacToePlayer currentPlayer;
-    
+
     TicTacToeState state;
     f32 secondsToWait;
     TicTacToeState nextState;
-    
+
     u8 grid[9];
 };
 
@@ -85,8 +85,8 @@ internal TicTacToePlayer
 check_winner(GameState *state)
 {
     TicTacToePlayer result = Player_None;
-    
-#if 0    
+
+#if 0
     u32 results[8];
     results[0] = ((get_tile(state, 0, 0) == get_tile(state, 1, 0)) &&
                   (get_tile(state, 1, 0) == get_tile(state, 2, 0)));
@@ -105,7 +105,7 @@ check_winner(GameState *state)
     results[7] = ((get_tile(state, 0, 0) == get_tile(state, 1, 1)) &&
                   (get_tile(state, 1, 1) == get_tile(state, 2, 2)));
 #endif
-    
+
     for (u32 idx = 0; idx < 3; ++idx)
     {
         TicTacToePlayer test = get_tile(state, idx, 0);
@@ -116,7 +116,7 @@ check_winner(GameState *state)
             result = test;
         }
     }
-    
+
     for (u32 idx = 0; idx < 3; ++idx)
     {
         TicTacToePlayer test = get_tile(state, 0, idx);
@@ -127,9 +127,9 @@ check_winner(GameState *state)
             result = test;
         }
     }
-    
+
     TicTacToePlayer test = get_tile(state, 1, 1);
-    if (is_player(test) && 
+    if (is_player(test) &&
         (((test == get_tile(state, 0, 0)) &&
           (test == get_tile(state, 2, 2))) ||
          ((test == get_tile(state, 0, 2)) &&
@@ -137,12 +137,12 @@ check_winner(GameState *state)
     {
         result = test;
     }
-    
+
     if ((result == Player_None) && !has_empty_spots(state))
     {
         result = Player_Tie;
     }
-    
+
     return result;
 }
 
@@ -259,29 +259,29 @@ next_move_minimax(GameState *state)
 DRAW_IMAGE(draw_image)
 {
     i_expect(sizeof(GameState) <= state->memorySize);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
-    
+
     GameState *game = (GameState *)state->memory;
     if (!state->initialized)
     {
         // game->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
         game->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         game->nextState = State_Started;
-        
+
         state->initialized = true;
     }
-    
+
     v2 tileSize;
     tileSize.x = tileSize.y = (size.height - 20.0f) / 3.0f;
     v2 start = {10, 10};
     v2 end = start + 3.0f * tileSize;
-    
+
     //
     // NOTE(michiel): Update
     //
-    
+
     if (game->secondsToWait > 0.0f)
     {
         game->secondsToWait -= dt;
@@ -293,9 +293,9 @@ DRAW_IMAGE(draw_image)
         {
             case State_Started: {
                 reset_game(game);
-                
+
 #if 1
-                if (mouse.mouseDowns & Mouse_Left)
+                if (is_down(&mouse, Mouse_Left))
                 {
                     f32 mouseX = clamp(0.0f, (mouse.pixelPosition.x - start.x) / tileSize.x, 2.0f);
                     f32 mouseY = clamp(0.0f, (mouse.pixelPosition.y - start.y) / tileSize.y, 2.0f);
@@ -307,12 +307,12 @@ DRAW_IMAGE(draw_image)
                 set_timeout(game, State_PlayerInput, 0.5f);
 #endif
             } break;
-            
+
             case State_PlayerChange: {
                 game->currentPlayer = other_player(game->currentPlayer);
                 set_timeout(game, State_PlayerInput, 0.25f);
             } break;
-            
+
             case State_PlayerInput: {
                 TicTacToePlayer winner = check_winner(game);
                 if (winner != Player_None)
@@ -329,26 +329,26 @@ DRAW_IMAGE(draw_image)
                     {
                         next_move_random(game);
                     }
-                    
+
                     set_timeout(game, State_PlayerChange, 0.25f);
                 }
             } break;
-            
+
             case State_EndOfGame: {
                 set_timeout(game, State_Started, 1.5f);
             } break;
-            
+
             INVALID_DEFAULT_CASE;
         }
     }
-    
+
     //
     // NOTE(michiel): Render
     //
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     Rectangle2 boardRect = rect_min_dim(start, 3.0f * tileSize);
-    
+
     if (game->state == State_EndOfGame)
     {
         // NOTE(michiel): Draw board
@@ -357,7 +357,7 @@ DRAW_IMAGE(draw_image)
         draw_line(image, start.x, start.y + 2.0f * tileSize.y, end.x, start.y + 2.0f * tileSize.y, V4(1, 1, 1, 0.1f));
         draw_line(image, start.x + tileSize.x, start.y, start.x + tileSize.x, end.y, V4(1, 1, 1, 0.1f));
         draw_line(image, start.x + 2.0f * tileSize.x, start.y, start.x + 2.0f * tileSize.x, end.y, V4(1, 1, 1, 0.1f));
-        
+
         TicTacToePlayer winner = check_winner(game);
         switch (winner)
         {
@@ -367,13 +367,13 @@ DRAW_IMAGE(draw_image)
                 draw_line(image, boardRect.max.x - 10.0f, boardRect.min.y + 10.0f,
                           boardRect.min.x + 10.0f, boardRect.max.y - 10.0f, V4(1, 1, 0, 1));
             } break;
-            
+
             case Player_O:
             {
                 fill_circle(image, boardRect.min + 0.5f * get_dim(boardRect), 0.45f * 3.0f * tileSize.x, V4(1, 1, 0, 1));
                 fill_circle(image, boardRect.min + 0.5f * get_dim(boardRect), 0.44f * 3.0f * tileSize.x, V4(0, 0, 0, 1));
             } break;
-            
+
             case Player_Tie:
             {
                 // NOTE(michiel): Draw players
@@ -401,7 +401,7 @@ DRAW_IMAGE(draw_image)
                     }
                 }
             } break;
-            
+
             INVALID_DEFAULT_CASE;
         }
     }
@@ -413,14 +413,14 @@ DRAW_IMAGE(draw_image)
         draw_line(image, start.x, start.y + 2.0f * tileSize.y, end.x, start.y + 2.0f * tileSize.y, V4(1, 1, 1, 1));
         draw_line(image, start.x + tileSize.x, start.y, start.x + tileSize.x, end.y, V4(1, 1, 1, 1));
         draw_line(image, start.x + 2.0f * tileSize.x, start.y, start.x + 2.0f * tileSize.x, end.y, V4(1, 1, 1, 1));
-        
+
         v4 colour = V4(1, 1, 0, 1);
         if ((game->nextState == State_EndOfGame) &&
             (game->seconds > 0.5f))
         {
             colour.a = 0.2f;
         }
-        
+
         // NOTE(michiel): Draw players
         for (u32 row = 0; row < 3; ++row)
         {
@@ -446,8 +446,7 @@ DRAW_IMAGE(draw_image)
             }
         }
     }
-    
-    game->prevMouseDown = mouse.mouseDowns;
+
     game->seconds += dt;
     ++game->ticks;
     if (game->seconds > 1.0f)

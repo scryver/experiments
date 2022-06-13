@@ -8,6 +8,18 @@
 #include "../libberdip/multilane.h"
 #include "../libberdip/complex.h"
 
+#include "../libberdip/std_memory.h"
+
+global MemoryAPI gMemoryApi_;
+global MemoryAPI *gMemoryApi = &gMemoryApi_;
+global MemoryArena gMemoryArena_;
+global MemoryArena *gMemoryArena = &gMemoryArena_;
+
+global FileAPI gFileApi_;
+global FileAPI *gFileApi = &gFileApi_;
+
+#include "../libberdip/memory.cpp"
+#include "../libberdip/std_memory.cpp"
 #include "../libberdip/fft.cpp"
 #include "fft_impl.cpp"
 
@@ -20,18 +32,18 @@ fft_iter_inplace_address(u32 dftCount)
 {
     i_expect(is_pow2(dftCount));
     i_expect(dftCount > 2);
-    
+
     fprintf(stdout, "Preprocess swap:\n");
     BitScanResult highBit = find_most_significant_set_bit(dftCount);
     for (u32 index = 0; index < dftCount; ++index)
     {
-        u32 reversedIndex = reverse_bits(index, highBit.index);
+        u32 reversedIndex = reverse_bits32(index, highBit.index);
         if (reversedIndex > index)
         {
             fprintf(stdout, "%3u <=> %3u\n", index, reversedIndex);
         }
     }
-    
+
     fprintf(stdout, "\nFFT methode:\n\n");
     u32 halfM = 1;
     u32 m = 2;
@@ -131,13 +143,15 @@ print_timings(AllStats *allStats)
 
 int main(int argc, char **argv)
 {
+    std_memory_api(gMemoryApi);
+
     u32 iterAddress = 0;
     u32 tests = 32;
     u32 testCount = 64*8192;
     b32 doDFT = false;
     b32 doRecurse = false;
     b32 doLibOnly = false;
-    
+
     if (argc > 1)
     {
         u32 argCount = argc - 1;
@@ -193,17 +207,17 @@ int main(int argc, char **argv)
             }
         }
     }
-    
+
     if (iterAddress)
     {
         fft_iter_inplace_address(iterAddress);
     }
-    
+
     if (tests)
     {
-        f32 *signal = allocate_array(f32, testCount);
-        Complex32 *fftSignal = allocate_array(Complex32, testCount);
-        
+        f32 *signal = arena_allocate_array(gMemoryArena, f32, testCount, default_memory_alloc());
+        Complex32 *fftSignal = arena_allocate_array(gMemoryArena, Complex32, testCount, default_memory_alloc());
+
         for (u32 x = 0; x < testCount; ++x)
         {
             if ((x & 0xFF) > 0x80)
@@ -215,12 +229,12 @@ int main(int argc, char **argv)
                 signal[x] = 1.0f;
             }
         }
-        
+
         struct timespec start;
         struct timespec end;
-        
+
         AllStats allStats = {};
-        
+
         if (doLibOnly)
         {
             // NOTE(michiel): Warmup the cache
@@ -231,7 +245,7 @@ int main(int argc, char **argv)
                     fftSignal[x] = {signal[x], 0};
                 }
             }
-            
+
             Stats *fftLibTime = create_stat(&allStats, static_string("FFT in libberdip"));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -258,7 +272,7 @@ int main(int argc, char **argv)
                     accum_stats(dftTime, get_seconds_elapsed(start, end));
                 }
             }
-            
+
             if (doRecurse)
             {
                 Stats *fftRecTime = create_stat(&allStats, static_string("FFT Recursive                "));
@@ -270,7 +284,7 @@ int main(int argc, char **argv)
                     end = get_wall_clock();
                     accum_stats(fftRecTime, get_seconds_elapsed(start, end));
                 }
-                
+
                 Stats *fftRec2Time = create_stat(&allStats, static_string("FFT Recursive 2              "));
                 for (u32 testIndex = 0; testIndex < tests; ++testIndex)
                 {
@@ -281,7 +295,7 @@ int main(int argc, char **argv)
                     accum_stats(fftRec2Time, get_seconds_elapsed(start, end));
                 }
             }
-            
+
             Stats *fftIterTime = create_stat(&allStats, static_string("FFT Iterate                  "));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -291,8 +305,8 @@ int main(int argc, char **argv)
                 end = get_wall_clock();
                 accum_stats(fftIterTime, get_seconds_elapsed(start, end));
             }
-            
-#if 0        
+
+#if 0
             Stats *fftIter2Time = create_stat(&allStats, static_string("FFT Iterate 2                "));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -303,7 +317,7 @@ int main(int argc, char **argv)
                 accum_stats(fftIter2Time, get_seconds_elapsed(start, end));
             }
 #endif
-            
+
             Stats *fftIterInPlaceCopyTime = create_stat(&allStats, static_string("FFT Iterate inplace with copy"));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -316,7 +330,7 @@ int main(int argc, char **argv)
                 end = get_wall_clock();
                 accum_stats(fftIterInPlaceCopyTime, get_seconds_elapsed(start, end));
             }
-            
+
             Stats *fftIterInPlaceTime = create_stat(&allStats, static_string("FFT Iterate inplace no copy  "));
             for (u32 x = 0; x < testCount; ++x)
             {
@@ -329,7 +343,7 @@ int main(int argc, char **argv)
                 end = get_wall_clock();
                 accum_stats(fftIterInPlaceTime, get_seconds_elapsed(start, end));
             }
-            
+
             Stats *fftIterInPlaceCopy2Time = create_stat(&allStats, static_string("FFT Iterate inplace w/copy2  "));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -342,7 +356,7 @@ int main(int argc, char **argv)
                 end = get_wall_clock();
                 accum_stats(fftIterInPlaceCopy2Time, get_seconds_elapsed(start, end));
             }
-            
+
             Stats *fftIterInPlaceCopy3Time = create_stat(&allStats, static_string("FFT Iterate in libberdip     "));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -355,7 +369,7 @@ int main(int argc, char **argv)
                 end = get_wall_clock();
                 accum_stats(fftIterInPlaceCopy3Time, get_seconds_elapsed(start, end));
             }
-            
+
             Stats *fftSinCosTime = create_stat(&allStats, static_string("FFT Iterate in sincos        "));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -368,13 +382,13 @@ int main(int argc, char **argv)
                 end = get_wall_clock();
                 accum_stats(fftSinCosTime, get_seconds_elapsed(start, end));
             }
-            
+
 #if WITH_FFTW
             fftwf_complex *in;
             fftwf_plan p;
             in  = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex) * testCount);
             p   = fftwf_plan_dft_1d(testCount, in, in, FFTW_FORWARD, FFTW_ESTIMATE);
-            
+
             Stats *fftwTime = create_stat(&allStats, static_string("FFTW library Estimate        "));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -384,13 +398,13 @@ int main(int argc, char **argv)
                 accum_stats(fftwTime, get_seconds_elapsed(start, end));
             }
             fftwf_destroy_plan(p);
-            
+
             Stats *fftwMesTime = create_stat(&allStats, static_string("FFTW library Measuring       "));
             start = get_wall_clock();
             p   = fftwf_plan_dft_1d(testCount, in, in, FFTW_FORWARD, FFTW_MEASURE);
             end = get_wall_clock();
             accum_stats(fftwMesTime, get_seconds_elapsed(start, end));
-            
+
             Stats *fftwOptTime = create_stat(&allStats, static_string("FFTW library Measure         "));
             for (u32 testIndex = 0; testIndex < tests; ++testIndex)
             {
@@ -400,11 +414,11 @@ int main(int argc, char **argv)
                 accum_stats(fftwOptTime, get_seconds_elapsed(start, end));
             }
             fftwf_destroy_plan(p);
-            
+
             fftwf_free(in);
 #endif
         }
-        
+
         fprintf(stdout, "Timings for %u tests of size %u:\n", tests, testCount);
         print_timings(&allStats);
     }

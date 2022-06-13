@@ -9,7 +9,7 @@ internal ReversalBits
 reversal_bits(u32 startIndex, u32 bitCount)
 {
     i_expect((startIndex & 0x3) == 0);
-    
+
     u32 half = 1 << (bitCount - 1);
     ReversalBits result = {};
     if (startIndex == 0)
@@ -38,7 +38,7 @@ reversal_bits(u32 startIndex, u32 bitCount)
             ++reversals;
             index >>= 1;
         }
-        
+
         u32 value = half;
         for (u32 reverse = 0; reverse < reversals; ++reverse)
         {
@@ -48,10 +48,10 @@ reversal_bits(u32 startIndex, u32 bitCount)
                 value = value ^ half;
             }
         }
-        
+
         result.indices[0] = value;
         result.indices[1] = value ^ half;
-        
+
         addOne[0] = 0;
         reversals = 1;
         index = (startIndex + 2) >> 1;
@@ -68,7 +68,7 @@ reversal_bits(u32 startIndex, u32 bitCount)
             ++reversals;
             index >>= 1;
         }
-        
+
         value = half;
         for (u32 reverse = 0; reverse < reversals; ++reverse)
         {
@@ -78,10 +78,10 @@ reversal_bits(u32 startIndex, u32 bitCount)
                 value = value ^ half;
             }
         }
-        
+
         result.indices[2] = value;
         result.indices[3] = value ^ half;
-        
+
     }
     return result;
 }
@@ -101,6 +101,6 @@ int main(int argc, char **argv)
     bits = reversal_bits(12, bitCount);
     fprintf(stdout, "12: %2u, 13: %2u, 14: %2u, 15: %u\n",
             bits.indices[0], bits.indices[1], bits.indices[2], bits.indices[3]);
-    
+
     return 0;
 }

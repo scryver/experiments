@@ -11,7 +11,7 @@ struct FractalState
 {
     RandomSeriesPCG randomizer;
     u32 ticks;
-    
+
     u32 prevMouseDown;
 };
 
@@ -33,13 +33,12 @@ DRAW_IMAGE(draw_image)
     if (!state->initialized)
     {
         fractalState->randomizer = random_seed_pcg(time(0), 1928649128658612912ULL);
-        
+
         state->initialized = true;
-        
+
         fill_rectangle(image, 0, 0, image->width, image->height, V4(1, 1, 1, 1));
         draw_circle(image, 0.5f * image->width, 0.5f * image->height, 200.0f);
     }
-    
-    fractalState->prevMouseDown = mouse.mouseDowns;
+
     ++fractalState->ticks;
 }

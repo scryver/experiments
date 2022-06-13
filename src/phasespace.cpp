@@ -18,21 +18,21 @@ struct PhaseState
     u32 ticks;
     u32 prevMouseDown;
     s32 prevMouseScroll;
-    
+
     UIState ui;
-    
+
     f32 slideR;
     f32 slideL;
     f32 slideC;
     f32 slideVin;
-    
+
     v2 viewSize;
-    
+
     f32 R;
     f32 L;
     f32 C;
     f32 Vin;
-    
+
     FlowField field;
 };
 
@@ -42,7 +42,7 @@ update_phase_state(PhaseState *state)
     f32 oneOverLC = 1.0f / (state->L * state->C);
     f32 oneOverRC = 1.0f / (state->R * state->C);
     f32 offset = state->Vin * oneOverRC;
-    
+
     v2 *grid = state->field.grid;
     for (u32 row = 0; row < state->field.size.y; ++row)
     {
@@ -65,7 +65,7 @@ update_phase_state(PhaseState *state)
     f32 oneOverLC = 1.0f / (state->L * state->C);
     f32 RoverL = state->R / state->L;
     f32 offset = state->Vin * oneOverLC;
-    
+
     v2 *grid = state->field.grid;
     for (u32 row = 0; row < state->field.size.y; ++row)
     {
@@ -87,32 +87,32 @@ DRAW_IMAGE(draw_image)
     if (!state->initialized)
     {
         phaseSpace->randomizer = random_seed_pcg(129301597412ULL, 1928649128658612912ULL);
-        
+
         phaseSpace->R = 1.0f;
         phaseSpace->L = 1.0f;
         phaseSpace->C = 1.0f;
         phaseSpace->Vin = 0.0f;
-        
+
         phaseSpace->slideR = (phaseSpace->R - 0.01f) * 0.5f;
         phaseSpace->slideL = (phaseSpace->L - 0.01f) * 0.5f;
         phaseSpace->slideC = (phaseSpace->C - 0.01f) * 0.5f;
-        
+
         phaseSpace->viewSize = V2(14, 14);
-        
+
         u32 tileSize = 40;
         phaseSpace->field.size = V2U(14, 14);
         //phaseSpace->field.size = V2U(image->width / tileSize, image->height / tileSize);
         phaseSpace->field.tileSize = tileSize;
-        phaseSpace->field.grid = allocate_array(v2, phaseSpace->field.size.x * phaseSpace->field.size.y);
-        
+        phaseSpace->field.grid = arena_allocate_array(gMemoryArena, v2, phaseSpace->field.size.x * phaseSpace->field.size.y, default_memory_alloc());
+
         init_ui(&phaseSpace->ui, image, 32, static_string("data/output.font"));
-        
+
         state->initialized = true;
     }
-    
+
     FlowField *field = &phaseSpace->field;
     v2 startP = V2(20, ((f32)image->height - (f32)field->tileSize * field->size.y) * 0.5f);
-    
+
     if ((mouse.pixelPosition.x > startP.x) &&
         (mouse.pixelPosition.x < (startP.x + field->size.x * field->tileSize)) &&
         (mouse.pixelPosition.y > startP.y) &&
@@ -126,7 +126,7 @@ DRAW_IMAGE(draw_image)
             zoomOut = true;
             steps = -steps;
         }
-        
+
         for (s32 step = 0; step < steps; ++step)
         {
             if (zoomOut) {
@@ -138,16 +138,16 @@ DRAW_IMAGE(draw_image)
             }
         }
     }
-    
+
     update_phase_state(phaseSpace);
-    
+
     v2 size = V2((f32)image->width, (f32)image->height);
     phaseSpace->ui.mouse = hadamard(mouse.relativePosition, size);
     phaseSpace->ui.mouseScroll = mouse.scroll - phaseSpace->prevMouseScroll;
-    phaseSpace->ui.clicked = mouse.mouseDowns;
-    
+    phaseSpace->ui.clicked = is_down(&mouse, Mouse_Left);
+
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
-    
+
     // NOTE(michiel): Grid
     // x = 0
     draw_line(image, startP + V2(field->size.x * 0.5f + 0.5f, 0) * field->tileSize,
@@ -155,30 +155,30 @@ DRAW_IMAGE(draw_image)
     // y = 0
     draw_line(image, startP + V2(0, field->size.y * 0.5f + 0.5f) * field->tileSize,
               startP + V2(field->size.x, field->size.y * 0.5f + 0.5f) * field->tileSize, V4(0.4f, 0.4f, 0.4f, 1.0f));
-    
+
     for (u32 row = 0; row < field->size.y; ++row)
     {
         for (u32 col = 0; col < field->size.x; ++col)
         {
-            v2 center = startP + V2(col * (f32)field->tileSize, row * (f32)field->tileSize) + 
+            v2 center = startP + V2(col * (f32)field->tileSize, row * (f32)field->tileSize) +
                 V2(0.5f * (f32)field->tileSize, 0.5f * (f32)field->tileSize);
             v2 target = field->grid[row * field->size.x + col] * 0.5f * (f32)field->tileSize + center;
-            
-#if 0            
-            outline_rectangle(image, round(startP.x) + col * field->tileSize, round(startP.y) + row * field->tileSize,
+
+#if 0
+            outline_rectangle(image, round32(startP.x) + col * field->tileSize, round32(startP.y) + row * field->tileSize,
                               field->tileSize, field->tileSize, V4(0.3f, 0.3f, 0.3f, 1.0f));
 #endif
-            
-            draw_line(image, round(center.x), round(center.y), 
-                      round(target.x), round(target.y), V4(0.7f,0.7f,0.7f,1.0f));
-            fill_circle(image, round(target.x), round(target.y), 4, V4(0.7f, 0.7f, 0.7f, 1.0f));
+
+            draw_line(image, round32(center.x), round32(center.y),
+                      round32(target.x), round32(target.y), V4(0.7f,0.7f,0.7f,1.0f));
+            fill_circle(image, round32(target.x), round32(target.y), 4, V4(0.7f, 0.7f, 0.7f, 1.0f));
         }
     }
-    
+
     // NOTE(michiel): UI
     v2 uiP = startP + V2(field->size.x, 0) * field->tileSize + V2(20, 0);
-    UILayout *layout = ui_begin(&phaseSpace->ui, Layout_Horizontal, round(uiP.x), round(uiP.y),
-                                image->width - round(uiP.x), image->height - round(uiP.y), 0);
+    UILayout *layout = ui_begin(&phaseSpace->ui, Layout_Horizontal, round32(uiP.x), round32(uiP.y),
+                                image->width - round32(uiP.x), image->height - round32(uiP.y), 0);
     if (ui_slider_imm(&phaseSpace->ui, layout, &phaseSpace->slideR, 1.0f))
     {
         phaseSpace->R = 2.0f * phaseSpace->slideR + 0.01f;
@@ -192,10 +192,9 @@ DRAW_IMAGE(draw_image)
         phaseSpace->C = 2.0f * phaseSpace->slideC + 0.01f;
     }
     ui_end(&phaseSpace->ui);
-    
-    phaseSpace->prevMouseDown = mouse.mouseDowns;
+
     phaseSpace->prevMouseScroll = mouse.scroll;
-    
+
     phaseSpace->seconds += dt;
     ++phaseSpace->ticks;
     if (phaseSpace->seconds > 1.0f)

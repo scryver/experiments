@@ -28,7 +28,7 @@ operator -(FixedPoint a)
 {
     FixedPoint result;
     result.pointAt = a.pointAt;
-    
+
     u64 carry = 1;
     for (u32 digitIndex = 0;
          digitIndex < array_count(a.digits);
