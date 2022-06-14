@@ -10,7 +10,6 @@ struct BasicState
     RandomSeriesPCG randomizer;
     f32 seconds;
     u32 ticks;
-    u32 prevMouseDown;
 };
 
 DRAW_IMAGE(draw_image)
@@ -30,7 +29,6 @@ DRAW_IMAGE(draw_image)
 
     fill_rectangle(image, 0, 0, image->width, image->height, V4(0, 0, 0, 1));
 
-    basics->prevMouseDown = mouse.mouseDowns;
     basics->seconds += dt;
     ++basics->ticks;
     if (basics->seconds > 1.0f)
